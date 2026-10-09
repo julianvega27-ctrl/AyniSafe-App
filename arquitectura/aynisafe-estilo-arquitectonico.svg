@@ -1,0 +1,246 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1810 1290" role="img" lang="es" data-diagram-type="architecture" data-quality-profile="standard" data-reader-fit="authored-height" data-reader-min-text="14" data-reader-primary-text="18" aria-labelledby="archify-diagram-title archify-diagram-description" width="1810" height="1290" style="--panel: #111b2a; --panel-border: #4b596b; --text: #e6edf7; --text-muted: #b9c6d8; --text-dim: #7e91a9; --layer-present: #17283c; --layer-business: #1b3026; --layer-data: #302b1d; --caption-present: #213b58; --caption-business: #294735; --caption-data: #493c22; --present-node: #182236; --business-node: #284333; --data-node: #29271d; --middleware: #243c5b; --orm: #493b23; --external-node: #252c37; --client-node: #202a3b; --integration: #c2a3e7;"><title id="archify-diagram-title">AyniSafe · Estilo arquitectónico: monolito modular por capas</title><desc id="archify-diagram-description">Ciudadano, operador y administrador; aplicación móvil y panel web; backend con tres capas y seis módulos; Prisma y PostgreSQL; adaptadores para evidencias, IA, notificaciones y mapas.</desc><defs><marker id="layer-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" class="arrow-fill"/></marker><marker id="integration-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" class="integration-fill"/></marker></defs><style>svg{font-family:Arial,Helvetica,sans-serif}svg .page{fill:var(--panel);stroke:none}svg .frame{fill:none;stroke:var(--text-muted);stroke-width:2;stroke-dasharray:11 7}svg .module-frame{fill:none;stroke:var(--text-dim);stroke-width:1.3;stroke-dasharray:6 5}svg .band-present{fill:var(--layer-present,#f0f5fc);stroke:var(--panel-border)}svg .band-business{fill:var(--layer-business,#f0f7ed);stroke:var(--panel-border)}svg .band-data{fill:var(--layer-data,#fcf7eb);stroke:var(--panel-border)}svg .caption-present{fill:var(--caption-present,#dce8f7);stroke:var(--panel-border)}svg .caption-business{fill:var(--caption-business,#dfecd7);stroke:var(--panel-border)}svg .caption-data{fill:var(--caption-data,#f4e8cd);stroke:var(--panel-border)}svg .present-node{fill:var(--present-node,#fff);stroke:#8ba6cc}svg .business-node{fill:var(--business-node,#deecd6);stroke:#8bad78}svg .data-node{fill:var(--data-node,#fff);stroke:#c6a854}svg .middleware{fill:var(--middleware,#dce8fa);stroke:#8ba6cc}svg .orm{fill:var(--orm,#f8e7c9);stroke:#c6a854}svg .external-node{fill:var(--external-node,#f0f0f0);stroke:var(--text-dim)}svg .client-node{fill:var(--client-node,#fff);stroke:var(--text-muted)}svg .layer-edge{fill:none;stroke:var(--text-muted);stroke-width:1.6}svg .integration-edge{fill:none;stroke:var(--integration,#75608d);stroke-width:1.7;stroke-dasharray:7 4}svg .edge-halo{fill:none;stroke:var(--panel);stroke-width:5;pointer-events:none}svg .arrow-fill{fill:var(--text-muted)}svg .integration-fill{fill:var(--integration,#75608d)}svg .note-box{fill:var(--panel);stroke:var(--panel-border)}html[data-theme="dark"]{--layer-present:#17283c;--layer-business:#1b3026;--layer-data:#302b1d;--caption-present:#213b58;--caption-business:#294735;--caption-data:#493c22;--present-node:#182236;--business-node:#284333;--data-node:#29271d;--middleware:#243c5b;--orm:#493b23;--external-node:#252c37;--client-node:#202a3b;--integration:#c2a3e7}html .diagram-container{background:var(--panel)!important}html[data-preset="classic"] .diagram-container&gt;svg [data-node-id]&gt;rect{filter:none!important}svg .t-primary{fill:var(--text)}svg .t-muted{fill:var(--text-muted)}</style>
+<rect x="0" y="0" width="1810" height="1290" class="page"/>
+<g id="node-ciudadano" data-node-id="ciudadano" data-node-label="Ciudadano" data-node-kind="external" data-node-sublabel="" tabindex="0" role="button" aria-label="Ciudadano · " aria-pressed="false">
+<rect x="470" y="24" width="200" height="58" class="client-node" rx="3" stroke-width="1.5"/>
+<text x="570" y="50" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="570" dy="0">Ciudadano</tspan></text>
+</g>
+<g id="node-operador" data-node-id="operador" data-node-label="Operador" data-node-kind="external" data-node-sublabel="" tabindex="0" role="button" aria-label="Operador · " aria-pressed="false">
+<rect x="905" y="24" width="185" height="58" class="client-node" rx="3" stroke-width="1.5"/>
+<text x="997.5" y="50" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="997.5" dy="0">Operador</tspan></text>
+</g>
+<g id="node-administrador" data-node-id="administrador" data-node-label="Administrador" data-node-kind="external" data-node-sublabel="" tabindex="0" role="button" aria-label="Administrador · " aria-pressed="false">
+<rect x="1150" y="24" width="215" height="58" class="client-node" rx="3" stroke-width="1.5"/>
+<text x="1257.5" y="50" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1257.5" dy="0">Administrador</tspan></text>
+</g>
+<g><path d="M 570 82 L 570 128" class="edge-halo"/><path data-edge-id="ciudadano-movil" data-edge-key="0" data-edge-from="ciudadano" data-edge-to="movil" data-composition-points="570,82;570,128" d="M 570 82 L 570 128" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g><path d="M 997.5 82 L 997.5 106 L 1120 106 L 1120 128" class="edge-halo"/><path data-edge-id="operador-web" data-edge-key="1" data-edge-from="operador" data-edge-to="web" data-composition-points="997.5,82;997.5,106;1120,106;1120,128" d="M 997.5 82 L 997.5 106 L 1120 106 L 1120 128" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g><path d="M 1257.5 82 L 1257.5 106 L 1120 106 L 1120 128" class="edge-halo"/><path data-edge-id="administrador-web" data-edge-key="2" data-edge-from="administrador" data-edge-to="web" data-composition-points="1257.5,82;1257.5,106;1120,106;1120,128" d="M 1257.5 82 L 1257.5 106 L 1120 106 L 1120 128" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-movil" data-node-id="movil" data-node-label="Aplicación móvil" data-node-kind="frontend" data-node-sublabel="React Native · Expo · TypeScript" tabindex="0" role="button" aria-label="Aplicación móvil · React Native · Expo · TypeScript" aria-pressed="false">
+<rect x="350" y="128" width="440" height="76" class="client-node" rx="3" stroke-width="1.5"/>
+<text x="570" y="163" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="570" dy="0">Aplicación móvil</tspan></text>
+<text x="570" y="186" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="570" dy="0">React Native · Expo · TypeScript</tspan></text>
+</g>
+<g id="node-web" data-node-id="web" data-node-label="Panel web" data-node-kind="frontend" data-node-sublabel="React · TypeScript" tabindex="0" role="button" aria-label="Panel web · React · TypeScript" aria-pressed="false">
+<rect x="900" y="128" width="440" height="76" class="client-node" rx="3" stroke-width="1.5"/>
+<text x="1120" y="163" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1120" dy="0">Panel web</tspan></text>
+<text x="1120" y="186" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1120" dy="0">React · TypeScript</tspan></text>
+</g>
+<rect x="20" y="292" width="1440" height="790" class="frame"/>
+<text x="40" y="322" data-detail="context" class="t-primary" font-size="21" text-anchor="start" font-weight="650"><tspan x="40" dy="0">«monolito modular» AyniSafe Backend · Node.js + Express + TypeScript</tspan></text>
+<text x="40" y="347" data-detail="context" class="t-muted" font-size="17" text-anchor="start" font-weight="400"><tspan x="40" dy="0">Una aplicación backend · Una unidad principal de despliegue</tspan></text>
+<rect x="42" y="378" width="1396" height="258" class="band-present"/>
+<rect x="42" y="378" width="186" height="258" class="caption-present"/>
+<rect x="42" y="650" width="1396" height="228" class="band-business"/>
+<rect x="42" y="650" width="186" height="228" class="caption-business"/>
+<rect x="42" y="892" width="1396" height="160" class="band-data"/>
+<rect x="42" y="892" width="186" height="160" class="caption-data"/>
+<text x="57" y="475" data-detail="context" class="t-primary" font-size="18" text-anchor="start" font-weight="700"><tspan x="57" dy="0">1. CAPA DE</tspan><tspan x="57" dy="22.5">PRESENTACIÓN</tspan></text>
+<text x="57" y="535" data-detail="context" class="t-muted" font-size="15" text-anchor="start" font-weight="400"><tspan x="57" dy="0">Recibe peticiones HTTP,</tspan><tspan x="57" dy="18.75">valida la entrada</tspan><tspan x="57" dy="18.75">y responde JSON.</tspan></text>
+<text x="57" y="704" data-detail="context" class="t-primary" font-size="18" text-anchor="start" font-weight="700"><tspan x="57" dy="0">2. CAPA DE LÓGICA</tspan><tspan x="57" dy="22.5">DE NEGOCIO</tspan></text>
+<text x="57" y="765" data-detail="context" class="t-muted" font-size="15" text-anchor="start" font-weight="400"><tspan x="57" dy="0">Casos de uso, reglas</tspan><tspan x="57" dy="18.75">de negocio y coordinación</tspan><tspan x="57" dy="18.75">mediante interfaces.</tspan></text>
+<text x="57" y="934" data-detail="context" class="t-primary" font-size="18" text-anchor="start" font-weight="700"><tspan x="57" dy="0">3. CAPA DE DATOS</tspan></text>
+<text x="57" y="975" data-detail="context" class="t-muted" font-size="15" text-anchor="start" font-weight="400"><tspan x="57" dy="0">Repositorios por módulo</tspan><tspan x="57" dy="18.75">y acceso a persistencia.</tspan></text>
+<g><path d="M 570 204 L 570 255 L 580 255 L 580 392" class="edge-halo"/><path data-edge-id="movil-api" data-edge-key="3" data-edge-from="movil" data-edge-to="api" data-composition-points="570,204;570,255;580,255;580,392" d="M 570 204 L 570 255 L 580 255 L 580 392" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g><path d="M 1120 204 L 1120 255 L 1110 255 L 1110 392" class="edge-halo"/><path data-edge-id="web-api" data-edge-key="4" data-edge-from="web" data-edge-to="api" data-composition-points="1120,204;1120,255;1110,255;1110,392" d="M 1120 204 L 1120 255 L 1110 255 L 1110 392" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="479" y="232" width="200" height="46" class="page"/>
+<rect x="1010" y="232" width="200" height="46" class="page"/>
+<text x="579" y="250" data-detail="context" class="t-muted" font-size="16" text-anchor="middle" font-weight="600"><tspan x="579" dy="0">API REST</tspan><tspan x="579" dy="20">HTTPS · JSON</tspan></text>
+<text x="1110" y="250" data-detail="context" class="t-muted" font-size="16" text-anchor="middle" font-weight="600"><tspan x="1110" dy="0">API REST</tspan><tspan x="1110" dy="20">HTTPS · JSON</tspan></text>
+<g id="node-api" data-node-id="api" data-node-label="Middlewares Express (transversales)" data-node-kind="security" data-node-sublabel="Autenticación · Autorización · Validación de entrada · Manejo de errores" tabindex="0" role="button" aria-label="Middlewares Express (transversales) · Autenticación · Autorización · Validación de entrada · Manejo de errores" aria-pressed="false">
+<rect x="246" y="392" width="1174" height="65" class="middleware" rx="3" stroke-width="1.5"/>
+<text x="833" y="421.5" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="833" dy="0">Middlewares Express (transversales)</tspan></text>
+<text x="833" y="444.5" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="833" dy="0">Autenticación · Autorización · Validación de entrada · Manejo de errores</tspan></text>
+</g>
+<rect x="246" y="471" width="184" height="511" class="module-frame"/>
+<g><path d="M 338 457 L 338 534" class="edge-halo"/><path data-edge-id="api-identidad" data-edge-key="5" data-edge-from="api" data-edge-to="identidad-controller" data-composition-points="338,457;338,534" d="M 338 457 L 338 534" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="254" y="478" width="168" height="27" class="band-present" stroke="none"/>
+<text x="338" y="495" data-detail="context" class="t-primary" font-size="17" text-anchor="middle" font-weight="650"><tspan x="338" dy="0">Módulo Identidad</tspan></text>
+<g id="node-identidad-controller" data-node-id="identidad-controller" data-node-label="Identidad" data-node-kind="backend" data-node-sublabel="Controller" tabindex="0" role="button" aria-label="Identidad · Controller" aria-pressed="false">
+<rect x="255" y="534" width="166" height="68" class="present-node" rx="3" stroke-width="1.5"/>
+<text x="338" y="565" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="338" dy="0">Identidad</tspan></text>
+<text x="338" y="588" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="338" dy="0">Controller</tspan></text>
+</g>
+<g><path d="M 338 602 L 338 698" class="edge-halo"/><path data-edge-id="identidad-casos-uso" data-edge-key="6" data-edge-from="identidad-controller" data-edge-to="identidad-service" data-composition-points="338,602;338,698" d="M 338 602 L 338 698" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-identidad-service" data-node-id="identidad-service" data-node-label="Identidad" data-node-kind="backend" data-node-sublabel="Service" tabindex="0" role="button" aria-label="Identidad · Service" aria-pressed="false">
+<rect x="255" y="698" width="166" height="103" class="business-node" rx="3" stroke-width="1.5"/>
+<text x="338" y="722" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="338" dy="0">Identidad</tspan></text>
+<text x="338" y="742" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="338" dy="0">Service</tspan></text>
+<text x="338" y="762" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="338" dy="0">Autenticación, usuarios,</tspan><tspan x="338" dy="17.5">perfiles y permisos</tspan></text>
+</g>
+<g><path d="M 338 801 L 338 917" class="edge-halo"/><path data-edge-id="identidad-datos" data-edge-key="7" data-edge-from="identidad-service" data-edge-to="identidad-repository" data-composition-points="338,801;338,917" d="M 338 801 L 338 917" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-identidad-repository" data-node-id="identidad-repository" data-node-label="Identidad" data-node-kind="database" data-node-sublabel="Repository" tabindex="0" role="button" aria-label="Identidad · Repository" aria-pressed="false">
+<rect x="255" y="917" width="166" height="56" class="data-node" rx="3" stroke-width="1.5"/>
+<text x="338" y="942" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="338" dy="0">Identidad</tspan></text>
+<text x="338" y="965" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="338" dy="0">Repository</tspan></text>
+</g>
+<g><path d="M 338 973 L 338 996 L 338 1007" class="edge-halo"/><path data-edge-id="identidad-orm" data-edge-key="8" data-edge-from="identidad-repository" data-edge-to="prisma" data-composition-points="338,973;338,996;338,1007" d="M 338 973 L 338 996 L 338 1007" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="444" y="471" width="184" height="511" class="module-frame"/>
+<g><path d="M 536 457 L 536 534" class="edge-halo"/><path data-edge-id="api-reportes" data-edge-key="9" data-edge-from="api" data-edge-to="reportes-controller" data-composition-points="536,457;536,534" d="M 536 457 L 536 534" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="452" y="478" width="168" height="27" class="band-present" stroke="none"/>
+<text x="536" y="495" data-detail="context" class="t-primary" font-size="17" text-anchor="middle" font-weight="650"><tspan x="536" dy="0">Módulo Reportes</tspan></text>
+<g id="node-reportes-controller" data-node-id="reportes-controller" data-node-label="Reportes" data-node-kind="backend" data-node-sublabel="Controller" tabindex="0" role="button" aria-label="Reportes · Controller" aria-pressed="false">
+<rect x="453" y="534" width="166" height="68" class="present-node" rx="3" stroke-width="1.5"/>
+<text x="536" y="565" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="536" dy="0">Reportes</tspan></text>
+<text x="536" y="588" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="536" dy="0">Controller</tspan></text>
+</g>
+<g><path d="M 536 602 L 536 698" class="edge-halo"/><path data-edge-id="reportes-casos-uso" data-edge-key="10" data-edge-from="reportes-controller" data-edge-to="reportes-service" data-composition-points="536,602;536,698" d="M 536 602 L 536 698" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-reportes-service" data-node-id="reportes-service" data-node-label="Reportes" data-node-kind="backend" data-node-sublabel="Service" tabindex="0" role="button" aria-label="Reportes · Service" aria-pressed="false">
+<rect x="453" y="698" width="166" height="103" class="business-node" rx="3" stroke-width="1.5"/>
+<text x="536" y="722" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="536" dy="0">Reportes</tspan></text>
+<text x="536" y="742" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="536" dy="0">Service</tspan></text>
+<text x="536" y="762" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="536" dy="0">Incidentes, ubicación</tspan><tspan x="536" dy="17.5">y evidencias</tspan></text>
+</g>
+<g><path d="M 536 801 L 536 917" class="edge-halo"/><path data-edge-id="reportes-datos" data-edge-key="11" data-edge-from="reportes-service" data-edge-to="reportes-repository" data-composition-points="536,801;536,917" d="M 536 801 L 536 917" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-reportes-repository" data-node-id="reportes-repository" data-node-label="Reportes" data-node-kind="database" data-node-sublabel="Repository" tabindex="0" role="button" aria-label="Reportes · Repository" aria-pressed="false">
+<rect x="453" y="917" width="166" height="56" class="data-node" rx="3" stroke-width="1.5"/>
+<text x="536" y="942" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="536" dy="0">Reportes</tspan></text>
+<text x="536" y="965" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="536" dy="0">Repository</tspan></text>
+</g>
+<g><path d="M 536 973 L 536 996 L 536 1007" class="edge-halo"/><path data-edge-id="reportes-orm" data-edge-key="12" data-edge-from="reportes-repository" data-edge-to="prisma" data-composition-points="536,973;536,996;536,1007" d="M 536 973 L 536 996 L 536 1007" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="642" y="471" width="184" height="511" class="module-frame"/>
+<g><path d="M 734 457 L 734 534" class="edge-halo"/><path data-edge-id="api-analisis" data-edge-key="13" data-edge-from="api" data-edge-to="analisis-controller" data-composition-points="734,457;734,534" d="M 734 457 L 734 534" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="650" y="478" width="168" height="27" class="band-present" stroke="none"/>
+<text x="734" y="495" data-detail="context" class="t-primary" font-size="17" text-anchor="middle" font-weight="650"><tspan x="734" dy="0">Módulo Análisis</tspan></text>
+<g id="node-analisis-controller" data-node-id="analisis-controller" data-node-label="Análisis" data-node-kind="backend" data-node-sublabel="Controller" tabindex="0" role="button" aria-label="Análisis · Controller" aria-pressed="false">
+<rect x="651" y="534" width="166" height="68" class="present-node" rx="3" stroke-width="1.5"/>
+<text x="734" y="565" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="734" dy="0">Análisis</tspan></text>
+<text x="734" y="588" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="734" dy="0">Controller</tspan></text>
+</g>
+<g><path d="M 734 602 L 734 698" class="edge-halo"/><path data-edge-id="analisis-casos-uso" data-edge-key="14" data-edge-from="analisis-controller" data-edge-to="analisis-service" data-composition-points="734,602;734,698" d="M 734 602 L 734 698" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-analisis-service" data-node-id="analisis-service" data-node-label="Análisis" data-node-kind="backend" data-node-sublabel="Service" tabindex="0" role="button" aria-label="Análisis · Service" aria-pressed="false">
+<rect x="651" y="698" width="166" height="103" class="business-node" rx="3" stroke-width="1.5"/>
+<text x="734" y="722" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="734" dy="0">Análisis</tspan></text>
+<text x="734" y="742" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="734" dy="0">Service</tspan></text>
+<text x="734" y="762" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="734" dy="0">Clasificación, prioridad</tspan><tspan x="734" dy="17.5">y correlación con IA</tspan></text>
+</g>
+<g><path d="M 734 801 L 734 917" class="edge-halo"/><path data-edge-id="analisis-datos" data-edge-key="15" data-edge-from="analisis-service" data-edge-to="analisis-repository" data-composition-points="734,801;734,917" d="M 734 801 L 734 917" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-analisis-repository" data-node-id="analisis-repository" data-node-label="Análisis" data-node-kind="database" data-node-sublabel="Repository" tabindex="0" role="button" aria-label="Análisis · Repository" aria-pressed="false">
+<rect x="651" y="917" width="166" height="56" class="data-node" rx="3" stroke-width="1.5"/>
+<text x="734" y="942" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="734" dy="0">Análisis</tspan></text>
+<text x="734" y="965" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="734" dy="0">Repository</tspan></text>
+</g>
+<g><path d="M 734 973 L 734 996 L 734 1007" class="edge-halo"/><path data-edge-id="analisis-orm" data-edge-key="16" data-edge-from="analisis-repository" data-edge-to="prisma" data-composition-points="734,973;734,996;734,1007" d="M 734 973 L 734 996 L 734 1007" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="840" y="471" width="184" height="511" class="module-frame"/>
+<g><path d="M 932 457 L 932 534" class="edge-halo"/><path data-edge-id="api-operaciones" data-edge-key="17" data-edge-from="api" data-edge-to="operaciones-controller" data-composition-points="932,457;932,534" d="M 932 457 L 932 534" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="848" y="478" width="168" height="27" class="band-present" stroke="none"/>
+<text x="932" y="495" data-detail="context" class="t-primary" font-size="17" text-anchor="middle" font-weight="650"><tspan x="932" dy="0">Módulo Operaciones</tspan></text>
+<g id="node-operaciones-controller" data-node-id="operaciones-controller" data-node-label="Operaciones" data-node-kind="backend" data-node-sublabel="Controller" tabindex="0" role="button" aria-label="Operaciones · Controller" aria-pressed="false">
+<rect x="849" y="534" width="166" height="68" class="present-node" rx="3" stroke-width="1.5"/>
+<text x="932" y="565" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="932" dy="0">Operaciones</tspan></text>
+<text x="932" y="588" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="932" dy="0">Controller</tspan></text>
+</g>
+<g><path d="M 932 602 L 932 698" class="edge-halo"/><path data-edge-id="operaciones-casos-uso" data-edge-key="18" data-edge-from="operaciones-controller" data-edge-to="operaciones-service" data-composition-points="932,602;932,698" d="M 932 602 L 932 698" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-operaciones-service" data-node-id="operaciones-service" data-node-label="Operaciones" data-node-kind="backend" data-node-sublabel="Service" tabindex="0" role="button" aria-label="Operaciones · Service" aria-pressed="false">
+<rect x="849" y="698" width="166" height="103" class="business-node" rx="3" stroke-width="1.5"/>
+<text x="932" y="722" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="932" dy="0">Operaciones</tspan></text>
+<text x="932" y="742" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="932" dy="0">Service</tspan></text>
+<text x="932" y="762" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="932" dy="0">Revisión, validación</tspan><tspan x="932" dy="17.5">y seguimiento humano</tspan></text>
+</g>
+<g><path d="M 932 801 L 932 917" class="edge-halo"/><path data-edge-id="operaciones-datos" data-edge-key="19" data-edge-from="operaciones-service" data-edge-to="operaciones-repository" data-composition-points="932,801;932,917" d="M 932 801 L 932 917" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-operaciones-repository" data-node-id="operaciones-repository" data-node-label="Operaciones" data-node-kind="database" data-node-sublabel="Repository" tabindex="0" role="button" aria-label="Operaciones · Repository" aria-pressed="false">
+<rect x="849" y="917" width="166" height="56" class="data-node" rx="3" stroke-width="1.5"/>
+<text x="932" y="942" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="932" dy="0">Operaciones</tspan></text>
+<text x="932" y="965" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="932" dy="0">Repository</tspan></text>
+</g>
+<g><path d="M 932 973 L 932 996 L 932 1007" class="edge-halo"/><path data-edge-id="operaciones-orm" data-edge-key="20" data-edge-from="operaciones-repository" data-edge-to="prisma" data-composition-points="932,973;932,996;932,1007" d="M 932 973 L 932 996 L 932 1007" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="1038" y="471" width="184" height="511" class="module-frame"/>
+<g><path d="M 1130 457 L 1130 534" class="edge-halo"/><path data-edge-id="api-alertas" data-edge-key="21" data-edge-from="api" data-edge-to="alertas-controller" data-composition-points="1130,457;1130,534" d="M 1130 457 L 1130 534" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="1046" y="478" width="168" height="27" class="band-present" stroke="none"/>
+<text x="1130" y="495" data-detail="context" class="t-primary" font-size="17" text-anchor="middle" font-weight="650"><tspan x="1130" dy="0">Módulo Alertas</tspan></text>
+<g id="node-alertas-controller" data-node-id="alertas-controller" data-node-label="Alertas" data-node-kind="backend" data-node-sublabel="Controller" tabindex="0" role="button" aria-label="Alertas · Controller" aria-pressed="false">
+<rect x="1047" y="534" width="166" height="68" class="present-node" rx="3" stroke-width="1.5"/>
+<text x="1130" y="565" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1130" dy="0">Alertas</tspan></text>
+<text x="1130" y="588" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1130" dy="0">Controller</tspan></text>
+</g>
+<g><path d="M 1130 602 L 1130 698" class="edge-halo"/><path data-edge-id="alertas-casos-uso" data-edge-key="22" data-edge-from="alertas-controller" data-edge-to="alertas-service" data-composition-points="1130,602;1130,698" d="M 1130 602 L 1130 698" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-alertas-service" data-node-id="alertas-service" data-node-label="Alertas" data-node-kind="backend" data-node-sublabel="Service" tabindex="0" role="button" aria-label="Alertas · Service" aria-pressed="false">
+<rect x="1047" y="698" width="166" height="103" class="business-node" rx="3" stroke-width="1.5"/>
+<text x="1130" y="722" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1130" dy="0">Alertas</tspan></text>
+<text x="1130" y="742" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1130" dy="0">Service</tspan></text>
+<text x="1130" y="762" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="1130" dy="0">Generación y distribución</tspan><tspan x="1130" dy="17.5">de alertas preventivas</tspan></text>
+</g>
+<g><path d="M 1130 801 L 1130 917" class="edge-halo"/><path data-edge-id="alertas-datos" data-edge-key="23" data-edge-from="alertas-service" data-edge-to="alertas-repository" data-composition-points="1130,801;1130,917" d="M 1130 801 L 1130 917" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-alertas-repository" data-node-id="alertas-repository" data-node-label="Alertas" data-node-kind="database" data-node-sublabel="Repository" tabindex="0" role="button" aria-label="Alertas · Repository" aria-pressed="false">
+<rect x="1047" y="917" width="166" height="56" class="data-node" rx="3" stroke-width="1.5"/>
+<text x="1130" y="942" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1130" dy="0">Alertas</tspan></text>
+<text x="1130" y="965" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1130" dy="0">Repository</tspan></text>
+</g>
+<g><path d="M 1130 973 L 1130 996 L 1130 1007" class="edge-halo"/><path data-edge-id="alertas-orm" data-edge-key="24" data-edge-from="alertas-repository" data-edge-to="prisma" data-composition-points="1130,973;1130,996;1130,1007" d="M 1130 973 L 1130 996 L 1130 1007" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="1236" y="471" width="184" height="511" class="module-frame"/>
+<g><path d="M 1328 457 L 1328 534" class="edge-halo"/><path data-edge-id="api-consultas" data-edge-key="25" data-edge-from="api" data-edge-to="consultas-controller" data-composition-points="1328,457;1328,534" d="M 1328 457 L 1328 534" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="1244" y="478" width="168" height="27" class="band-present" stroke="none"/>
+<text x="1328" y="495" data-detail="context" class="t-primary" font-size="17" text-anchor="middle" font-weight="650"><tspan x="1328" dy="0">Módulo Consultas</tspan></text>
+<g id="node-consultas-controller" data-node-id="consultas-controller" data-node-label="Consultas" data-node-kind="backend" data-node-sublabel="Controller" tabindex="0" role="button" aria-label="Consultas · Controller" aria-pressed="false">
+<rect x="1245" y="534" width="166" height="68" class="present-node" rx="3" stroke-width="1.5"/>
+<text x="1328" y="565" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1328" dy="0">Consultas</tspan></text>
+<text x="1328" y="588" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1328" dy="0">Controller</tspan></text>
+</g>
+<g><path d="M 1328 602 L 1328 698" class="edge-halo"/><path data-edge-id="consultas-casos-uso" data-edge-key="26" data-edge-from="consultas-controller" data-edge-to="consultas-service" data-composition-points="1328,602;1328,698" d="M 1328 602 L 1328 698" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-consultas-service" data-node-id="consultas-service" data-node-label="Consultas" data-node-kind="backend" data-node-sublabel="Service" tabindex="0" role="button" aria-label="Consultas · Service" aria-pressed="false">
+<rect x="1245" y="698" width="166" height="103" class="business-node" rx="3" stroke-width="1.5"/>
+<text x="1328" y="722" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1328" dy="0">Consultas</tspan></text>
+<text x="1328" y="742" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1328" dy="0">Service</tspan></text>
+<text x="1328" y="762" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="1328" dy="0">Mapas, estadísticas</tspan><tspan x="1328" dy="17.5">e indicadores</tspan></text>
+</g>
+<g><path d="M 1328 801 L 1328 917" class="edge-halo"/><path data-edge-id="consultas-datos" data-edge-key="27" data-edge-from="consultas-service" data-edge-to="consultas-repository" data-composition-points="1328,801;1328,917" d="M 1328 801 L 1328 917" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-consultas-repository" data-node-id="consultas-repository" data-node-label="Consultas" data-node-kind="database" data-node-sublabel="Repository" tabindex="0" role="button" aria-label="Consultas · Repository" aria-pressed="false">
+<rect x="1245" y="917" width="166" height="56" class="data-node" rx="3" stroke-width="1.5"/>
+<text x="1328" y="942" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1328" dy="0">Consultas</tspan></text>
+<text x="1328" y="965" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1328" dy="0">Repository</tspan></text>
+</g>
+<g><path d="M 1328 973 L 1328 996 L 1328 1007" class="edge-halo"/><path data-edge-id="consultas-orm" data-edge-key="28" data-edge-from="consultas-repository" data-edge-to="prisma" data-composition-points="1328,973;1328,996;1328,1007" d="M 1328 973 L 1328 996 L 1328 1007" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<g id="node-prisma" data-node-id="prisma" data-node-label="Acceso a datos compartido · Prisma ORM" data-node-kind="database" data-node-sublabel="" tabindex="0" role="button" aria-label="Acceso a datos compartido · Prisma ORM · " aria-pressed="false">
+<rect x="246" y="1007" width="1174" height="43" class="orm" rx="3" stroke-width="1.5"/>
+<text x="833" y="1025.5" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="833" dy="0">Acceso a datos compartido · Prisma ORM</tspan></text>
+</g>
+<g><path d="M 578 801 L 578 825 L 1477 825 L 1477 533 L 1515 533" class="edge-halo"/><path data-edge-id="reportes-service-s3" data-edge-key="29" data-edge-from="reportes-service" data-edge-to="s3" data-composition-points="578,801;578,825;1477,825;1477,533;1515,533" d="M 578 801 L 578 825 L 1477 825 L 1477 533 L 1515 533" class="integration-edge" marker-end="url(#integration-arrow)"/></g>
+<g id="node-s3" data-node-id="s3" data-node-label="Amazon S3" data-node-kind="cloud" data-node-sublabel="Almacenamiento de evidencias" tabindex="0" role="button" aria-label="Amazon S3 · Almacenamiento de evidencias" aria-pressed="false">
+<rect x="1515" y="490" width="275" height="86" class="external-node" rx="3" stroke-width="1.5"/>
+<text x="1652.5" y="530" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1652.5" dy="0">Amazon S3</tspan></text>
+<text x="1652.5" y="553" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1652.5" dy="0">Almacenamiento de evidencias</tspan></text>
+</g>
+<text x="1652.5" y="511" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="1652.5" dy="0">«sistema externo · adaptador»</tspan></text>
+<g><path d="M 776 801 L 776 839 L 1486 839 L 1486 663 L 1515 663" class="edge-halo"/><path data-edge-id="analisis-service-ia" data-edge-key="30" data-edge-from="analisis-service" data-edge-to="ia" data-composition-points="776,801;776,839;1486,839;1486,663;1515,663" d="M 776 801 L 776 839 L 1486 839 L 1486 663 L 1515 663" class="integration-edge" marker-end="url(#integration-arrow)"/></g>
+<g id="node-ia" data-node-id="ia" data-node-label="Servicio de IA" data-node-kind="external" data-node-sublabel="Clasificación y priorización asistidas" tabindex="0" role="button" aria-label="Servicio de IA · Clasificación y priorización asistidas" aria-pressed="false">
+<rect x="1515" y="620" width="275" height="86" class="external-node" rx="3" stroke-width="1.5"/>
+<text x="1652.5" y="660" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1652.5" dy="0">Servicio de IA</tspan></text>
+<text x="1652.5" y="683" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1652.5" dy="0">Clasificación y priorización asistidas</tspan></text>
+</g>
+<text x="1652.5" y="641" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="1652.5" dy="0">«sistema externo · adaptador»</tspan></text>
+<g><path d="M 1172 801 L 1172 853 L 1495 853 L 1495 893 L 1515 893" class="edge-halo"/><path data-edge-id="alertas-service-push" data-edge-key="31" data-edge-from="alertas-service" data-edge-to="push" data-composition-points="1172,801;1172,853;1495,853;1495,893;1515,893" d="M 1172 801 L 1172 853 L 1495 853 L 1495 893 L 1515 893" class="integration-edge" marker-end="url(#integration-arrow)"/></g>
+<g id="node-push" data-node-id="push" data-node-label="Notificaciones push" data-node-kind="external" data-node-sublabel="Distribución de alertas preventivas" tabindex="0" role="button" aria-label="Notificaciones push · Distribución de alertas preventivas" aria-pressed="false">
+<rect x="1515" y="850" width="275" height="86" class="external-node" rx="3" stroke-width="1.5"/>
+<text x="1652.5" y="890" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1652.5" dy="0">Notificaciones push</tspan></text>
+<text x="1652.5" y="913" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1652.5" dy="0">Distribución de alertas preventivas</tspan></text>
+</g>
+<text x="1652.5" y="871" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="1652.5" dy="0">«sistema externo · adaptador»</tspan></text>
+<g><path d="M 1370 801 L 1370 867 L 1504 867 L 1504 1023 L 1515 1023" class="edge-halo"/><path data-edge-id="consultas-service-mapas" data-edge-key="32" data-edge-from="consultas-service" data-edge-to="mapas" data-composition-points="1370,801;1370,867;1504,867;1504,1023;1515,1023" d="M 1370 801 L 1370 867 L 1504 867 L 1504 1023 L 1515 1023" class="integration-edge" marker-end="url(#integration-arrow)"/></g>
+<g id="node-mapas" data-node-id="mapas" data-node-label="Servicio de mapas" data-node-kind="external" data-node-sublabel="Información para mapas e indicadores" tabindex="0" role="button" aria-label="Servicio de mapas · Información para mapas e indicadores" aria-pressed="false">
+<rect x="1515" y="980" width="275" height="86" class="external-node" rx="3" stroke-width="1.5"/>
+<text x="1652.5" y="1020" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="1652.5" dy="0">Servicio de mapas</tspan></text>
+<text x="1652.5" y="1043" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="1652.5" dy="0">Información para mapas e indicadores</tspan></text>
+</g>
+<text x="1652.5" y="1001" data-detail="context" class="t-muted" font-size="14" text-anchor="middle" font-weight="400"><tspan x="1652.5" dy="0">«sistema externo · adaptador»</tspan></text>
+<g><path d="M 833 1050 L 833 1132" class="edge-halo"/><path data-edge-id="orm-db" data-edge-key="33" data-edge-from="prisma" data-edge-to="postgres" data-composition-points="833,1050;833,1132" d="M 833 1050 L 833 1132" class="layer-edge" marker-end="url(#layer-arrow)"/></g>
+<rect x="730" y="1093" width="205" height="24" class="page"/>
+<text x="832" y="1110" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="832" dy="0">Persistencia · PostgreSQL</tspan></text>
+<g id="node-postgres" data-node-id="postgres" data-node-label="PostgreSQL" data-node-kind="database" data-node-sublabel="Base de datos principal" tabindex="0" role="button" aria-label="PostgreSQL · Base de datos principal" aria-pressed="false">
+<rect x="713" y="1132" width="240" height="89" class="data-node" rx="3" stroke-width="1.5"/>
+<text x="833" y="1173.5" data-detail="context" class="t-primary" font-size="18" text-anchor="middle" font-weight="650"><tspan x="833" dy="0">PostgreSQL</tspan></text>
+<text x="833" y="1196.5" data-detail="context" class="t-muted" font-size="15" text-anchor="middle" font-weight="400"><tspan x="833" dy="0">Base de datos principal</tspan></text>
+</g>
+<rect x="35" y="1122" width="597" height="124" class="note-box" rx="3"/>
+<text x="53" y="1147" data-detail="context" class="t-primary" font-size="18" text-anchor="start" font-weight="650"><tspan x="53" dy="0">Leyenda</tspan></text>
+<path d="M54 1172H118" class="layer-edge" marker-end="url(#layer-arrow)"/>
+<text x="135" y="1177" data-detail="context" class="t-muted" font-size="15" text-anchor="start" font-weight="400"><tspan x="135" dy="0">Llamada entre capas / acceso mediante repositorios</tspan></text>
+<path d="M54 1200H118" class="integration-edge" marker-end="url(#integration-arrow)"/>
+<text x="135" y="1205" data-detail="context" class="t-muted" font-size="15" text-anchor="start" font-weight="400"><tspan x="135" dy="0">Integración mediante un adaptador</tspan></text>
+<rect x="54" y="1220" width="65" height="15" class="module-frame"/>
+<text x="135" y="1233" data-detail="context" class="t-muted" font-size="15" text-anchor="start" font-weight="400"><tspan x="135" dy="0">Límite de módulo; cruces de líneas sin acoplamiento</tspan></text>
+<rect x="1000" y="1122" width="790" height="124" class="note-box" rx="3"/>
+<text x="1020" y="1147" data-detail="context" class="t-primary" font-size="18" text-anchor="start" font-weight="650"><tspan x="1020" dy="0">Reglas y alcance de la arquitectura</tspan></text>
+<text x="1020" y="1176" data-detail="context" class="t-muted" font-size="15" text-anchor="start" font-weight="400"><tspan x="1020" dy="0">Módulos comunicados mediante interfaces o servicios de aplicación definidos.</tspan><tspan x="1020" dy="18.75">Cada módulo accede a datos mediante sus propios repositorios; evita dependencias circulares.</tspan><tspan x="1020" dy="18.75">Redis y mensajería: incorporaciones opcionales para caché y procesamiento asíncrono.</tspan></text>
+<text x="35" y="1272" data-detail="context" class="t-muted" font-size="15" text-anchor="start" font-weight="400"><tspan x="35" dy="0">Fuente: arquitectura/estilo-arquitectonico.md · Arquitectura lógica propuesta · Adaptación visual de la imagen de referencia</tspan></text>
+<rect x="35" y="303" width="945" height="30" class="page"/>
+<text x="40" y="322" data-detail="context" class="t-primary" font-size="21" text-anchor="start" font-weight="650"><tspan x="40" dy="0">«monolito modular» AyniSafe Backend · Node.js + Express + TypeScript</tspan></text>
+</svg>
