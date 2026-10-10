@@ -19,4 +19,4 @@ Su principio fundamental es que las dependencias del código deben orientarse ha
 | Capas definidas | Presentación, Aplicación, Dominio e Infraestructura. |
 | Beneficios | Facilita el mantenimiento, las pruebas unitarias, la sustitución de tecnologías y la evolución de los módulos sin afectar innecesariamente las reglas de negocio. |
 
-![Estilo Arquitectónico](aynisafe-enfoque-arquitectonico.svg)
+![Estilo Arquitectónico](../../img/aynisafe-enfoque-arquitectonico.svg)

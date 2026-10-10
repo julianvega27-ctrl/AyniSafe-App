@@ -22,4 +22,4 @@ La aplicación móvil y el panel web funcionarán como clientes independientes q
 | Integraciones | Servicios externos de inteligencia artificial, mapas, notificaciones y almacenamiento de evidencias. |
 | Beneficios | Facilita el mantenimiento, las pruebas, el despliegue y la evolución progresiva del sistema. |
 
-![Estilo Arquitectónico](aynisafe-estilo-arquitectonico.svg)
+![Estilo Arquitectónico](../../img/aynisafe-estilo-arquitectonico.svg)

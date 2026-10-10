@@ -1,7 +1,7 @@
 # Arquitectura inicial de AyniSafe
 
 ## Diagrama de Arquitectura
-![Diagrama Inicial](Diagrama_inicial_AyniSafe.drawio.svg)
+![Diagrama Inicial](../../img/Diagrama_inicial_AyniSafe.drawio.svg)
 
 ## Descripción
 
