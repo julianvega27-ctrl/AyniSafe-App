@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1660 1640" width="1660" height="1640" role="img" aria-labelledby="title desc">
+<title id="title">AyniSafe · Diagrama UML de clases del módulo Reportes</title>
+<desc id="desc">Once clases e interfaces del diseño de Reportes. El controlador usa el caso de uso, que crea Reporte y utiliza cuatro puertos. Reporte compone una ubicación opcional y varias referencias de evidencia. Los adaptadores Prisma y S3 realizan sus interfaces de Aplicación.</desc>
+<defs>
+  <marker id="open-arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L11 6 L1 11" fill="none" stroke="var(--line)" stroke-width="1.8"/></marker>
+  <marker id="triangle" viewBox="0 0 16 16" refX="15" refY="8" markerWidth="17" markerHeight="17" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L15 8 L1 15 Z" fill="var(--paper)" stroke="var(--line)" stroke-width="1.8"/></marker>
+  <marker id="diamond" viewBox="0 -7 20 14" refX="0" refY="0" markerWidth="20" markerHeight="14" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L9 -6 L18 0 L9 6 Z" fill="var(--line)"/></marker>
+</defs>
+<style>
+  svg{--paper:#ffffff;--ink:#142135;--muted:#56677d;--line:#4e627c;--note:#f1f5f9;background:var(--paper);font-family:Segoe UI,Arial,sans-serif;color:var(--ink)}
+  .box{--fill:#effaf7;--head:#d3f0e5;--border:#238568}.box.domain{--fill:#fff9ed;--head:#ffedc5;--border:#b27b16}.box.presentation{--fill:#f0f8ff;--head:#dceeff;--border:#3776b6}.box.infrastructure{--fill:#f7f3ff;--head:#e9dfff;--border:#8151b8}
+  rect{fill:var(--fill);stroke:var(--border);stroke-width:1.8}.head{fill:var(--head)}.divider{stroke:var(--border);stroke-width:1.1;fill:none}
+  text{fill:var(--ink)}.heading{font-size:28px;font-weight:700}.subtitle{font-size:17px;fill:var(--muted)}.stereotype{font-size:14px;fill:var(--muted)}.class-name{font-size:19px;font-weight:700}.member{font:14px Consolas,monospace}.static{text-decoration:underline}.relation{stroke:var(--line);stroke-width:2;fill:none;stroke-linejoin:round}.dashed{stroke-dasharray:8 6}.relation-label{font-size:15px;paint-order:stroke;stroke:var(--paper);stroke-width:7;stroke-linejoin:round}.cardinality{font-size:16px;font-weight:600}.note{fill:var(--note);stroke:none}.note-title{font-size:17px;font-weight:700}.note-text{font-size:15px;fill:var(--muted)}
+  @media(prefers-color-scheme:dark){svg{--paper:#0e1727;--ink:#e8edf7;--muted:#b1c0d4;--line:#b4c4dc;--note:#1a283c}.box{--fill:#112f2a;--head:#174237;--border:#47c59d}.box.domain{--fill:#332a17;--head:#49391a;--border:#d5a74b}.box.presentation{--fill:#172e46;--head:#203e5d;--border:#69a7e0}.box.infrastructure{--fill:#2c2042;--head:#3d2b59;--border:#bb98ef}}
+</style>
+<rect x="0" y="0" width="1660" height="1640" style="fill:var(--paper);stroke:none"/>
+<text x="40" y="42" class="heading" >AyniSafe · Diagrama de clases del módulo Reportes</text>
+<text x="40" y="74" class="subtitle" >Diseño propuesto · Clean Architecture · 11 tipos y 10 relaciones</text>
+<g id="uml-controlador-caso"><title>usa</title><path class="relation" d="M760 270 V430" marker-end="url(#open-arrow)"/><text x="785" y="354" class="relation-label" text-anchor="middle">usa</text></g>
+<g id="uml-caso-crea-reporte"><title>«crea»</title><path class="relation dashed" d="M530 525 H390" marker-end="url(#open-arrow)"/><text x="460" y="504" class="relation-label" text-anchor="middle">«crea»</text></g>
+<g id="uml-reporte-ubicacion"><title>composición 1 : 0..1</title><path class="relation" d="M215 450 V330" marker-start="url(#diamond)"/><text x="275" y="395" class="relation-label" text-anchor="middle">ubicacion</text><text x="195" y="427" class="cardinality" >1</text><text x="185" y="354" class="cardinality" >0..1</text></g>
+<g id="uml-reporte-referencias"><title>referencias 1 : 0..*</title><path class="relation" d="M215 660 V880" marker-start="url(#diamond)"/><text x="280" y="775" class="relation-label" text-anchor="middle">referencias</text><text x="195" y="690" class="cardinality" >1</text><text x="183" y="863" class="cardinality" >0..*</text></g>
+<g id="uml-caso-identidad"><title>autoriza</title><path class="relation" d="M730 740 V880" marker-end="url(#open-arrow)"/><text x="765" y="813" class="relation-label" text-anchor="middle">autoriza</text></g>
+<g id="uml-caso-categorias"><title>verifica categoría</title><path class="relation" d="M580 740 H470 V1270 H530" marker-end="url(#open-arrow)"/><text x="455" y="1132" class="relation-label" text-anchor="end">verifica categoría</text></g>
+<g id="uml-caso-registro"><title>guarda con evento</title><path class="relation" d="M990 530 H1200" marker-end="url(#open-arrow)"/><text x="1095" y="510" class="relation-label" text-anchor="middle">guarda con evento</text></g>
+<g id="uml-caso-evidencias"><title>verifica referencias</title><path class="relation" d="M990 680 H1090 V970 H1200" marker-end="url(#open-arrow)"/><text x="1090" y="798" class="relation-label" text-anchor="middle">verifica referencias</text></g>
+<g id="uml-prisma-registro"><title>«implementa»</title><path class="relation dashed" d="M1405 300 V440" marker-end="url(#triangle)"/><text x="1480" y="375" class="relation-label" text-anchor="middle">«implementa»</text></g>
+<g id="uml-s3-evidencias"><title>«implementa»</title><path class="relation dashed" d="M1405 1190 V1060" marker-end="url(#triangle)"/><text x="1480" y="1126" class="relation-label" text-anchor="middle">«implementa»</text></g>
+
+<g id="uml-controlador" class="box presentation"><title>ReporteController · Presentación</title>
+<rect x="530" y="110" width="460" height="160" rx="5"/>
+<path class="head" d="M535 110 H985 Q990 110 990 115 V180 H530 V115 Q530 110 535 110Z"/>
+<text x="760" y="134" class="stereotype" text-anchor="middle">«clase» · Presentación</text>
+<text x="760" y="161" class="class-name" text-anchor="middle">ReporteController</text>
+<path class="divider" d="M530 180 H990"/>
+<text x="546" y="207" class="member" >- registrarReporte: RegistrarReporteUseCase</text>
+<path class="divider" d="M530 222 H990"/>
+<text x="546" y="248" class="member" >+ registrar(req, res, next): Promise&lt;void&gt;</text>
+</g>
+<g id="uml-caso-uso" class="box application"><title>RegistrarReporteUseCase · Aplicación</title>
+<rect x="530" y="430" width="460" height="310" rx="5"/>
+<path class="head" d="M535 430 H985 Q990 430 990 435 V500 H530 V435 Q530 430 535 430Z"/>
+<text x="760" y="454" class="stereotype" text-anchor="middle">«clase» · Aplicación</text>
+<text x="760" y="481" class="class-name" text-anchor="middle">RegistrarReporteUseCase</text>
+<path class="divider" d="M530 500 H990"/>
+<text x="546" y="527" class="member" >- registro: RegistroReportePort</text>
+<text x="546" y="550" class="member" >- identidad: IdentidadPort</text>
+<text x="546" y="573" class="member" >- categorias: CategoriasPort</text>
+<text x="546" y="596" class="member" >- evidencias: EvidenciasPort</text>
+<text x="546" y="619" class="member" >- generarId: () =&gt; string</text>
+<text x="546" y="642" class="member" >- ahora: () =&gt; string</text>
+<path class="divider" d="M530 657 H990"/>
+<text x="546" y="683" class="member" >+ ejecutar(autorId, cmd): Promise&lt;Resultado&gt;</text>
+</g>
+<g id="uml-reporte" class="box domain"><title>Reporte · Dominio</title>
+<rect x="40" y="450" width="350" height="210" rx="5"/>
+<path class="head" d="M45 450 H385 Q390 450 390 455 V520 H40 V455 Q40 450 45 450Z"/>
+<text x="215" y="474" class="stereotype" text-anchor="middle">«entidad» · Dominio</text>
+<text x="215" y="501" class="class-name" text-anchor="middle">Reporte</text>
+<path class="divider" d="M40 520 H390"/>
+<text x="56" y="547" class="member" >+ datos: Readonly&lt;DatosReporte&gt;</text>
+<text x="56" y="570" class="member" >+ estado: EstadoReporte = REGISTRADO</text>
+<path class="divider" d="M40 585 H390"/>
+<text x="56" y="611" class="member" >+ crear(datos: DatosReporte): Reporte</text>
+<text x="56" y="634" class="member static" >  {static}</text>
+</g>
+<g id="uml-ubicacion" class="box domain"><title>Ubicacion · Dominio</title>
+<rect x="40" y="110" width="350" height="220" rx="5"/>
+<path class="head" d="M45 110 H385 Q390 110 390 115 V180 H40 V115 Q40 110 45 110Z"/>
+<text x="215" y="134" class="stereotype" text-anchor="middle">«objeto de valor» · Dominio</text>
+<text x="215" y="161" class="class-name" text-anchor="middle">Ubicacion</text>
+<path class="divider" d="M40 180 H390"/>
+<text x="56" y="207" class="member" >+ latitud: number</text>
+<text x="56" y="230" class="member" >+ longitud: number</text>
+<path class="divider" d="M40 245 H390"/>
+<text x="56" y="271" class="member" >+ crear(latitud, longitud, autorizada)</text>
+<text x="56" y="294" class="member static" >  : Ubicacion {static}</text>
+</g>
+<g id="uml-referencia" class="box domain"><title>ReferenciaEvidencia · Dominio</title>
+<rect x="40" y="880" width="350" height="140" rx="5"/>
+<path class="head" d="M45 880 H385 Q390 880 390 885 V950 H40 V885 Q40 880 45 880Z"/>
+<text x="215" y="904" class="stereotype" text-anchor="middle">«interface» · Dominio</text>
+<text x="215" y="931" class="class-name" text-anchor="middle">ReferenciaEvidencia</text>
+<path class="divider" d="M40 950 H390"/>
+<text x="56" y="977" class="member" >+ id: string</text>
+</g>
+<g id="uml-identidad" class="box application"><title>IdentidadPort · Aplicación</title>
+<rect x="530" y="880" width="400" height="160" rx="5"/>
+<path class="head" d="M535 880 H925 Q930 880 930 885 V950 H530 V885 Q530 880 535 880Z"/>
+<text x="730" y="904" class="stereotype" text-anchor="middle">«interface» · Aplicación</text>
+<text x="730" y="931" class="class-name" text-anchor="middle">IdentidadPort</text>
+<path class="divider" d="M530 950 H930"/>
+<path class="divider" d="M530 965 H930"/>
+<text x="546" y="991" class="member" >+ exigirPermiso(actorId, permiso)</text>
+<text x="546" y="1014" class="member" >  : Promise&lt;void&gt;</text>
+</g>
+<g id="uml-categorias" class="box application"><title>CategoriasPort · Aplicación</title>
+<rect x="530" y="1190" width="400" height="160" rx="5"/>
+<path class="head" d="M535 1190 H925 Q930 1190 930 1195 V1260 H530 V1195 Q530 1190 535 1190Z"/>
+<text x="730" y="1214" class="stereotype" text-anchor="middle">«interface» · Aplicación</text>
+<text x="730" y="1241" class="class-name" text-anchor="middle">CategoriasPort</text>
+<path class="divider" d="M530 1260 H930"/>
+<path class="divider" d="M530 1275 H930"/>
+<text x="546" y="1301" class="member" >+ exigirActiva(categoriaId): Promise&lt;void&gt;</text>
+</g>
+<g id="uml-registro" class="box application"><title>RegistroReportePort · Aplicación</title>
+<rect x="1200" y="440" width="410" height="180" rx="5"/>
+<path class="head" d="M1205 440 H1605 Q1610 440 1610 445 V510 H1200 V445 Q1200 440 1205 440Z"/>
+<text x="1405" y="464" class="stereotype" text-anchor="middle">«interface» · Aplicación</text>
+<text x="1405" y="491" class="class-name" text-anchor="middle">RegistroReportePort</text>
+<path class="divider" d="M1200 510 H1610"/>
+<path class="divider" d="M1200 525 H1610"/>
+<text x="1216" y="551" class="member" >+ guardarConEvento(reporte, evento)</text>
+<text x="1216" y="574" class="member" >  : Promise&lt;void&gt;</text>
+</g>
+<g id="uml-evidencias" class="box application"><title>EvidenciasPort · Aplicación</title>
+<rect x="1200" y="880" width="410" height="180" rx="5"/>
+<path class="head" d="M1205 880 H1605 Q1610 880 1610 885 V950 H1200 V885 Q1200 880 1205 880Z"/>
+<text x="1405" y="904" class="stereotype" text-anchor="middle">«interface» · Aplicación</text>
+<text x="1405" y="931" class="class-name" text-anchor="middle">EvidenciasPort</text>
+<path class="divider" d="M1200 950 H1610"/>
+<path class="divider" d="M1200 965 H1610"/>
+<text x="1216" y="991" class="member" >+ verificarReferencias(autorId, ids)</text>
+<text x="1216" y="1014" class="member" >  : Promise&lt;void&gt;</text>
+</g>
+<g id="uml-prisma" class="box infrastructure"><title>PrismaRegistroReporteAdapter · Infraestructura</title>
+<rect x="1200" y="110" width="410" height="190" rx="5"/>
+<path class="head" d="M1205 110 H1605 Q1610 110 1610 115 V180 H1200 V115 Q1200 110 1205 110Z"/>
+<text x="1405" y="134" class="stereotype" text-anchor="middle">«adaptador» · Infraestructura</text>
+<text x="1405" y="161" class="class-name" text-anchor="middle">PrismaRegistroReporteAdapter</text>
+<path class="divider" d="M1200 180 H1610"/>
+<text x="1216" y="207" class="member" >- db: PrismaClient</text>
+<path class="divider" d="M1200 222 H1610"/>
+<text x="1216" y="248" class="member" >+ guardarConEvento(reporte, evento)</text>
+<text x="1216" y="271" class="member" >  : Promise&lt;void&gt;</text>
+</g>
+<g id="uml-s3" class="box infrastructure"><title>S3EvidenciasAdapter · Infraestructura</title>
+<rect x="1200" y="1190" width="410" height="180" rx="5"/>
+<path class="head" d="M1205 1190 H1605 Q1610 1190 1610 1195 V1260 H1200 V1195 Q1200 1190 1205 1190Z"/>
+<text x="1405" y="1214" class="stereotype" text-anchor="middle">«adaptador» · Infraestructura</text>
+<text x="1405" y="1241" class="class-name" text-anchor="middle">S3EvidenciasAdapter</text>
+<path class="divider" d="M1200 1260 H1610"/>
+<path class="divider" d="M1200 1275 H1610"/>
+<text x="1216" y="1301" class="member" >+ verificarReferencias(autorId, ids)</text>
+<text x="1216" y="1324" class="member" >  : Promise&lt;void&gt;</text>
+</g>
+
+<rect class="note" x="40" y="1410" width="1570" height="190" rx="9"/>
+<text x="62" y="1440" class="note-title" >Notación UML y alcance</text>
+<text x="62" y="1472" class="note-text" >→ Asociación: referencia a un colaborador.   ⇢ Dependencia «crea».   △ Realización: línea discontinua y triángulo hueco.   ◆ Composición.</text>
+<text x="62" y="1501" class="note-text" >0..1: ubicación opcional.   0..*: referencias de evidencia.   + público / - privado.   {static}: operación de clase.   Resultado: { reporteId, estado }.</text>
+<text x="62" y="1530" class="note-text" >DatosReporte reúne id, autorId, categoriaId, descripcion, ocurridoEn, registradoEn, ubicacion y evidencias; EstadoReporte contiene REGISTRADO.</text>
+<text x="62" y="1559" class="note-text" >La composición se expresa a través de DatosReporte. Las referencias pertenecen al reporte; el archivo físico en S3 tiene su propio ciclo de vida.</text>
+</svg>
