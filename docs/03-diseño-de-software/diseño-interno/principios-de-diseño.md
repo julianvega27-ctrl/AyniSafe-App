@@ -15,6 +15,12 @@ Los ejemplos y archivos corresponden al diseño propuesto del sistema.
 
 ## SOLID en AyniSafe
 
+![Principios SOLID aplicados a las clases e interfaces del módulo Reportes](../../../img/aynisafe-solid-modulo-reportes.svg)
+
+[Explorar el diagrama interactivo](../../../img/fuentes-html/solid-modulo-reportes.html).
+
+Las letras indican el principio que ilustra cada tipo; O, L y D también se explican mediante sus relaciones. `RegistroEnMemoria` y `OtroEvidenciasAdapter` son ejemplos propuestos para mostrar sustitución y extensión, respectivamente.
+
 | Principio | Dónde se aplica (capa) | Cómo se aplica en AyniSafe | Archivos |
 |---|---|---|---|
 | **S** · Responsabilidad única | Todas las capas | El controlador atiende HTTP, el caso de uso coordina el registro, la entidad valida las reglas del reporte y el adaptador realiza la persistencia. | `reporte.controller.ts`, `registrar-reporte.use-case.ts`, `reporte.ts`, `prisma-registro-reporte.adapter.ts` |
