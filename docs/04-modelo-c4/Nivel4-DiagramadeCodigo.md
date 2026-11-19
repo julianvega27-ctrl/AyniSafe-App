@@ -1,7 +1,7 @@
 # Nivel 4 · Diagrama de código
 
 > **Proyecto:** AyniSafe · **Módulo detallado:** Reportes  
-> **Modelo:** C4 · Nivel 4 de 4 · **Notación:** UML · **Versión:** 1.0
+> **Modelo:** C4 · Nivel 4 de 4 · **Notación:** UML · **Versión:** 1.1 · Actualización: 19/11/2026
 
 ## 1. Objetivo
 
@@ -20,8 +20,7 @@ Detallar las clases, interfaces y colaboraciones del módulo **Reportes** de la 
 
 ![Diagrama UML de clases del módulo Reportes de AyniSafe](../../img/aynisafe-clases-modulo-reportes.svg)
 
-[Explorar las relaciones y el detalle de los tipos](../../img/fuentes-html/clases-modulo-reportes.html).
-
+[Explorar las relaciones y el detalle de los tipos](../../img/diagramas-interactivos/clases-modulo-reportes.html).
 
 ### 2.1 Capas de Clean Architecture
 
@@ -81,7 +80,7 @@ La composición se refiere a los valores y referencias asociados al reporte; el 
 
 ![Diagrama de secuencia del registro de un reporte en AyniSafe](../../img/aynisafe-secuencia-registrar-reporte.svg)
 
-[Abrir la secuencia interactiva](../../img/fuentes-html/registrar-reporte.html).
+[Abrir la secuencia interactiva](../../img/diagramas-interactivos/registrar-reporte.html).
 
 Las evidencias se cargan previamente mediante un flujo autorizado. La solicitud envía sus identificadores y la ubicación solo cuando existe autorización. El autor se obtiene de la sesión verificada.
 
@@ -92,7 +91,7 @@ Las evidencias se cargan previamente mediante un flujo autorizado. La solicitud 
 | 5 | Caso de uso → `RegistroReportePort` | Tras crear `Reporte` y `ReporteRegistrado`, solicita `guardarConEvento(...)`. |
 | 6–7 | Adaptador de registro ↔ PostgreSQL | Guarda el reporte, sus referencias y el evento pendiente en una transacción local; confirma el `COMMIT`. |
 | 8–9 | Registro → caso de uso → controlador | Confirma la persistencia y devuelve `{ reporteId, estado: REGISTRADO }`. |
-| 10 | Controlador → aplicación móvil | Responde `201 Created` sin esperar a la IA ni a las notificaciones. |
+| 10 | Controlador → aplicación móvil | Responde `201 Created` sin esperar al análisis ni a las notificaciones. |
 | 11–12 | Despachador → PostgreSQL y Análisis | Lee los eventos pendientes confirmados y entrega `ReporteRegistrado`. |
 | 13–14 | Análisis → despachador → PostgreSQL | Análisis obtiene datos autorizados, genera y persiste sugerencias; después se registra la entrega completada. |
 
@@ -106,10 +105,10 @@ Las evidencias se cargan previamente mediante un flujo autorizado. La solicitud 
 | Datos inválidos | Responder `400` sin persistir un reporte parcial. |
 | Permisos insuficientes o evidencia ajena | Responder `403` sin revelar información de recursos ajenos. |
 | Fallo de la transacción | Revertir reporte y evento; devolver un error controlado sin confirmar el registro. |
-| IA no disponible | Conservar el reporte registrado y la tarea pendiente para aplicar reintentos. |
+| Análisis de reglas interrumpido | Conservar el reporte registrado y la tarea pendiente para aplicar reintentos. |
 | Solicitud o evento repetido | Usar una clave de idempotencia por registro y seguimiento de eventos procesados por consumidor para evitar efectos duplicados. |
 
-El diagrama muestra el flujo exitoso; las alternativas se resumen en la tabla. La confirmación de un consumidor no sustituye el seguimiento de otros consumidores. Las sugerencias de IA quedan sujetas a revisión humana en Operaciones.
+El diagrama muestra el flujo exitoso; las alternativas se resumen en la tabla. La confirmación de un consumidor no sustituye el seguimiento de otros consumidores. Los resultados de reglas quedan sujetos a revisión humana en Operaciones.
 
 ## 4. Patrones y principios visibles
 
@@ -124,3 +123,17 @@ El diagrama muestra el flujo exitoso; las alternativas se resumen en la tabla. L
 | Colaboración por contratos públicos y eventos persistentes | **Monolito modular:** no se accede a tablas ni clases internas de otro módulo. |
 
 Detalle en [patrones de diseño](../03-diseño-de-software/diseño-interno/patrones-de-diseño.md), [principios de diseño](../03-diseño-de-software/diseño-interno/principios-de-diseño.md) y los [fragmentos de código del módulo Reportes](../03-diseño-de-software/diseño-interno/diseño-interno-de-modulos.md#7-código-de-referencia).
+
+## 5. Extensión del ejemplo ante el nuevo alcance
+
+Las clases y firmas del registro son un ejemplo parcial. Su implementación deberá añadir distrito calculado/declarado y versión territorial, condiciones de heridos/lesiones y la idempotencia ya prevista. Operaciones resolverá principal y apoyos mediante contratos de Identidad/territorio; Alertas mantendrá avisos por usuario y lectura individual. Estas responsabilidades no se introducen en ReporteController ni en la entidad Reporte.
+
+La app pasa a Flutter/Dart sin cambiar HTTPS/JSON ni las reglas de inversión de dependencias. S3EvidenciasAdapter representa una alternativa, no una obligación del despliegue gratuito. [Especificación de referencia](../01-analisis-del-sistema/09-alcance-territorial-e-institucional.md).
+
+Para RF41–RF44, el comando y la persistencia del registro deben incorporar `evaluacionRapidaSamu`: existencia/cantidad de heridos, fichas de personas con signos vitales informados, conciencia y sangrado, estado de completitud, origen y fecha. Las respuestas desconocidas se representan explícitamente, sin convertirlas en `false` o cero. Las condiciones por persona no se confunden con el total de heridos. La evaluación ciudadana se guarda con el reporte; las aclaraciones operativas se versionan mediante Operaciones. El evento del outbox conserva solo referencias, nunca las respuestas sanitarias. Los fragmentos abreviados anteriores aún no contienen estos campos ni la autorización sanitaria específica; no constituyen una implementación de RF41–RF44.
+
+RF44 se implementa en la presentación Flutter con botones y cantidad sin teclado. Los diagramas de clases y secuencia son ejemplos abreviados, no un contrato completo del registro ampliado. La secuencia desarrolla un consumidor de outbox; la entrega independiente a Operaciones para avisos provisionales se detalla en nivel 3. No esperar al resultado de prioridad o correlación para crear la bandeja institucional.
+
+RF44 se implementa en la presentación Flutter con botones y cantidad sin teclado. Los diagramas de clases y secuencia son ejemplos abreviados, no un contrato completo del registro ampliado. La secuencia desarrolla un consumidor de outbox; la entrega independiente a Operaciones para avisos provisionales se detalla en nivel 3. No esperar al resultado de prioridad o correlación para crear la bandeja institucional.
+
+Acuerdos de operación: [catálogo de cinco distritos y sedes candidatas](../01-analisis-del-sistema/10-catalogo-territorial-y-sedes.md) y [política de estados, FIFO, publicación, alertas y conservación](../01-analisis-del-sistema/11-operacion-publicacion-y-conservacion.md). La etiqueta de prioridad se asigna manualmente en el MVP; las correlaciones siguen en Análisis. Las sedes documentadas no se consideran integraciones institucionales activas.

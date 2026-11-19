@@ -1,7 +1,7 @@
 # Nivel 2 · Diagrama de contenedores
 
 > **Proyecto:** AyniSafe  
-> **Modelo:** C4 · Nivel 2 de 4 · **Versión:** 1.0
+> **Modelo:** C4 · Nivel 2 de 4 · **Versión:** 1.1 · Actualización: 19/11/2026
 
 ## 1. Objetivo
 
@@ -19,21 +19,21 @@ Abrir la caja **AyniSafe** del nivel 1 y mostrar las aplicaciones y almacenes de
 
 ![Diagrama de contenedores de AyniSafe · Modelo C4, nivel 2](../../img/aynisafe-nivel2-contenedores.svg)
 
-[Abrir el diagrama interactivo](../../img/fuentes-html/nivel2-contenedores-aynisafe.html).
+[Abrir el diagrama interactivo](../../img/diagramas-interactivos/nivel2-contenedores-aynisafe.html).
 
 El límite de AyniSafe agrupa la aplicación móvil, el panel web, la API y los almacenes de datos propios. Las personas y los servicios externos permanecen fuera. Es una **vista del diseño propuesto**, no de servidores o réplicas desplegadas.
 
-La API incluye el despachador y los consumidores de tareas en segundo plano. El reporte y su evento pendiente se guardan juntos en PostgreSQL antes de responder `201 Created`, sin esperar a la IA ni a las notificaciones. Una cola o un proceso de trabajo independiente se incorporaría si resulta necesario; no se presenta como un contenedor ya definido.
+La API incluye el despachador y los consumidores de tareas en segundo plano. El reporte y su evento pendiente se guardan juntos en PostgreSQL antes de responder `201 Created`, sin esperar al análisis ni a las notificaciones. Una cola o un proceso de trabajo independiente se incorporaría si resulta necesario; no se presenta como un contenedor ya definido.
 
 ## 3. Contenedores
 
 | Contenedor | Tecnología | Responsabilidad | Datos que maneja |
 |---|---|---|---|
-| **Aplicación móvil** | React Native + Expo + TypeScript; prioridad inicial Android. | Permite al ciudadano registrar reportes, adjuntar evidencias, autorizar su ubicación y consultar seguimiento, mapa y alertas. | Formulario, referencias de evidencias y estado local de la interfaz. |
-| **Panel web** | React + TypeScript. | Permite a operadores revisar y gestionar incidentes, y a administradores configurar usuarios, roles, categorías y reglas. | Estado de pantalla y resultados autorizados obtenidos de la API. |
-| **API AyniSafe** | Node.js + Express + TypeScript; Prisma para persistencia. | Expone la API REST, aplica permisos y reglas de negocio, coordina integraciones y ejecuta tareas asíncronas. Es un **monolito modular**. | Procesa datos del negocio; persiste en PostgreSQL y utiliza caché y servicios externos. |
+| **Aplicación móvil** | Flutter + Dart; entrega inicial Android y versión iPhone (iOS) prevista. | Permite al ciudadano registrar reportes, adjuntar evidencias, autorizar su ubicación y consultar seguimiento, mapa y alertas. | Formulario, referencias de evidencias y estado local de la interfaz. |
+| **Panel web** | React + TypeScript. | Ofrece portada pública y panel protegido: organización institucional para administradores, atención para operadores y bandeja individual de avisos por ámbito. | Contenido público, estado de pantalla y resultados autorizados obtenidos de la API. |
+| **API AyniSafe** | Node.js + Express + TypeScript; Prisma para persistencia. | Expone la API REST, aplica permisos y reglas de negocio, coordina integraciones y ejecuta tareas asíncronas. Es un **monolito modular**. | Procesa datos del negocio; persiste en PostgreSQL e integra los servicios externos; caché solo en evolución. |
 | **Base de datos** | PostgreSQL. | Conserva la información del negocio, el historial y los eventos pendientes del outbox. | Usuarios, roles, reportes, incidentes, actuaciones, alertas, auditoría y metadatos de evidencias. |
-| **Caché** | Redis; incorporación prevista. | Reduce consultas repetitivas sobre información consultada frecuentemente. | Copias temporales de consultas; no constituye la fuente persistente del negocio. |
+| **Caché** | Redis; alternativa de evolución, fuera del MVP. | Reduce consultas repetitivas sobre información consultada frecuentemente. | Copias temporales de consultas; no constituye la fuente persistente del negocio. |
 
 **Identidad, Reportes, Análisis, Operaciones, Alertas y Consultas** son módulos internos de la API y se detallan en niveles posteriores. **Storage** se mantiene como servicio externo para archivos de evidencia, sin especificar proveedor en esta vista.
 
@@ -48,8 +48,7 @@ La API incluye el despachador y los consumidores de tareas en segundo plano. El 
 | Panel web | API AyniSafe | Ejecuta operaciones y consultas autorizadas por rol. | API REST mediante HTTPS/JSON. |
 | API AyniSafe | Base de datos | Lee y escribe datos; registra cambios y eventos pendientes de forma atómica. | SQL sobre TCP, mediante Prisma. |
 | API AyniSafe | Caché | Consulta y actualiza datos temporales cuando se incorpore la caché. | Protocolo de Redis sobre TCP. |
-| API AyniSafe | Servicio de IA | Solicita análisis en segundo plano y conserva sugerencias para revisión humana. | API mediante HTTPS; contrato por definir. |
-| API AyniSafe | Servicio de notificaciones push | Solicita en segundo plano la entrega de alertas y cambios relevantes a los dispositivos. | API o SDK del proveedor; contrato por definir. |
+| API AyniSafe | Servicio de notificaciones push | Solicita en segundo plano la entrega de alertas y cambios relevantes a los dispositivos. | API HTTPS de FCM o SDK del servidor; APNs configurado para iOS. |
 | Aplicación móvil | Mapas y geolocalización | Obtiene cartografía y solicita coordenadas solo con permiso del ciudadano. | API/SDK de mapas y API de ubicación del dispositivo. |
 | API AyniSafe | Storage | Gestiona cargas y consultas autorizadas de evidencias privadas. | API del servicio de almacenamiento mediante HTTPS. |
 
@@ -63,8 +62,8 @@ Mapas y geolocalización agrupa dos capacidades y no presupone un único proveed
 | Un backend organizado como monolito modular. | ADR-001 y ADR-002. | Separar responsabilidades y dependencias internas manteniendo una unidad principal de despliegue. |
 | Registro inmediato y procesamiento posterior recuperable. | ADR-004 y diseño interno, sección 6. | Confirmar el reporte persistido sin esperar servicios externos, y recuperar tareas pendientes ante fallos. |
 | PostgreSQL para datos y Storage para evidencias. | ADR-006. | Separar los archivos privados de sus referencias y metadatos transaccionales. |
-| Redis como caché prevista. | ADR-005. | Reducir consultas repetitivas; las claves, expiración e invalidación se concretarán en el diseño técnico. |
-| La validación de incidentes permanece en personal autorizado. | RC05. | La IA aporta sugerencias y no sustituye la decisión humana. |
+| Redis solo como alternativa de evolución. | ADR-005. | ADR-005 no lo incorpora al MVP; evaluar primero consultas, cuotas e invalidación de permisos. |
+| La validación de incidentes permanece en personal autorizado. | RC05. | Las reglas ofrecen resultados orientativos; el operador confirma las decisiones. |
 
 ## 6. Seguridad entre contenedores
 
@@ -72,8 +71,19 @@ Mapas y geolocalización agrupa dos capacidades y no presupone un único proveed
 |---|---|
 | Clientes → API | HTTPS, autenticación y autorización por rol, propiedad del recurso y operación; el mecanismo de sesión se concretará en el diseño de seguridad. |
 | API → PostgreSQL y Redis | Acceso restringido al backend, credenciales protegidas y permisos mínimos; sin acceso directo desde los clientes. |
-| API → IA y notificaciones | Credenciales del proveedor protegidas en el servidor y envío limitado a datos autorizados. |
+| API → notificaciones | Credenciales del proveedor protegidas en el servidor y envío limitado a datos autorizados. |
 | API → Storage | Archivos privados, comprobación de propiedad y permisos, y acceso temporal autorizado a evidencias. |
 | Móvil → Ubicación | Solicitud explícita de permiso y tratamiento de su denegación. |
 | Consultas del mapa, panel y alertas | Aplicación de filtros de privacidad y permisos antes de entregar información. |
 | Revisiones y cambios de estado | Registro del actor autorizado, la acción y su momento en la auditoría. |
+
+## 7. Alcance actualizado de los contenedores
+
+- App Flutter/Dart: Android inicial, iPhone previsto, seguimiento, mapa por distrito/categoría, reporte, contactos, perfil e información de desarrolladores. Push FCM y permisos de plataforma.
+- Web React: portada pública y rutas protegidas. Administrador crea instituciones, sedes y operadores; operador revisa y atiende según ámbito. Ambos consultan bandeja persistente individual desde la API.
+- API: geometrías distritales propias, enrutamiento provisional, principal/apoyos, condiciones, permisos territoriales y notificaciones; no integra centrales institucionales.
+- PostgreSQL: instituciones, sedes, coberturas, competencias, categorías, distritos/versiones, asignaciones y avisos por usuario, además del negocio/outbox. Redis es evolución, no dependencia del MVP.
+
+MapLibre/OpenFreeMap aporta el mapa base a los clientes que lo muestran. Los límites distritales proceden de la API. Filtros web/móvil no amplían permisos. El polling del panel no requiere servicio push externo. Detalle en [especificación](../01-analisis-del-sistema/09-alcance-territorial-e-institucional.md).
+
+Acuerdos de operación: [catálogo de cinco distritos y sedes candidatas](../01-analisis-del-sistema/10-catalogo-territorial-y-sedes.md) y [política de estados, FIFO, publicación, alertas y conservación](../01-analisis-del-sistema/11-operacion-publicacion-y-conservacion.md). La etiqueta de prioridad se asigna manualmente en el MVP; las correlaciones siguen en Análisis. Las sedes documentadas no se consideran integraciones institucionales activas.

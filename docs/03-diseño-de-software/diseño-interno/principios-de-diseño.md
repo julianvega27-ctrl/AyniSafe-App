@@ -17,7 +17,7 @@ Los ejemplos y archivos corresponden al diseño propuesto del sistema.
 
 ![Principios SOLID aplicados a las clases e interfaces del módulo Reportes](../../../img/aynisafe-solid-modulo-reportes.svg)
 
-[Explorar el diagrama interactivo](../../../img/fuentes-html/solid-modulo-reportes.html).
+[Explorar el diagrama interactivo](../../../img/diagramas-interactivos/solid-modulo-reportes.html).
 
 Las letras indican el principio que ilustra cada tipo; O, L y D también se explican mediante sus relaciones. `RegistroEnMemoria` y `OtroEvidenciasAdapter` son ejemplos propuestos para mostrar sustitución y extensión, respectivamente.
 
@@ -34,7 +34,6 @@ Las letras indican el principio que ilustra cada tipo; O, L y D también se expl
 | Situación | Sin SOLID | Con SOLID |
 |---|---|---|
 | Cambia el almacenamiento de evidencias | Se modifican los casos de uso que llaman directamente a S3. | Se reemplaza el adaptador manteniendo `EvidenciasPort`. |
-| Cambia el proveedor de IA | El análisis depende del formato y del SDK del proveedor. | Un nuevo adaptador conserva el contrato de `ProveedorIAPort`. |
 | Se quiere probar el registro de un reporte | Se necesitan PostgreSQL, S3 y los servicios reales. | El caso de uso se prueba con implementaciones de prueba de sus puertos. |
 | Cambia una regla de creación del reporte | La regla está repetida en controladores y servicios. | La regla se modifica en `Reporte` o `Ubicacion`, según corresponda. |
 | Se sustituye el adaptador de persistencia | El reemplazo podría guardar el reporte sin su evento. | Se exige conservar la atomicidad definida por `RegistroReportePort`. |
@@ -47,3 +46,7 @@ Las letras indican el principio que ilustra cada tipo; O, L y D también se expl
 | Abierto/cerrado y Liskov | Adapter permite sustituir proveedores respetando el contrato y su comportamiento esperado. |
 | Segregación de interfaces | Los puertos de Aplicación delimitan las necesidades de cada colaborador. |
 | Inversión de dependencias | Los casos de uso dependen de puertos; Repository y los adaptadores concretos implementan esas abstracciones desde Infraestructura. |
+
+## Extensión institucional
+
+Separar autorización por sede/categoría/distrito, resolución geométrica, reglas de destinatarios y canales de entrega. Flutter y el panel consumen DTO autorizados; no resuelven permisos. Cambiar de canal push o proveedor cartográfico no debe alterar las reglas de atención. S3EvidenciasAdapter en el ejemplo es una alternativa de infraestructura.

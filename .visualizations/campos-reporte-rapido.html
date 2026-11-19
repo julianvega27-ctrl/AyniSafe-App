@@ -1,0 +1,135 @@
+<div id="ayni-reporte-v1" class="viz-dotted-background">
+  <style>
+    #ayni-reporte-v1 { color-scheme:light dark; color:light-dark(#182d31,#e4efef); font:400 15px/1.5 system-ui,sans-serif; }
+    #ayni-reporte-v1 * { box-sizing:border-box; }
+    #ayni-reporte-v1 .ar-app { max-width:550px; margin:auto; background:light-dark(#fff,#132326); border:1px solid light-dark(#d8e4e3,#3c5356); border-radius:24px; overflow:hidden; }
+    #ayni-reporte-v1 .ar-header { padding:22px 24px; background:light-dark(#e9f5f0,#203d36); }
+    #ayni-reporte-v1 h2 { font-size:22px; line-height:1.3; font-weight:500; margin:3px 0; }
+    #ayni-reporte-v1 h3 { font-size:17px; font-weight:500; margin:0 0 14px; }
+    #ayni-reporte-v1 .ar-overline { font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+    #ayni-reporte-v1 .ar-form { padding:22px 24px; display:grid; gap:24px; }
+    #ayni-reporte-v1 .ar-section { display:grid; gap:14px; min-width:0; }
+    #ayni-reporte-v1 .ar-field { display:grid; gap:7px; min-width:0; }
+    #ayni-reporte-v1 label, #ayni-reporte-v1 legend { font-weight:500; }
+    #ayni-reporte-v1 fieldset { border:0; padding:0; margin:0; min-width:0; display:grid; gap:7px; }
+    #ayni-reporte-v1 legend { padding:0; margin-bottom:7px; }
+    #ayni-reporte-v1 .ar-row { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+    #ayni-reporte-v1 button { font:inherit; min-height:44px; padding:9px 13px; border:1px solid light-dark(#b9cccc,#4a6264); border-radius:12px; background:light-dark(#fff,#1c3236); color:inherit; }
+    #ayni-reporte-v1 button[aria-pressed="true"] { background:light-dark(#d8eee4,#274e40); border-color:light-dark(#227352,#7acba8); }
+    #ayni-reporte-v1 select, #ayni-reporte-v1 textarea, #ayni-reporte-v1 input { width:100%; min-width:0; min-height:44px; padding:10px; font:inherit; font-size:16px; background:light-dark(#fff,#1c3236); color:inherit; border:1px solid light-dark(#b9cccc,#4a6264); border-radius:12px; }
+    #ayni-reporte-v1 textarea { min-height:74px; resize:vertical; }
+    #ayni-reporte-v1 .ar-secondary { color:light-dark(#506b70,#acc4c7); font-size:13px; }
+    #ayni-reporte-v1 .ar-tag { display:inline-block; border-radius:8px; padding:3px 8px; font-size:12px; background:light-dark(#e9efef,#293d40); }
+    #ayni-reporte-v1 .ar-samu { border-top:2px solid light-dark(#afd2c3,#467665); padding-top:18px; }
+    #ayni-reporte-v1 .ar-person { display:grid; gap:15px; border-left:3px solid light-dark(#c5ddd4,#46665b); padding-left:14px; }
+    #ayni-reporte-v1 .ar-person-title { font-weight:500; }
+    #ayni-reporte-v1 .ar-send { background:light-dark(#15593f,#9fdcbd); color:light-dark(#fff,#102b20); border:0; width:100%; font-weight:500; }
+    #ayni-reporte-v1 details { padding-top:12px; border-top:1px solid light-dark(#d8e4e3,#3c5356); }
+    #ayni-reporte-v1 summary { font-weight:500; min-height:36px; }
+    #ayni-reporte-v1 dl { display:grid; grid-template-columns:1fr 1fr; gap:7px 12px; font-size:13px; }
+    #ayni-reporte-v1 dt { font-weight:500; } #ayni-reporte-v1 dd { margin:0; }
+    #ayni-reporte-v1 [hidden] { display:none !important; }
+    #ayni-reporte-v1 .ar-result { font-size:14px; min-height:24px; }
+    @media(max-width:400px) { #ayni-reporte-v1 .ar-form,#ayni-reporte-v1 .ar-header { padding:18px 14px; } #ayni-reporte-v1 dl { grid-template-columns:1fr; } }
+  </style>
+  <div class="ar-app">
+    <header class="ar-header">
+      <div class="ar-overline">AyniSafe · Propuesta de formulario</div>
+      <h2>Reportar un incidente</h2>
+      <div class="ar-secondary">Datos breves, opciones de un toque.</div>
+    </header>
+    <div class="ar-form">
+      <section class="ar-section" aria-label="Datos comunes del reporte">
+        <h3>1. ¿Qué ocurrió?</h3>
+        <div class="ar-field">
+          <label for="ar-category">Categoría <span class="ar-tag">Obligatoria</span></label>
+          <select id="ar-category">
+            <option>Accidente de tránsito</option><option>Acoso</option><option>Actividad sospechosa</option><option>Agresión</option><option>Asalto</option><option>Daños por sismo</option><option>Deslizamiento</option><option>Emergencia médica</option><option>Incendio</option><option>Inundación</option><option>Otra emergencia</option><option>Otro incidente de seguridad</option><option>Pelea</option><option>Robo</option><option>Vandalismo</option><option>Violencia</option>
+          </select>
+        </div>
+        <div class="ar-field"><label for="ar-description">Descripción breve <span class="ar-tag">Obligatoria</span></label><textarea id="ar-description" placeholder="Describe lo que ocurrió en pocas palabras."></textarea></div>
+        <fieldset><legend>¿Cuándo ocurrió?</legend><div class="ar-row" data-group="moment"><button type="button" aria-pressed="true" data-value="now">Ahora</button><button type="button" aria-pressed="false" data-value="before">Antes</button></div><label for="ar-date" id="ar-date-label" hidden>Fecha y hora del hecho</label><input id="ar-date" type="datetime-local" hidden></fieldset>
+      </section>
+      <section class="ar-section" aria-label="Lugar y evidencia">
+        <h3>2. Lugar y evidencia</h3>
+        <fieldset><legend>Ubicación del incidente <span class="ar-tag">Recomendada</span></legend><div class="ar-row" data-group="location"><button type="button" aria-pressed="false" data-value="gps">Mi ubicación</button><button type="button" aria-pressed="false" data-value="map">Punto en mapa</button><button type="button" aria-pressed="false" data-value="none">Sin punto</button></div><div id="ar-location-note" class="ar-secondary" aria-live="polite">Elige el lugar del hecho, que puede ser distinto de donde estás.</div></fieldset>
+        <div id="ar-district" class="ar-field" hidden><label for="ar-district-select">Distrito del incidente</label><select id="ar-district-select"><option value="">Elegir del catálogo aprobado</option><option value="pending">No sé el distrito</option></select><div class="ar-secondary">Los distritos concretos del piloto están pendientes de definición.</div></div>
+        <div class="ar-field"><label for="ar-photos">Fotografías <span class="ar-tag">Opcionales</span></label><input id="ar-photos" type="file" accept="image/*" multiple><div id="ar-photo-note" class="ar-secondary">Puedes enviar sin adjuntar fotos.</div></div>
+      </section>
+      <section class="ar-section ar-samu" aria-label="Evaluación rápida según destinatarios">
+        <h3 id="ar-health-title">3. Evaluación rápida para SAMU</h3>
+        <div id="ar-route" class="ar-secondary" aria-live="polite">PNP + SAMU, según cobertura.</div>
+        <div id="ar-injury-block">
+          <fieldset><legend>¿Hay personas heridas?</legend><div class="ar-row" data-group="injuries"><button type="button" aria-pressed="false" data-value="yes">Sí</button><button type="button" aria-pressed="false" data-value="no">No</button><button type="button" aria-pressed="false" data-value="unknown">No sé</button></div></fieldset>
+          <fieldset id="ar-quantity" hidden><legend>¿Cuántos heridos?</legend><div class="ar-row" data-group="quantity"><button type="button" aria-pressed="false" data-value="1">1</button><button type="button" aria-pressed="false" data-value="2">2</button><button type="button" aria-pressed="false" data-value="3">3</button><button type="button" aria-pressed="false" data-value="4">4</button><button type="button" aria-pressed="false" data-value="5">5</button><button type="button" aria-pressed="false" data-value="more">Otra cantidad</button><button type="button" aria-pressed="false" data-value="unknown">No sé</button></div><div id="ar-more" class="ar-row" hidden><button type="button" id="ar-minus" aria-label="Reducir cantidad de heridos">−</button><output id="ar-count" aria-live="polite">6</output><button type="button" id="ar-plus" aria-label="Aumentar cantidad de heridos">+</button></div></fieldset>
+        </div>
+        <div id="ar-pending" class="ar-secondary" hidden>La necesidad de SAMU queda pendiente de evaluación del operador.</div>
+        <div id="ar-people" class="ar-section">
+          <div id="ar-person-list" class="ar-section"></div>
+          <div><button type="button" id="ar-add">+ Describir otra persona</button></div>
+          <div class="ar-secondary">No necesitas describir a todos los afectados para enviar.</div>
+        </div>
+      </section>
+      <section class="ar-section" aria-label="Envío del reporte">
+        <button type="button" class="ar-send" id="ar-send">Probar envío del reporte</button>
+        <div class="ar-secondary">Información sanitaria pendiente: se permite continuar.</div>
+        <div id="ar-result" class="ar-result" aria-live="polite"></div>
+        <details><summary>Datos que no tienes que llenar</summary><dl><dt>Autor</dt><dd>Tu cuenta con sesión iniciada.</dd><dt>ID y estado inicial</dt><dd>Se generan al registrar.</dd><dt>Fecha de registro</dt><dd>La registra el servidor.</dd><dt>Distrito y coordenadas</dt><dd>Desde el punto autorizado; si falta, declarado o pendiente.</dd><dt>Instituciones y sedes</dt><dd>Según categoría, condiciones y cobertura.</dd><dt>Prioridad</dt><dd>Orientativa por reglas; revisada por un operador.</dd></dl></details>
+      </section>
+    </div>
+  </div>
+  <script>
+  (()=>{
+    const root=document.getElementById('ayni-reporte-v1');
+    const q=s=>root.querySelector(s);
+    const category=q('#ar-category');
+    const conditional=new Set(['Agresión','Pelea','Violencia']);
+    const mandatory=new Set(['Accidente de tránsito','Emergencia médica']);
+    const principal={'Accidente de tránsito':'PNP + SAMU','Acoso':'PNP','Actividad sospechosa':'PNP + Serenazgo','Agresión':'PNP','Asalto':'PNP','Daños por sismo':'Bomberos','Deslizamiento':'Bomberos','Emergencia médica':'SAMU','Incendio':'Bomberos','Inundación':'Bomberos','Otra emergencia':'Institución pendiente de evaluación','Otro incidente de seguridad':'PNP','Pelea':'PNP','Robo':'PNP','Vandalismo':'PNP + Serenazgo','Violencia':'PNP'};
+    let injuries=null, persons=0, count=6;
+    function update(){
+      const cat=category.value, needs=mandatory.has(cat)||(conditional.has(cat)&&injuries==='yes');
+      q('#ar-health-title').textContent=needs?'3. Evaluación rápida para SAMU':'3. Destinatarios del reporte';
+      q('#ar-route').textContent=principal[cat]+(conditional.has(cat)&&injuries==='yes'?' + SAMU':'')+', según cobertura. Apoyo de Serenazgo según configuración.';
+      q('#ar-injury-block').hidden=!(mandatory.has(cat)||conditional.has(cat));
+      q('#ar-quantity').hidden=injuries!=='yes';
+      q('#ar-people').hidden=!needs;
+      q('#ar-pending').hidden=!(conditional.has(cat)&&(injuries===null||injuries==='unknown'));
+    }
+    function addPerson(){
+      persons++;
+      const section=document.createElement('section');section.className='ar-person';section.setAttribute('aria-label','Persona '+persons);
+      const title=document.createElement('div');title.className='ar-person-title';title.textContent='Persona '+persons;section.appendChild(title);
+      const fields=[['Signos de vida observados',['Se observan','No observados','No sé']],['¿Está consciente?',['Sí','No','No sé']],['¿Hay sangrado visible?',['Sí','No','No sé']]];
+      for(const [label,values]of fields){
+        const field=document.createElement('fieldset'),legend=document.createElement('legend'),row=document.createElement('div');legend.textContent=label;row.className='ar-row';
+        for(const v of values){const button=document.createElement('button');button.type='button';button.textContent=v;button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>{for(const sibling of row.children)sibling.setAttribute('aria-pressed',String(sibling===button));});row.appendChild(button);}
+        field.append(legend,row);section.appendChild(field);
+      }
+      q('#ar-person-list').appendChild(section);
+    }
+    root.querySelectorAll('[data-group]').forEach(group=>group.addEventListener('click',e=>{
+      const button=e.target.closest('button');if(!button||!group.contains(button))return;
+      group.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+      const value=button.dataset.value;
+      if(group.dataset.group==='injuries'){injuries=value;update();}
+      if(group.dataset.group==='quantity')q('#ar-more').hidden=value!=='more';
+      if(group.dataset.group==='moment'){q('#ar-date').hidden=value!=='before';q('#ar-date-label').hidden=value!=='before';}
+      if(group.dataset.group==='location'){
+        q('#ar-district').hidden=value!=='none';
+        q('#ar-location-note').textContent=value==='gps'?'En la app: permiso y confirmación del punto del incidente.':value==='map'?'En la app: selección del punto del incidente en el mapa.':'Puedes indicar un distrito o enviarlo como ubicación pendiente.';
+      }
+    }));
+    category.addEventListener('change',()=>{update();if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{categoriaEjemplo:category.value},privateContent:null}).catch(()=>{});});
+    q('#ar-minus').addEventListener('click',()=>{count=Math.max(6,count-1);q('#ar-count').textContent=String(count);});
+    q('#ar-plus').addEventListener('click',()=>{count++;q('#ar-count').textContent=String(count);});
+    q('#ar-add').addEventListener('click',addPerson);
+    q('#ar-photos').addEventListener('change',()=>{q('#ar-photo-note').textContent=q('#ar-photos').files.length+' foto(s) seleccionada(s) en esta vista previa. No se suben.';});
+    q('#ar-send').addEventListener('click',()=>{q('#ar-result').textContent=q('#ar-description').value.trim()?'Demostración completada. No se ha enviado ni guardado ningún reporte.':'Falta la descripción breve. Las observaciones sanitarias pueden quedar pendientes.';});
+    const saved=window.openai?.widgetState?.modelContent?.categoriaEjemplo;
+    if(saved&&Object.hasOwn(principal,saved))category.value=saved;
+    window.addEventListener('openai:set_globals',e=>{const next=e.detail?.globals?.widgetState?.modelContent?.categoriaEjemplo;if(next&&Object.hasOwn(principal,next)){category.value=next;update();}});
+    addPerson();update();
+  })();
+  </script>
+</div>

@@ -15,8 +15,12 @@ Su principio fundamental es que las dependencias del código deben orientarse ha
 |---|---|
 | Patrón / enfoque arquitectónico | Clean Architecture (Arquitectura Limpia) |
 | Objetivo | Separar las responsabilidades del sistema y controlar las dependencias internas para proteger las reglas de negocio. |
-| ¿Qué problema resuelve? | Evita que las reglas de negocio dependan directamente de Express, Prisma, PostgreSQL o proveedores externos de inteligencia artificial y notificaciones. |
+| ¿Qué problema resuelve? | Evita que las reglas de negocio dependan directamente de Express, Prisma, PostgreSQL o proveedores externos de notificaciones y almacenamiento. |
 | Capas definidas | Presentación, Aplicación, Dominio e Infraestructura. |
 | Beneficios | Facilita el mantenimiento, las pruebas unitarias, la sustitución de tecnologías y la evolución de los módulos sin afectar innecesariamente las reglas de negocio. |
 
 ![Estilo Arquitectónico](../../img/aynisafe-enfoque-arquitectonico.svg)
+
+## Extensiones del alcance
+
+Flutter/Dart y React son clientes independientes. Los contratos internos incorporan organización institucional, cobertura territorial y destinatarios sin depender de SDK móviles. El proveedor cartográfico no decide el distrito del negocio; la API aplica geometrías versionadas y permisos. FCM entrega push móvil; la bandeja web se consulta mediante REST.

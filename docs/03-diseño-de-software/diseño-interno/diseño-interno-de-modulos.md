@@ -2,27 +2,27 @@
 
 > **Proyecto:** AyniSafe · **Backend:** Node.js + Express + TypeScript · **Módulo de referencia:** Reportes
 > **Estilo arquitectónico:** Monolito modular · **Enfoque interno:** Clean Architecture dentro de cada módulo del monolito modular
->  **Nivel C4:** 4 - codigo · **Versión:** 1.0 
+> **Nivel C4:** 4 - código · **Versión:** 1.1 · Actualización: 19/11/2026
 
 ## 1. Propósito y alcance
 
 Este documento define cómo organizar el código de los módulos del backend de AyniSafe, qué responsabilidad corresponde a cada capa y cómo deben colaborar las funcionalidades del sistema. Se desarrolla el módulo **Reportes** como referencia para registrar incidentes con ubicación autorizada y evidencias privadas.
 
-La estructura permite mantener las reglas de negocio independientes de Express, Prisma, PostgreSQL, Amazon S3 y los proveedores de inteligencia artificial y notificaciones. La aplicación móvil y el panel web consumen la misma API REST; no acceden directamente a la base de datos.
+La estructura permite mantener las reglas de negocio independientes de Express, Prisma, PostgreSQL, Amazon S3 y los proveedores de almacenamiento y notificaciones. La aplicación móvil y el panel web consumen la misma API REST; no acceden directamente a la base de datos.
 
 El diseño se basa en el [estilo de monolito modular](../../02-arquitectura/estilo-arquitectonico.md) y el [enfoque de Clean Architecture](../../02-arquitectura/enfoque-arquitectonico.md).
 ## 2. Módulos y responsabilidades
 
 | Módulo | Responsabilidad | Elementos internos propuestos | Requisitos relacionados |
 |---|---|---|---|
-| **Identidad** | Gestionar cuentas, autenticación, perfiles y permisos por rol. | Usuario, Rol, RegistrarUsuario, IniciarSesion, RecuperarContrasena y AutorizarAccion. | RF01–RF05, RF22 |
-| **Reportes** | Registrar y conservar reportes ciudadanos, sus ubicaciones autorizadas y las referencias a sus evidencias; permitir al autor consultar su seguimiento. Administrar las categorías admitidas. | Reporte, Ubicacion, ReferenciaEvidencia, Categoria, RegistrarReporte, ConsultarMisReportes y GestionarCategorias. | RF06–RF10, RF23 |
-| **Análisis** | Generar sugerencias de categoría, prioridad y relaciones entre reportes mediante procesamiento asíncrono. | SugerenciaAnalisis, AnalizarReporte, BuscarReportesRelacionados y ProveedorIAPort. | RF11–RF13 |
-| **Operaciones** | Revisar, validar, consolidar y descartar reportes; gestionar incidentes y registrar actuaciones y cambios de estado. | Incidente, Actuacion, RevisarReporte, ValidarReporte, ConsolidarReportes y CambiarEstadoIncidente. | RF14–RF17 |
-| **Alertas** | Evaluar reglas de proximidad, distribuir alertas preventivas y notificar cambios relevantes. | ReglaAlerta, AlertaPreventiva, EvaluarDestinatarios, NotificarCambioEstado y NotificacionesPort. | RF18, RF19, RF24 |
-| **Consultas** | Entregar vistas del mapa, estadísticas y consultas del panel, aplicando filtros de privacidad y permisos; gestionar el contenido informativo. | ConsultarMapa, ConsultarIndicadores, ConsultarPanel y GestionarContenidoInformativo. | RF20, RF21, RF25–RF27 |
+| **Identidad** | Gestionar cuentas, perfiles, tres roles, instituciones/sedes, cobertura y competencias de sus operadores. | Usuario, Rol, Institucion, Sede, Cobertura, Competencia y contratos de autorización. | RF01–RF05, RF22, RF28–RF30 |
+| **Reportes** | Conservar el envío ciudadano, categoría original, ubicación/distrito, referencias de evidencia y evaluación rápida inicial SAMU; consultar el seguimiento del autor. | Reporte, Ubicacion, Categoria, ReferenciaEvidencia, EvaluacionRapida y RegistrarReporte. | RF06–RF10, RF23, RF31, RF41–RF42 |
+| **Análisis** | Detectar posibles relaciones por categoría, distancia y tiempo en segundo plano; prioridad automática fuera del alcance inicial. | ResultadoCorrelacion, BuscarReportesRelacionados y ReglasCorrelacion. | RF13 |
+| **Operaciones** | Revisar categoría/prioridad; enrutar, validar, consolidar, descartar y atender casos con trazabilidad y aclaraciones SAMU. | Incidente, Asignacion, Participacion, Actuacion, ReclasificarReporte y AclararEvaluacion. | RF11–RF12, RF14–RF17, RF32–RF33, RF35, RF39–RF40, RF43 |
+| **Alertas** | Resolver entregas desde las decisiones de enrutamiento, mantener bandejas individuales y avisos ciudadanos autorizados. | ReglaAlerta, Notificacion, Destinatario, Entrega y NotificacionesPort. | RF18–RF19, RF24, RF34 |
+| **Consultas** | Exponer mapas, geometrías, indicadores, panel y contenido; aplicar DTO públicos y permisos de cada consulta. | ConsultarMapa, ConsultarPanel, ConsultarIndicadores, ConsultarEvaluacionAutorizada y GestionarContenido. | RF20–RF21, RF25–RF27, RF31, RF36–RF38, RF43 |
 
-Un **reporte** representa la comunicación original de un ciudadano. Un **incidente** representa el caso gestionado por Operaciones y puede vincular varios reportes. Consolidarlos no debe eliminar su autoría, evidencias ni historial. Reportes conserva el envío original; Operaciones es responsable del estado operativo del incidente, que los demás módulos consultan mediante contratos públicos.
+Un **reporte** representa la comunicación original de un ciudadano. Un **incidente** representa el caso gestionado por Operaciones y puede vincular varios reportes. Consolidarlos no debe eliminar su autoría, evidencias ni historial. Reportes conserva el envío original y persiste sus estados de revisión mediante contratos; Operaciones es responsable del estado operativo del incidente, que los demás módulos consultan mediante contratos públicos.
 
 ### 2.1 Comunicación y propiedad de los datos
 
@@ -31,6 +31,8 @@ Un **reporte** representa la comunicación original de un ciudadano. Un **incide
 - Un módulo consumidor define el puerto que necesita; un adaptador conecta ese puerto con la API pública del módulo proveedor. No se importan entidades, repositorios concretos ni archivos internos de otro módulo.
 - Los hechos que requieren procesamiento posterior, como `ReporteRegistrado` o `EstadoIncidenteCambiado`, se entregan mediante tareas o eventos persistentes con identificadores y versiones de contrato.
 - Consultas puede mantener proyecciones de lectura alimentadas por esos contratos. Las proyecciones no conceden permiso para modificar datos de otros módulos y deben indicar su posible demora de actualización.
+
+RF44 corresponde a la presentación Flutter del formulario y a los contratos de evaluación; no es una responsabilidad del módulo Análisis. La pertenencia institucional no autoriza por sí sola la consulta sanitaria.
 
 ## 3. Estructura de carpetas
 
@@ -101,7 +103,7 @@ Las dependencias del código apuntan hacia las políticas internas. Una llamada 
 
 ![Diagrama de paquetes del módulo Reportes de AyniSafe](../../../img/aynisafe-paquetes-modulo-reportes.svg)
 
-[Abrir el diagrama interactivo](../../../img/fuentes-html/paquetes-modulo-reportes.html).
+[Abrir el diagrama interactivo](../../../img/diagramas-interactivos/paquetes-modulo-reportes.html).
 
 Cada paquete corresponde a una carpeta de `src/modules/reportes/`. El archivo `reportes.module.ts` se muestra por separado como raíz de composición. El diagrama representa el diseño propuesto; la versión interactiva incluye el detalle de los archivos de cada paquete.
 
@@ -125,7 +127,7 @@ La revisión de los `import` debe comprobar estas reglas y que los accesos entre
 
 ![Diagrama UML de clases del módulo Reportes de AyniSafe](../../../img/aynisafe-clases-modulo-reportes.svg)
 
-[Explorar las relaciones en Archify](../../../img/fuentes-html/clases-modulo-reportes.html).
+[Explorar las relaciones en Archify](../../../img/diagramas-interactivos/clases-modulo-reportes.html).
 
 La imagen conserva los once tipos y las diez relaciones del diagrama original, con atributos, operaciones y notación UML. Los colores identifican las capas de Presentación, Aplicación, Dominio e Infraestructura. La vista interactiva de Archify representa las mismas relaciones mediante nodos y etiquetas, con el detalle de cada tipo en sus notas.
 
@@ -139,7 +141,9 @@ Las evidencias se cargan previamente mediante un flujo autorizado. La solicitud 
 
 ![Diagrama de secuencia del registro de un reporte en AyniSafe](../../../img/aynisafe-secuencia-registrar-reporte.svg)
 
-[Abrir la secuencia interactiva en Archify](../../../img/fuentes-html/registrar-reporte.html).
+[Abrir la secuencia interactiva en Archify](../../../img/diagramas-interactivos/registrar-reporte.html).
+
+La secuencia ilustra solo el consumidor de Análisis, no todo el enrutamiento institucional. ReporteRegistrado también activa Operaciones de forma independiente para crear la bandeja provisional; Alertas procesa sus destinatarios persistidos sin esperar prioridad, correlación ni publicación.
 
 El diagrama conserva los ocho participantes del modelo original y organiza el flujo exitoso en tres fases: autorización y validación, persistencia y confirmación, y análisis asíncrono. Presenta catorce intercambios entre participantes; las tres acciones internas —verificar la sesión y el formato, crear el reporte y su evento, y obtener datos autorizados para generar y persistir sugerencias— se conservan como notas en sus pasos correspondientes.
 
@@ -154,7 +158,7 @@ El despachador puede procesar el evento inmediatamente después de la confirmaci
 | 3 | Caso de uso → Puertos | Comprobar permisos, categoría y propiedad de las evidencias. | Aplicación → Adaptadores por interfaz |
 | 4 | Caso de uso → Reporte | Crear una entidad válida con identificador y estado inicial. | Aplicación → Dominio |
 | 5 | Caso de uso → Registro | Persistir reporte, referencias y evento pendiente en una única transacción local. | Aplicación → Infraestructura |
-| 6 | Controlador → Aplicación móvil | Responder `201 Created` con identificador y estado, sin sugerencias de IA todavía. | Presentación → Cliente |
+| 6 | Controlador → Aplicación móvil | Responder `201 Created` con identificador y estado, sin esperar los resultados del análisis. | Presentación → Cliente |
 | 7 | Despachador → Análisis | Entregar el evento y generar sugerencias recuperables ante fallas. | Infraestructura → Aplicación de Análisis |
 | 8 | Operador → Operaciones | Revisar las sugerencias y registrar decisiones con actor, acción y momento. | Presentación → Aplicación de Operaciones |
 | 9 | Operaciones → Alertas y Consultas | Publicar los cambios confirmados para evaluar notificaciones y actualizar vistas autorizadas. | Colaboración mediante contratos y eventos |
@@ -167,11 +171,11 @@ El despachador puede procesar el evento inmediatamente después de la confirmaci
 | Sesión ausente o inválida | Responder `401`; no ejecutar el caso de uso. |
 | Actor sin permiso o evidencia ajena | Rechazar la operación (`403`) sin revelar información de recursos ajenos. |
 | Fallo de la transacción | Revertir el reporte y su evento pendiente; responder con un error controlado, sin confirmar el registro. |
-| IA o notificaciones no disponibles | Mantener el reporte registrado, conservar la tarea pendiente y aplicar la política de reintentos. |
+| Análisis interrumpido o notificaciones no disponibles | Mantener el reporte registrado, conservar la tarea pendiente y aplicar la política de reintentos. |
 | Entrega repetida de un evento | Reconocer su identificador y evitar repetir los efectos ya completados por ese consumidor. |
 | Corte de conexión después del registro | Conservar los datos del formulario y permitir consultar o reintentar con la misma clave de idempotencia, sin generar otro reporte. |
 
-La **idempotencia del registro HTTP** requiere una clave por intento lógico, asociada al autor, una restricción única y el resultado persistido en la misma transacción del registro. La **idempotencia de consumidores** requiere registrar el evento procesado por consumidor junto con sus efectos. Estos mecanismos deben implementarse además del ejemplo abreviado de la siguiente sección. Una marca global de entrega no sustituye el seguimiento individual si un evento tiene varios consumidores.
+La **idempotencia del registro HTTP** requiere una clave por intento lógico, asociada al autor, una restricción única y el resultado persistido en la misma transacción del registro. La **idempotencia de consumidores** requiere registrar el evento procesado por consumidor junto con sus efectos. Estos mecanismos deben implementarse además del ejemplo abreviado de la siguiente sección. La idempotencia en BD no garantiza entrega push exactamente una vez: un reintento ante respuesta incierta puede repetirse y requiere notificacionId para deduplicación del cliente. La idempotencia en BD no garantiza entrega push exactamente una vez: un reintento ante respuesta incierta puede repetirse y requiere notificacionId para deduplicación del cliente. Una marca global de entrega no sustituye el seguimiento individual si un evento tiene varios consumidores.
 
 ## 7. Código de referencia
 
@@ -355,7 +359,7 @@ export class RegistrarReporteUseCase {
 }
 ```
 
-El caso de uso recibe funciones para el reloj y los identificadores; así puede probarse sin depender del tiempo real. No invoca la IA, el proveedor push ni un SDK de colas. Las comprobaciones que puedan cambiar concurrentemente deben respaldarse con restricciones o verificaciones transaccionales al guardar, especialmente la asociación de evidencias a su propietario.
+El caso de uso recibe funciones para el reloj y los identificadores; así puede probarse sin depender del tiempo real. No ejecuta el análisis posterior ni invoca el proveedor push ni un SDK de colas. Las comprobaciones que puedan cambiar concurrentemente deben respaldarse con restricciones o verificaciones transaccionales al guardar, especialmente la asociación de evidencias a su propietario.
 
 ### 7.4 Infraestructura: persistencia transaccional
 
@@ -484,3 +488,31 @@ export type { DependenciasReportes } from './reportes.module';
 ```
 
 La composición general suministra adaptadores para Identidad, categorías y evidencias; registra las rutas protegidas y el middleware de errores. El controlador retornado se usa para montar la API HTTP. La fachada de consultas internas autorizadas se añadirá como contrato público para Análisis y Operaciones, sin exportar el repositorio ni las entidades persistidas.
+
+## 8. Ampliación territorial e institucional
+
+RF41–RF44 amplían Reportes con la evaluación rápida ciudadana para SAMU y Operaciones con sus aclaraciones versionadas. La [especificación funcional](../../01-analisis-del-sistema/09-alcance-territorial-e-institucional.md#evaluacion-rapida-samu) define campos por persona, cantidad de heridos, desconocidos, envío incompleto y permisos sanitarios. Los contratos y fragmentos abreviados de la sección 7 deberán ampliarse; no se considera implementado este flujo por documentarlo.
+
+El código anterior es un ejemplo abreviado del registro; aún no implementa los nuevos campos ni contratos. La [especificación vigente](../../01-analisis-del-sistema/09-alcance-territorial-e-institucional.md) distribuye RF28–RF44 entre los seis módulos.
+
+Identidad expone organización, sede, cobertura distrital y competencia del operador; Operaciones consume esos contratos para resolver principal, avisos simultáneos y condiciones. Alertas crea una notificación por usuario/evento con lectura individual. Consultas expone límites GeoJSON versionados y resultados filtrados con autorización del backend. Reportes incorporará distrito calculado/declarado, versión territorial e indicadores de lesiones/heridos. El punto público generalizado no se usa para enrutar.
+
+La API pública de los módulos debe añadir consultas tipadas de organización/cobertura, resolución territorial, enrutamiento y bandeja incremental. Se mantienen llamadas internas y eventos persistentes, sin HTTP entre módulos. La app Flutter utiliza FCM; el panel consulta avisos por cursor. S3EvidenciasAdapter permanece únicamente como ejemplo sustituible, no como proveedor obligatorio del MVP.
+
+### Contratos del alcance ampliado
+
+Los fragmentos de la sección 7 son ilustrativos y no contienen distrito declarado, evaluación sanitaria, idempotencia ni el flujo institucional completo. Antes de implementar, extender RegistrarReporteCommand, DatosReporte, validaciones, esquema Prisma y transacción juntos; no basta con agregar campos al formulario. La validación clínica no se infiere de las opciones seleccionadas.
+
+Operaciones consume ReporteRegistrado para el enrutamiento provisional y emite DestinatariosResueltos; Alertas persiste avisos por usuario. Análisis consume el mismo registro con su propia marca de entrega. Consultas expone detalle sanitario solo usando contratos autorizados de Reportes/Operaciones; sus proyecciones públicas no incorporan esa información. Corregir heridos o lesiones genera una reevaluación de destinatarios, aunque permanezcan categoría y distrito.
+
+No exigir fotos para registrar. Si el ciudadano decide adjuntarlas, el ejemplo presupone cargas ya confirmadas; ante fallo, el cliente ofrece reintentar o quitar esas referencias y enviar sin fotos. No confirmar evidencia inexistente ni convertir el registro en una espera obligatoria por almacenamiento externo.
+
+## 9. Acuerdos operativos cerrados
+
+RF45–RF55 amplían el registro/revisión, seguimiento del autor, bandeja FIFO, privacidad del mapa, preferencias, fotos y conservación. La fuente es [Operación, publicación y conservación](../../01-analisis-del-sistema/11-operacion-publicacion-y-conservacion.md). El enum EstadoReporte del ejemplo solo representa su creación inicial y debe extenderse con EN_REVISION, VALIDADO y DESCARTADO al implementar el ciclo completo. Las actuaciones operativas no sobrescriben el envío original.
+
+Análisis calcula correlaciones; la etiqueta de prioridad inicial es Sin evaluar y la asigna Operaciones por intervención del operador. Consultas ordena pendientes por fecha de recepción ascendente e ID, sin que cambiar color/etiqueta cambie ese orden. Los metadatos de conservación se guardan en la misma transacción que el cierre/descarte y disparan tareas persistentes de bloqueo/eliminación. Cada módulo aplica la eliminación de sus datos mediante contrato; Storage elimina archivos y derivados, y la restauración reaplica tombstones de eliminación.
+
+La publicación requiere validación y autorización expresa de publicación; los cinco distritos son catálogo acordado, sus geometrías no. El catálogo de sedes no crea operadores ni envía invitaciones hasta su alta habilitada.
+
+RF56 exige persistir una asignación activa única por unidad de revisión/caso e institución, con compare-and-set o transacción equivalente y control de versión al asumir, transferir, consolidar y cambiar principal. RF57 añade al contrato de registro `necesidadMedicaInformada: SI | NO | DESCONOCIDO`, además del indicador de heridos. Desconocido no se convierte en `false`. El enrutamiento de accidentes determina SAMU principal solo si existe condición positiva informada; el resto llega a PNP con revisión pendiente cuando corresponda. El cambio de principal modifica el permiso de cierre en la misma operación auditada. Estos contratos aún no figuran en el ejemplo abreviado de la sección 7.

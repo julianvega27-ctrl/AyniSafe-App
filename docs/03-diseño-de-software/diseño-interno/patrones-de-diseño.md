@@ -16,22 +16,21 @@ Los patrones y archivos corresponden al diseño propuesto del sistema.
 
 | Patrón | Dónde se usa | Problema que resuelve | Se implementa con | Archivos del diseño |
 |---|---|---|---|---|
-| Adapter | Análisis → proveedor de IA | El proveedor tiene su propia API y formato de respuesta. | API HTTPS o SDK del proveedor. | `proveedor-ia.port.ts`, `proveedor-ia.adapter.ts` |
 | Adapter | Alertas → notificaciones push | El envío depende de un servicio externo. | API o SDK del servicio push. | `notificaciones.port.ts`, `notificaciones-push.adapter.ts` |
-| Adapter | Reportes → evidencias | El acceso a archivos privados depende de S3. | Cliente de Amazon S3. | `evidencias.port.ts`, `s3-evidencias.adapter.ts` |
+| Adapter | Reportes → evidencias | El acceso a archivos privados depende del proveedor elegido. | SDK del proveedor; S3 solo ilustra una alternativa. | `evidencias.port.ts`, `s3-evidencias.adapter.ts` |
 | Repository | Módulos → PostgreSQL | Los casos de uso no deben conocer SQL ni Prisma. | PostgreSQL y Prisma. | `consulta-reportes.port.ts`, `prisma-consulta-reportes.adapter.ts` |
 
 ## Cómo funciona cada patrón
 
 | Patrón | En pocas palabras |
 |---|---|
-| Adapter | Traduce las solicitudes del sistema a las operaciones de IA, notificaciones o S3, y convierte sus respuestas al contrato interno. |
+| Adapter | Traduce las solicitudes del sistema a las operaciones de notificaciones o S3, y convierte sus respuestas al contrato interno. |
 | Repository | El caso de uso solicita guardar o consultar datos; la implementación de persistencia realiza las operaciones con Prisma. |
-| Decorator | Consulta primero Redis; si no hay un valor vigente, obtiene los datos de PostgreSQL y los guarda temporalmente en caché. |
+| Decorator | Si se incorpora caché en una evolución: consulta primero la copia vigente y recurre a PostgreSQL. No forma parte del MVP. |
 
 ## Beneficios
 
-- Cambiar el proveedor de IA o notificaciones concentra los cambios en su adaptador y configuración.
+- Cambiar el proveedor de notificaciones o almacenamiento concentra los cambios en su adaptador y configuración.
 - Cambiar la persistencia no exige modificar los casos de uso si se conserva su contrato.
 - La caché prevista puede incorporarse sin cambiar las reglas de negocio y debe respetar los permisos de consulta.
 
@@ -40,6 +39,18 @@ Los patrones y archivos corresponden al diseño propuesto del sistema.
 | Patrón | Dónde se aplicaría | Cuándo |
 |---|---|---|
 | Decorator | Consultas → caché del mapa e indicadores. | Al incorporar Redis para consultas frecuentes. |
-| Observer | Eventos de Reportes y Operaciones → Análisis, Alertas y Consultas. | Al implementar consumidores con eventos persistentes, reintentos y control de duplicados. |
+| Observer en memoria | Notificación local opcional. | No sustituye las entregas persistentes del outbox. |
 | Factory | Construcción de reportes o selección de adaptadores. | Si aparecen variantes que no se resuelven con `Reporte.crear(...)` y la composición actual. |
-| Facade | Comunicación entre módulos. | Al concretar una API pública de operaciones, expuesta mediante `index.ts`. |
+
+## Aplicación al alcance ampliado
+
+Las reglas versionadas de destinatarios se evalúan en Operaciones mediante contratos de organización y territorio. Transactional Outbox conserva eventos de registro y cambios; cada consumidor registra sus entregas. Alertas persiste la bandeja por usuario y deduplica, separando lectura de recepción operativa. El adaptador FCM sustituye la propuesta Expo; S3 es un ejemplo sustituible. Las reglas no se delegan a un proveedor de mapas ni al cliente Flutter.
+
+## Patrones ya incluidos en el diseño propuesto
+
+| Patrón | Responsabilidad | Estado |
+|---|---|---|
+| Transactional Outbox | Persistir cambios y eventos juntos; procesar entregas por consumidor con recuperación. | Diseñado, pendiente de implementación. |
+| Facade | Publicar operaciones tipadas de cada módulo desde index.ts, ocultando tablas y repositorios. | Diseñado, contratos completos pendientes. |
+
+Observer en memoria y Decorator no son condiciones para cumplir el diseño inicial. La composición actual usa fábricas sencillas; no se necesita introducir otro patrón Factory sin variantes que lo justifiquen.
