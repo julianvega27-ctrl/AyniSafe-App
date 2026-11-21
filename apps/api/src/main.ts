@@ -1,6 +1,7 @@
 import { crearApp } from './app';
 import { LoggerConsola } from './compartido/logger';
 import { cargarEntorno } from './config/entorno';
+import { crearModuloConsultas } from './modules/consultas';
 import { crearModuloIdentidadConPrisma } from './modules/identidad';
 import { crearPrismaClient } from './modules/identidad/infraestructura/prisma-cliente';
 
@@ -11,7 +12,9 @@ async function main(): Promise<void> {
   const logger = new LoggerConsola();
   const prisma = crearPrismaClient(entorno.urlBaseDeDatos);
   const identidad = crearModuloIdentidadConPrisma(entorno, prisma, logger);
-  const app = crearApp({ saltosProxyConfianza: entorno.saltosProxyConfianza, identidad });
+  // Si la fuente de contenido publico no cumple el esquema, el arranque falla aqui.
+  const consultas = crearModuloConsultas();
+  const app = crearApp({ saltosProxyConfianza: entorno.saltosProxyConfianza, identidad, consultas });
 
   const servidor = app.listen(entorno.puerto, () => {
     // Solo datos no sensibles: nunca imprimir variables de entorno ni la URL de la base.

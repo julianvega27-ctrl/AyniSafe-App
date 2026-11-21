@@ -1,4 +1,5 @@
-import type { Usuario } from '../../dominio/usuario';
+import type { PerfilCiudadano, Usuario } from '../../dominio/usuario';
+import type { CambiosPerfilValidos } from '../../dominio/validacion';
 
 export interface NuevaCuentaCiudadano {
   readonly nombre: string;
@@ -19,4 +20,12 @@ export interface CuentasPort {
   crearCiudadano(datos: NuevaCuentaCiudadano): Promise<Usuario>;
   buscarPorCorreo(correoNormalizado: string): Promise<Usuario | null>;
   buscarPorId(id: string): Promise<Usuario | null>;
+  /** Perfil del propio ciudadano (sin hash). Nulo si la cuenta no existe. */
+  obtenerPerfil(id: string): Promise<PerfilCiudadano | null>;
+  /**
+   * Aplica los cambios en una transaccion que bloquea la fila, con las reglas de `resolverPerfil`.
+   * Lanza ValidacionError si la autorizacion no es coherente y ServicioNoDisponibleError ante un
+   * fallo de almacenamiento, sin cambios parciales. Nulo si la cuenta no existe.
+   */
+  actualizarPerfil(id: string, cambios: CambiosPerfilValidos, ahora: Date): Promise<PerfilCiudadano | null>;
 }

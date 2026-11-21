@@ -209,3 +209,56 @@ export function validarSolicitudRecuperacion(entrada: unknown): Resultado<Solici
   if (Object.keys(campos).length > 0 || correoNormalizado === undefined) return { ok: false, campos };
   return { ok: true, valor: { correoNormalizado } };
 }
+
+/** Cambios admitidos en el perfil: solo los campos presentes se aplican. */
+export interface CambiosPerfilValidos {
+  readonly nombre?: string;
+  /** Telefono normalizado, o `null` para borrarlo. Ausente = sin cambio. */
+  readonly telefono?: string | null;
+  readonly compartirTelefono?: boolean;
+}
+
+const TELEFONO_VALIDO = /^\+?[0-9]{7,15}$/;
+const TELEFONO_ENTRADA_MAX = 40;
+
+/**
+ * Normaliza un telefono: quita espacios, guiones, puntos y parentesis. `null` o texto vacio lo
+ * borra. Devuelve `undefined` si no es valido (7 a 15 digitos con un '+' inicial opcional).
+ */
+export function normalizarTelefono(valor: unknown): string | null | undefined {
+  if (valor === null) return null;
+  if (typeof valor !== 'string') return undefined;
+  const crudo = valor.trim();
+  if (crudo === '') return null;
+  if (crudo.length > TELEFONO_ENTRADA_MAX) return undefined;
+  const limpio = crudo.replace(/[\s\-.()]/g, '');
+  return TELEFONO_VALIDO.test(limpio) ? limpio : undefined;
+}
+
+/** Valida `PATCH /perfil`: lista cerrada de campos (nunca correo, id, rol ni estado) y al menos uno. */
+export function validarCambiosPerfil(entrada: unknown): Resultado<CambiosPerfilValidos> {
+  const objeto = comoObjeto(entrada);
+  if (!objeto) return { ok: false, campos: { cuerpo: CUERPO_INVALIDO } };
+  const campos: ErroresPorCampo = {};
+  if (hayCamposExtra(objeto, ['nombre', 'telefono', 'compartirTelefono'])) campos.cuerpo = CAMPOS_EXTRA;
+  const cambios: { nombre?: string; telefono?: string | null; compartirTelefono?: boolean } = {};
+
+  if ('nombre' in objeto) {
+    const nombre = validarNombre(objeto.nombre, campos);
+    if (nombre !== undefined) cambios.nombre = nombre;
+  }
+  if ('telefono' in objeto) {
+    const telefono = normalizarTelefono(objeto.telefono);
+    if (telefono === undefined) campos.telefono = 'Ingresa un teléfono de 7 a 15 dígitos o déjalo vacío.';
+    else cambios.telefono = telefono;
+  }
+  if ('compartirTelefono' in objeto) {
+    if (typeof objeto.compartirTelefono === 'boolean') cambios.compartirTelefono = objeto.compartirTelefono;
+    else campos.compartirTelefono = 'Indica si autorizas compartir tu teléfono (sí o no).';
+  }
+  if (Object.keys(campos).length === 0 && Object.keys(cambios).length === 0) {
+    campos.cuerpo = 'Envía al menos un campo para actualizar.';
+  }
+  if (Object.keys(campos).length > 0) return { ok: false, campos };
+  return { ok: true, valor: cambios };
+}

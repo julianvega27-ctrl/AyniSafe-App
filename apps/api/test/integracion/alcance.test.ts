@@ -1,5 +1,6 @@
 import type { Router } from 'express';
 import { afterAll, describe, expect, it } from 'vitest';
+import { crearModuloConsultas } from '../../src/modules/consultas';
 import { crearArnes } from './arnes';
 
 /**
@@ -7,6 +8,7 @@ import { crearArnes } from './arnes';
  * operadores, administradores ni sedes, y no existe verificacion de correo.
  */
 const { prisma, modulo } = crearArnes();
+const consultas = crearModuloConsultas();
 
 afterAll(async () => {
   await modulo.gestorEnvios.detener();
@@ -41,10 +43,19 @@ describe('11.4 alcance de la entrega', () => {
         'POST /auth/tokens/consulta',
         'POST /auth/contrasena/restablecer',
         'POST /auth/activaciones',
+        'GET /perfil',
+        'PATCH /perfil',
       ].sort(),
     );
     for (const ruta of rutasDe(modulo.router)) {
-      expect(ruta).not.toMatch(/operador|administrador|sede|invit|verific/i);
+      expect(ruta).not.toMatch(/operador|administrador|sede|invit|verific|correo/i);
+    }
+  });
+
+  it('el modulo Consultas solo publica el contenido, de solo lectura, y ninguna ruta cambia el correo', () => {
+    expect(rutasDe(consultas.router)).toEqual(['GET /publico/contenido', '_ALL /publico/contenido'].sort());
+    for (const ruta of [...rutasDe(modulo.router), ...rutasDe(consultas.router)]) {
+      expect(ruta).not.toMatch(/correo|email|mail/i);
     }
   });
 

@@ -9,12 +9,15 @@ import type { RegistrarCiudadanoUseCase } from '../aplicacion/registrar-ciudadan
 import type { SolicitarRecuperacionUseCase } from '../aplicacion/solicitar-recuperacion.use-case';
 import {
   asignarRequestId,
+  autenticarCiudadano,
   exigirJson,
   leerJson,
   manejadorDeErrores,
   registrarSolicitudes,
   sinCache,
+  tokenBearer,
 } from './middlewares';
+import { registrarRutasPerfil, type CasosDeUsoPerfil } from './perfil.routes';
 
 export interface CasosDeUsoAuth {
   readonly registrar: RegistrarCiudadanoUseCase;
@@ -24,17 +27,7 @@ export interface CasosDeUsoAuth {
   readonly solicitarRecuperacion: SolicitarRecuperacionUseCase;
   readonly consultarToken: ConsultarTokenUseCase;
   readonly consumirToken: ConsumirTokenCuentaUseCase;
-}
-
-/**
- * Extrae el token de `Authorization: Bearer <token>`. Es el unico lugar desde el que se acepta
- * una sesion: ni la URL ni el cuerpo. Un token en la query simplemente se ignora.
- */
-export function tokenBearer(req: Request): string | undefined {
-  const cabecera = req.get('authorization');
-  if (!cabecera) return undefined;
-  const coincidencia = /^Bearer ([^\s]+)$/i.exec(cabecera);
-  return coincidencia?.[1];
+  readonly perfil: CasosDeUsoPerfil;
 }
 
 function ipDelCliente(req: Request): string {
@@ -90,6 +83,8 @@ export function crearRutasAuth(casos: CasosDeUsoAuth, logger: Logger): Router {
     await casos.cerrarSesion.ejecutar(tokenBearer(req));
     res.status(204).end();
   });
+
+  registrarRutasPerfil(router, casos.perfil, autenticarCiudadano(casos.consultarSesion));
 
   router.use(manejadorDeErrores(logger));
   return router;

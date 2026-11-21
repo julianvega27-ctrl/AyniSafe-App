@@ -69,12 +69,16 @@ describe('migracion desde base vacia', () => {
     expect(roles.rows.map((r) => r.e)).toEqual(['ciudadano', 'operador', 'administrador']);
   });
 
-  it('no incluye DNI ni telefono en usuarios', async () => {
+  it('no incluye DNI y el telefono es solo opcional (perfil)', async () => {
     const cols = await bd.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'usuarios'`,
     );
     const nombres = cols.rows.map((c) => c.column_name);
-    expect(nombres.some((c) => /dni|telefono|phone/i.test(c))).toBe(false);
+    expect(nombres.some((c) => /dni|documento/i.test(c))).toBe(false);
+    const tel = await bd.query<{ is_nullable: string }>(
+      `SELECT is_nullable FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'telefono'`,
+    );
+    expect(tel.rows[0]?.is_nullable).toBe('YES');
   });
 });
 
@@ -252,5 +256,31 @@ describe('envios_correo', () => {
       [id],
     );
     expect(await codigoDeError(q)).toBe('23514');
+  });
+});
+
+describe('perfil: telefono y autorizacion de compartirlo', () => {
+  it('las cuentas existentes quedan sin telefono ni autorizacion', async () => {
+    const id = await crearUsuario('a@ejemplo.com');
+    const r = await bd.query('SELECT telefono, telefono_compartir_consentido_at AS c FROM usuarios WHERE id = $1', [id]);
+    expect(r.rows[0]).toEqual({ telefono: null, c: null });
+  });
+
+  it('rechaza autorizacion sin telefono (23514)', async () => {
+    const id = await crearUsuario('b@ejemplo.com');
+    expect(
+      await codigoDeError(bd.query('UPDATE usuarios SET telefono_compartir_consentido_at = now() WHERE id = $1', [id])),
+    ).toBe('23514');
+  });
+
+  it('rechaza telefonos de 6 y 16 digitos o con letras y admite 7, 15 y +', async () => {
+    const id = await crearUsuario('c@ejemplo.com');
+    const poner = (t: string) => bd.query('UPDATE usuarios SET telefono = $2 WHERE id = $1', [id, t]);
+    for (const malo of ['123456', '1234567890123456', '98765432a', '+', '']) {
+      expect(await codigoDeError(poner(malo))).toBe('23514');
+    }
+    for (const bueno of ['1234567', '123456789012345', '+51987654321']) {
+      expect(await codigoDeError(poner(bueno))).toBeUndefined();
+    }
   });
 });

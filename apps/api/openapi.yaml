@@ -1,11 +1,12 @@
 openapi: 3.1.0
 info:
-  title: AyniSafe API - Acceso ciudadano, recuperacion y activacion
-  version: 0.2.0
+  title: AyniSafe API - Acceso ciudadano, perfil y contenido publico
+  version: 0.3.0
   description: |
     Contrato del modulo Identidad: registro, inicio de sesion, consulta y cierre de sesion del
     ciudadano (entrega `registro-login-ciudadano`), mas recuperacion de contrasena y activacion de
-    cuentas invitadas por correo (entrega `correo-recuperacion-activacion`).
+    cuentas invitadas por correo (entrega `correo-recuperacion-activacion`), mas el perfil del propio
+    ciudadano y el contenido publico (entrega `perfil-navegacion-movil`).
 
     Reglas transversales:
     - Solo HTTPS en entornos compartidos. Credenciales unicamente en el cuerpo JSON.
@@ -21,6 +22,14 @@ info:
     - Limites adicionales (configurables): recuperacion 10 por IP y 3 por correo+IP en 15 min, y 3 por
       correo por hora; consulta y consumo de tokens 20 por IP en 15 min. Tope diario global de
       solicitudes de recuperacion (por defecto 400, bajo la cuota de Gmail): al agotarse, 503 con Retry-After.
+    - Perfil (`/perfil`): solo del titular de la sesion (Bearer); no hay ruta ni campo para elegir otro
+      usuario. Admite editar `nombre`, `telefono` (opcional) y `compartirTelefono`; el correo es de solo lectura
+      y cualquier otro campo (`correo`, `id`, `rol`, `estado`) se rechaza con 400. El telefono nunca aparece en
+      `/auth/sesion`. La autorizacion de compartirlo solo se guarda: esta entrega no lo comparte con nadie.
+    - Contenido publico (`/publico/contenido`): sin sesion, solo lectura (otros metodos reciben 405 con
+      `Allow`), cache publica breve (no `no-store`). Cada seccion declara `aprobado` o `pendiente` y solo
+      publica texto cuando esta aprobada; los contactos de emergencia estan vacios mientras no haya
+      ninguno aprobado.
     - No hay endpoints para crear operadores, administradores ni sedes en este contrato. La capacidad
       de invitacion es interna (se invoca dentro de la transaccion de quien crea la cuenta).
     - Las paginas de respaldo del enlace del correo (`GET /cuenta/restablecer`, `GET /cuenta/activar`) y
@@ -30,6 +39,8 @@ servers:
 tags:
   - name: Acceso ciudadano
   - name: Recuperacion y activacion
+  - name: Perfil
+  - name: Contenido publico
 paths:
   /auth/ciudadanos/registro:
     post:
@@ -240,6 +251,78 @@ paths:
         '429': { $ref: '#/components/responses/LimiteExcedido' }
         '500': { $ref: '#/components/responses/ErrorInterno' }
         '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /perfil:
+    get:
+      tags: [Perfil]
+      operationId: obtenerPerfil
+      summary: Consultar el perfil propio
+      description: |
+        Devuelve unicamente el perfil del titular de la sesion presentada. No acepta parametros para
+        elegir otro usuario. Incluye el telefono (o nulo) y si autoriza compartirlo.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil del titular.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Perfil' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+    patch:
+      tags: [Perfil]
+      operationId: actualizarPerfil
+      summary: Editar nombre, telefono y autorizacion de compartirlo
+      description: |
+        Aplica solo los campos enviados (al menos uno). El correo no es editable: enviar `correo`, `id`,
+        `rol`, `estado` u otro campo no declarado devuelve 400. El telefono se normaliza (sin espacios,
+        guiones, puntos ni parentesis; 7 a 15 digitos con `+` inicial opcional); `null` o texto vacio lo borra.
+        La autorizacion exige telefono, se revoca al borrarlo o cambiarlo (salvo que la misma solicitud la
+        otorgue) y revocarla no borra el numero. Ediciones simultaneas se serializan (ultima escritura).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PerfilCambios' }
+      responses:
+        '200':
+          description: Perfil actualizado.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Perfil' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /publico/contenido:
+    get:
+      tags: [Contenido publico]
+      operationId: obtenerContenidoPublico
+      summary: Contenido publico versionado (sin sesion)
+      description: |
+        Finalidad y funcionamiento, desarrolladores, privacidad y contactos de emergencia. Es el mismo
+        contenido para todos. Una seccion `pendiente` no lleva texto. No incluye datos de cuentas. Los
+        metodos distintos de GET responden 405 con `Allow`.
+      security: []
+      responses:
+        '200':
+          description: Contenido vigente.
+          headers:
+            Cache-Control:
+              description: Cache publica breve.
+              schema: { type: string, const: "public, max-age=300" }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContenidoPublico' }
 components:
   securitySchemes:
     bearerAuth:
@@ -381,6 +464,105 @@ components:
       properties:
         proposito: { type: string, enum: [recuperacion, activacion] }
         expiresAt: { type: string, format: date-time }
+    Perfil:
+      type: object
+      additionalProperties: false
+      required: [id, nombre, correo, telefono, compartirTelefono]
+      example: { id: "5482bbd9-ef53-4049-a095-19a9d0144eeb", nombre: "Rosa Quispe", correo: "rosa@ejemplo.com", telefono: "+51987654321", compartirTelefono: false }
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string }
+        correo: { type: string, description: "Solo lectura. No se presenta como verificado." }
+        telefono:
+          type: [string, 'null']
+          description: Normalizado; nulo si no se registro.
+        compartirTelefono:
+          type: boolean
+          description: Autorizacion vigente para compartir el telefono. Por ahora solo se guarda; nadie lo recibe.
+    PerfilCambios:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      example: { nombre: "Rosa Quispe", telefono: "+51 987-654-321", compartirTelefono: true }
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 1 a 100 puntos de codigo Unicode tras recortar extremos.
+        telefono:
+          type: [string, 'null']
+          description: 7 a 15 digitos con `+` inicial opcional (se admiten espacios, guiones, puntos y parentesis). `null` o vacio lo borra.
+        compartirTelefono:
+          type: boolean
+          description: Requiere un telefono registrado o enviado en la misma solicitud.
+    EstadoAprobacion:
+      type: string
+      enum: [aprobado, pendiente]
+    ContenidoPublico:
+      type: object
+      additionalProperties: false
+      required: [version, actualizadoAt, app, desarrolladores, privacidad, contactos]
+      properties:
+        version: { type: integer, minimum: 1 }
+        actualizadoAt: { type: string, format: date }
+        app:
+          type: object
+          additionalProperties: false
+          required: [estado]
+          properties:
+            estado: { $ref: '#/components/schemas/EstadoAprobacion' }
+            finalidad: { type: string }
+            funcionamiento: { type: string }
+        desarrolladores:
+          type: object
+          additionalProperties: false
+          required: [estado]
+          properties:
+            estado: { $ref: '#/components/schemas/EstadoAprobacion' }
+            personas:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [nombre, rol]
+                properties:
+                  nombre: { type: string }
+                  rol: { type: string }
+        privacidad:
+          type: object
+          additionalProperties: false
+          required: [estado]
+          properties:
+            estado: { $ref: '#/components/schemas/EstadoAprobacion' }
+            secciones:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [titulo, texto]
+                properties:
+                  titulo: { type: string }
+                  texto: { type: string }
+        contactos:
+          type: object
+          additionalProperties: false
+          required: [estado, items]
+          properties:
+            estado: { $ref: '#/components/schemas/EstadoAprobacion' }
+            items:
+              type: array
+              description: Vacia mientras no haya contactos aprobados.
+              items:
+                type: object
+                additionalProperties: false
+                required: [institucion, numero, cobertura, fuente, verificadoAt]
+                properties:
+                  institucion: { type: string }
+                  numero: { type: string }
+                  cobertura: { type: string }
+                  fuente: { type: string }
+                  verificadoAt: { type: string, format: date }
     Error:
       type: object
       additionalProperties: false

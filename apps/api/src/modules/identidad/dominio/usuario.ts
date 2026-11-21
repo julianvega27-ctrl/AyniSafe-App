@@ -31,6 +31,17 @@ export function aUsuarioPublico(usuario: Usuario): UsuarioPublico {
   };
 }
 
+/** Perfil del propio ciudadano. Sin hash ni datos internos: solo sale por `/perfil`. */
+export interface PerfilCiudadano {
+  readonly id: string;
+  readonly nombre: string;
+  /** Solo lectura: el correo es la clave de identidad y no se edita desde el perfil. */
+  readonly correo: string;
+  readonly telefono: string | null;
+  /** Autorizacion vigente para compartir el telefono (nada se comparte todavia). */
+  readonly compartirTelefono: boolean;
+}
+
 /** Cuenta que puede usar el acceso ciudadano: rol ciudadano y estado activo. */
 export function esCiudadanoActivo(usuario: Usuario): boolean {
   return usuario.rol === 'ciudadano' && usuario.estado === 'activo';

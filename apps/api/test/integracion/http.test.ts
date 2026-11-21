@@ -59,6 +59,8 @@ describe('500: errores inesperados', () => {
       crearCiudadano: () => Promise.reject(new Error('DETALLE-INTERNO: select * from usuarios en 10.0.0.5')),
       buscarPorCorreo: () => Promise.reject(new Error('DETALLE-INTERNO: select * from usuarios en 10.0.0.5')),
       buscarPorId: () => Promise.resolve(null),
+      obtenerPerfil: () => Promise.resolve(null),
+      actualizarPerfil: () => Promise.resolve(null),
     };
     const conFallo = crearArnes({ prisma, sobrescribir: { cuentas: reventada } });
     const r = await request(conFallo.app).post(RUTA_REGISTRO).send(alta);

@@ -1,6 +1,8 @@
 import type { CuentasPort, NuevaCuentaCiudadano } from '../aplicacion/puertos/cuentas.port';
-import { CorreoEnUsoError, ServicioNoDisponibleError } from '../dominio/errores';
-import type { Usuario } from '../dominio/usuario';
+import { CorreoEnUsoError, ServicioNoDisponibleError, ValidacionError } from '../dominio/errores';
+import { resolverPerfil } from '../dominio/perfil';
+import type { PerfilCiudadano, Usuario } from '../dominio/usuario';
+import type { CambiosPerfilValidos } from '../dominio/validacion';
 import type { PrismaClient } from './prisma-cliente';
 
 interface FilaUsuario {
@@ -82,4 +84,73 @@ export class PrismaCuentasAdapter implements CuentasPort {
       throw new ServicioNoDisponibleError(error);
     }
   }
+
+  async obtenerPerfil(id: string): Promise<PerfilCiudadano | null> {
+    try {
+      const fila = await this.prisma.usuario.findUnique({
+        where: { id },
+        select: { id: true, nombre: true, correoNormalizado: true, telefono: true, telefonoCompartirConsentidoAt: true },
+      });
+      return fila ? aPerfil(fila) : null;
+    } catch (error) {
+      throw new ServicioNoDisponibleError(error);
+    }
+  }
+
+  async actualizarPerfil(id: string, cambios: CambiosPerfilValidos, ahora: Date): Promise<PerfilCiudadano | null> {
+    try {
+      // La fila se bloquea para serializar ediciones simultaneas: cada una parte del estado ya
+      // confirmado por la anterior y nunca queda una autorizacion sin telefono.
+      return await this.prisma.$transaction(async (tx) => {
+        const filas = await tx.$queryRaw<FilaPerfil[]>`
+          SELECT id, nombre, correo_normalizado AS "correoNormalizado", telefono,
+                 telefono_compartir_consentido_at AS "telefonoCompartirConsentidoAt"
+          FROM usuarios WHERE id = ${id}::uuid FOR UPDATE`;
+        const actual = filas[0];
+        if (!actual) return null;
+        const resuelto = resolverPerfil(
+          {
+            nombre: actual.nombre,
+            telefono: actual.telefono,
+            consentidoAt: actual.telefonoCompartirConsentidoAt,
+          },
+          cambios,
+          ahora,
+        );
+        if (!resuelto.ok) throw new ValidacionError(resuelto.campos);
+        const nuevo = resuelto.valor;
+        const nuevas = await tx.$queryRaw<FilaPerfil[]>`
+          UPDATE usuarios
+          SET nombre = ${nuevo.nombre},
+              telefono = ${nuevo.telefono},
+              telefono_compartir_consentido_at = ${nuevo.consentidoAt},
+              updated_at = now()
+          WHERE id = ${id}::uuid
+          RETURNING id, nombre, correo_normalizado AS "correoNormalizado", telefono,
+                    telefono_compartir_consentido_at AS "telefonoCompartirConsentidoAt"`;
+        return aPerfil(nuevas[0]!);
+      });
+    } catch (error) {
+      if (error instanceof ValidacionError) throw error;
+      throw new ServicioNoDisponibleError(error);
+    }
+  }
+}
+
+interface FilaPerfil {
+  id: string;
+  nombre: string;
+  correoNormalizado: string;
+  telefono: string | null;
+  telefonoCompartirConsentidoAt: Date | null;
+}
+
+function aPerfil(fila: FilaPerfil): PerfilCiudadano {
+  return {
+    id: fila.id,
+    nombre: fila.nombre,
+    correo: fila.correoNormalizado,
+    telefono: fila.telefono,
+    compartirTelefono: fila.telefonoCompartirConsentidoAt !== null,
+  };
 }

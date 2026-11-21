@@ -1,6 +1,7 @@
 import type { Router } from 'express';
 import type { Logger } from '../../compartido/logger';
 import type { Entorno } from '../../config/entorno';
+import { ActualizarPerfilUseCase, ConsultarPerfilUseCase } from './aplicacion/perfil.use-case';
 import { CerrarSesionUseCase } from './aplicacion/cerrar-sesion.use-case';
 import { ConsultarSesionUseCase } from './aplicacion/consultar-sesion.use-case';
 import { ConsultarTokenUseCase } from './aplicacion/consultar-token.use-case';
@@ -127,6 +128,10 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
         deps.politicaLimites,
       ),
       consumirToken,
+      perfil: {
+        consultar: new ConsultarPerfilUseCase(deps.cuentas),
+        actualizar: new ActualizarPerfilUseCase(deps.cuentas, deps.reloj),
+      },
     },
     deps.logger,
   );

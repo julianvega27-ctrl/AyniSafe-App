@@ -95,7 +95,7 @@ describe('respuestas reales conforme a openapi.yaml', () => {
   });
 
   it('503 y 500 en todas las operaciones', async () => {
-    const cuentas: CuentasPort = { crearCiudadano: noDisponible, buscarPorCorreo: noDisponible, buscarPorId: noDisponible };
+    const cuentas: CuentasPort = { crearCiudadano: noDisponible, buscarPorCorreo: noDisponible, buscarPorId: noDisponible, obtenerPerfil: noDisponible, actualizarPerfil: noDisponible };
     const sesiones: SesionesPort = { crearSiUsuarioHabilitado: noDisponible, buscarVigente: noDisponible, revocar: noDisponible, revocarTodasDe: noDisponible };
     const a503 = crearArnes({ prisma, sobrescribir: { cuentas, sesiones } }).app;
     verificar(REG, 'post', await request(a503).post(RUTA_REGISTRO).send(alta(20)));
@@ -103,7 +103,7 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     verificar(SES, 'get', await request(a503).get(RUTA_SESION).set('Authorization', 'Bearer abc'));
     verificar(SES, 'delete', await request(a503).delete(RUTA_SESION).set('Authorization', 'Bearer abc'));
 
-    const cuentas500: CuentasPort = { crearCiudadano: reventada, buscarPorCorreo: reventada, buscarPorId: reventada };
+    const cuentas500: CuentasPort = { crearCiudadano: reventada, buscarPorCorreo: reventada, buscarPorId: reventada, obtenerPerfil: reventada, actualizarPerfil: reventada };
     const sesiones500: SesionesPort = { crearSiUsuarioHabilitado: reventada, buscarVigente: reventada, revocar: reventada, revocarTodasDe: reventada };
     const a500 = crearArnes({ prisma, sobrescribir: { cuentas: cuentas500, sesiones: sesiones500 } }).app;
     verificar(REG, 'post', await request(a500).post(RUTA_REGISTRO).send(alta(21)));
@@ -215,13 +215,43 @@ describe('respuestas reales conforme a openapi.yaml', () => {
       prisma,
       sobrescribir: {
         tokensCuenta: { emitir: reventada, consultar: reventada, consumir: reventada },
-        cuentas: { crearCiudadano: reventada, buscarPorCorreo: reventada, buscarPorId: reventada },
+        cuentas: { crearCiudadano: reventada, buscarPorCorreo: reventada, buscarPorId: reventada, obtenerPerfil: reventada, actualizarPerfil: reventada },
       },
     }).app;
     verificar(REC, 'post', await request(a500).post(URL_REC).send({ correo: 'u30@ejemplo.com' }));
     verificar(CON, 'post', await request(a500).post(URL_CON).send({ token: 'abc' }));
     verificar(RES, 'post', await request(a500).post(URL_RES).send({ token: 'abc', contrasena: NUEVA }));
     verificar(ACT, 'post', await request(a500).post(URL_ACT).send({ token: 'abc', contrasena: NUEVA }));
+  });
+
+  it('perfil y contenido publico: cada estado documentado coincide con la respuesta real', async () => {
+    const PER = '/perfil';
+    const CONT = '/publico/contenido';
+    const URL_PER = '/api/v1/perfil';
+    const { app } = crearArnes({ prisma });
+    await request(app).post(RUTA_REGISTRO).send(alta(40)).expect(201);
+    const login = await request(app).post(RUTA_LOGIN).send({ correo: 'u40@ejemplo.com', contrasena: CLAVE });
+    const auth = { Authorization: `Bearer ${login.body.token}` };
+
+    verificar(PER, 'get', await request(app).get(URL_PER).set(auth)); // 200
+    verificar(PER, 'get', await request(app).get(URL_PER)); // 401
+    verificar(PER, 'patch', await request(app).patch(URL_PER).set(auth).send({ nombre: 'Rosa Q', telefono: '987654321', compartirTelefono: true })); // 200
+    verificar(PER, 'patch', await request(app).patch(URL_PER).set(auth).send({ correo: 'otro@ejemplo.com' })); // 400
+    verificar(PER, 'patch', await request(app).patch(URL_PER).send({ nombre: 'X' })); // 401
+    verificar(PER, 'patch', await request(app).patch(URL_PER).set(auth).set('Content-Type', 'text/plain').send('x')); // 415
+    verificar(PER, 'patch', await request(app).patch(URL_PER).set(auth).send({ nombre: 'a'.repeat(9000) })); // 413
+    verificar(CONT, 'get', await request(app).get('/api/v1/publico/contenido')); // 200
+
+    // Las sesiones son reales (el token es valido); solo falla el almacenamiento de cuentas.
+    const cuentas503: CuentasPort = { crearCiudadano: noDisponible, buscarPorCorreo: noDisponible, buscarPorId: noDisponible, obtenerPerfil: noDisponible, actualizarPerfil: noDisponible };
+    const a503 = crearArnes({ prisma, sobrescribir: { cuentas: cuentas503 } }).app;
+    verificar(PER, 'get', await request(a503).get(URL_PER).set(auth)); // 503
+    verificar(PER, 'patch', await request(a503).patch(URL_PER).set(auth).send({ nombre: 'X' })); // 503
+
+    const cuentas500: CuentasPort = { crearCiudadano: reventada, buscarPorCorreo: reventada, buscarPorId: reventada, obtenerPerfil: reventada, actualizarPerfil: reventada };
+    const a500 = crearArnes({ prisma, sobrescribir: { cuentas: cuentas500 } }).app;
+    verificar(PER, 'get', await request(a500).get(URL_PER).set(auth)); // 500
+    verificar(PER, 'patch', await request(a500).patch(URL_PER).set(auth).send({ nombre: 'X' })); // 500
   });
 
   it('todos los estados documentados fueron ejercitados y ninguna respuesta real quedo sin documentar', () => {

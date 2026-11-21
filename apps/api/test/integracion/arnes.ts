@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import type { Express } from 'express';
 import { crearApp } from '../../src/app';
+import { crearModuloConsultas } from '../../src/modules/consultas';
 import type { EventoLog, Logger } from '../../src/compartido/logger';
 import type { PoliticaLimites } from '../../src/modules/identidad/aplicacion/politica-limites';
 import type { HashContrasenaPort } from '../../src/modules/identidad/aplicacion/puertos/hash-contrasena.port';
@@ -122,7 +123,7 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     ...opciones.sobrescribir,
   };
   const modulo = crearModuloIdentidad(deps);
-  const app = crearApp({ saltosProxyConfianza: opciones.saltosProxy ?? 0, identidad: modulo });
+  const app = crearApp({ saltosProxyConfianza: opciones.saltosProxy ?? 0, identidad: modulo, consultas: crearModuloConsultas() });
   return { app, prisma, reloj, logger, modulo, deps, correo };
 }
 

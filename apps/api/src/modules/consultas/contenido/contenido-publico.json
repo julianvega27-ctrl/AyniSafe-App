@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "actualizadoAt": "2026-11-21",
+  "app": {
+    "estado": "aprobado",
+    "finalidad": "AyniSafe es una plataforma móvil para facilitar el reporte, la gestión y la prevención colaborativa de incidentes de seguridad ciudadana en Ayacucho, con información georreferenciada, alertas oportunas y clasificación revisada por operadores.",
+    "funcionamiento": "AyniSafe está en desarrollo. En esta versión puedes crear tu cuenta, iniciar sesión, editar tu perfil y consultar esta información. El reporte de incidentes, el mapa, el seguimiento de tus reportes y las alertas se incorporarán en próximas entregas. AyniSafe no despacha emergencias: en una situación urgente comunícate con los servicios de emergencia de tu localidad."
+  },
+  "desarrolladores": {
+    "estado": "aprobado",
+    "personas": [
+      { "nombre": "Julián Anthony Vega Salvatierra", "rol": "Desarrollador" }
+    ]
+  },
+  "privacidad": {
+    "estado": "aprobado",
+    "secciones": [
+      {
+        "titulo": "Qué datos guardamos",
+        "texto": "Guardamos tu nombre, tu correo, tu contraseña protegida (nunca en texto legible), la sesión de tu dispositivo y, solo si lo registras, tu teléfono."
+      },
+      {
+        "titulo": "Tu teléfono",
+        "texto": "Es opcional. No se publica ni se incluye en notificaciones. Tú decides si autorizas compartirlo y puedes revocar la autorización o borrarlo cuando quieras. Por ahora no se comparte con ninguna institución: esta versión solo guarda tu preferencia."
+      },
+      {
+        "titulo": "Tu correo",
+        "texto": "Lo usamos para identificar tu cuenta y enviarte los enlaces de recuperación. En esta versión no se verifica que el buzón sea tuyo y no se puede cambiar desde tu perfil."
+      },
+      {
+        "titulo": "Lo que no pedimos",
+        "texto": "No pedimos DNI. Al crear tu cuenta no solicitamos ubicación ni notificaciones: cada permiso se explicará cuando se use."
+      },
+      {
+        "titulo": "Conservación y eliminación",
+        "texto": "Los plazos de conservación y eliminación de datos están definidos para el proyecto, pero aún no se aplican en esta versión."
+      }
+    ]
+  },
+  "contactos": {
+    "estado": "pendiente",
+    "items": []
+  }
+}

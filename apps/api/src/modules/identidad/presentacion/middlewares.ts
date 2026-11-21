@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import express, { type ErrorRequestHandler, type RequestHandler } from 'express';
+import express, { type ErrorRequestHandler, type Request, type RequestHandler } from 'express';
+import type { ConsultarSesionUseCase } from '../aplicacion/consultar-sesion.use-case';
 import type { Logger } from '../../../compartido/logger';
 import {
   CorreoEnUsoError,
@@ -30,6 +31,33 @@ export type CodigoError =
   | 'RATE_LIMITED'
   | 'SERVICE_UNAVAILABLE'
   | 'INTERNAL_ERROR';
+
+/**
+ * Extrae el token de `Authorization: Bearer <token>`. Es el unico lugar desde el que se acepta
+ * una sesion: ni la URL ni el cuerpo. Un token en la query simplemente se ignora.
+ */
+export function tokenBearer(req: Request): string | undefined {
+  const cabecera = req.get('authorization');
+  if (!cabecera) return undefined;
+  const coincidencia = /^Bearer ([^\s]+)$/i.exec(cabecera);
+  return coincidencia?.[1];
+}
+
+/**
+ * Exige una sesion de ciudadano activo y deja el resultado en `res.locals.sesion`. La identidad
+ * sale siempre del servidor; un fallo responde 401 sin datos privados.
+ */
+export function autenticarCiudadano(consultar: ConsultarSesionUseCase): RequestHandler {
+  return (req, res, next) => {
+    consultar.ejecutar(tokenBearer(req)).then(
+      (sesion) => {
+        res.locals.sesion = sesion;
+        next();
+      },
+      (error: unknown) => next(error),
+    );
+  };
+}
 
 /** Identificador aleatorio de la solicitud: no contiene datos de cuenta. */
 export const asignarRequestId: RequestHandler = (_req, res, next) => {
