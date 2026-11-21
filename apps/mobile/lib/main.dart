@@ -5,11 +5,14 @@ import 'aplicacion/sesion_controlador.dart';
 import 'datos/almacenamiento_sesion.dart';
 import 'datos/auth_repositorio.dart';
 import 'datos/cliente_http.dart';
+import 'datos/contenido_repositorio.dart';
+import 'datos/perfil_repositorio.dart';
 import 'datos/enlaces_cuenta.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  final repositorio = AuthRepositorio(ClienteHttp());
+  final http = ClienteHttp();
+  final repositorio = AuthRepositorio(http);
   final sesion = SesionControlador(
     repositorio: repositorio,
     almacenamiento: AlmacenamientoSeguro(),
@@ -20,6 +23,8 @@ void main() {
     AyniSafeApp(
       repositorio: repositorio,
       sesion: sesion,
+      contenido: ContenidoRepositorio(http),
+      perfil: PerfilRepositorio(http),
       enlaces: FuenteDeEnlacesAppLinks(),
     ),
   );

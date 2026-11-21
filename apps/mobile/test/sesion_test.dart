@@ -101,7 +101,7 @@ void main() {
     });
 
     testWidgets(
-      'inicio correcto: guarda token y vencimiento, nunca la contraseña, y abre el destino mínimo',
+      'inicio correcto: guarda token y vencimiento, nunca la contraseña, y abre Inicio',
       (tester) async {
         final (api, almacen, _) = await montar(tester);
         await escribirEn(tester, 'Correo', 'rosa@ejemplo.com');
@@ -109,7 +109,7 @@ void main() {
         await tester.tap(find.widgetWithText(FilledButton, 'Ingresar'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Sesión iniciada'), findsOneWidget);
+        expect(find.text('Reportar un incidente'), findsOneWidget);
         expect(find.text('Hola, Rosa Quispe'), findsOneWidget);
         expect(
           almacen.guardada?.token,
@@ -119,11 +119,10 @@ void main() {
           almacen.guardada?.expiresAt,
           ahoraFijo.add(const Duration(hours: 24)),
         );
-        // Sin funcionalidades posteriores ni permisos.
-        expect(find.textContaining('Reportar'), findsNothing);
-        expect(find.textContaining('Mapa'), findsNothing);
-        expect(find.textContaining('Alertas'), findsNothing);
-        expect(find.textContaining('solo incluye el acceso'), findsOneWidget);
+        // El destino autenticado declara honestamente lo que aún no existe.
+        expect(find.text('Disponible próximamente'), findsOneWidget);
+        expect(find.text('Mapa'), findsOneWidget);
+        expect(find.text('Alertas'), findsOneWidget);
         // La contraseña solo viajó en el cuerpo del login.
         expect(
           api.solicitudes.where((s) => s.cuerpo.contains(claveValida)),
@@ -142,7 +141,7 @@ void main() {
         await tester.tap(find.widgetWithText(FilledButton, 'Ingresar'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Sesión iniciada'), findsNothing);
+        expect(find.text('Reportar un incidente'), findsNothing);
         expect(find.byType(AccesoPantalla), findsOneWidget);
         expect(
           find.textContaining('No pudimos guardar tu sesión de forma segura'),
@@ -175,7 +174,7 @@ void main() {
         await escribirEn(tester, 'Contraseña', claveValida);
         await tester.tap(find.widgetWithText(FilledButton, 'Ingresar'));
         await tester.pumpAndSettle();
-        expect(find.text('Sesión iniciada'), findsNothing);
+        expect(find.text('Reportar un incidente'), findsNothing);
         expect(
           find.textContaining('No pudimos guardar tu sesión'),
           findsOneWidget,
@@ -206,7 +205,8 @@ void main() {
         await restauracion;
         await tester.pumpAndSettle();
         expect(find.text('Hola, Rosa Quispe'), findsOneWidget);
-        final get = api.solicitudes.single;
+        // Solo se cuenta la verificación de sesión: Inicio también lee el contenido público.
+        final get = api.solicitudes.where((s) => s.ruta.endsWith('/auth/sesion')).single;
         expect(get.metodo, 'GET');
         expect(get.cabeceras['Authorization'], 'Bearer $tokenGuardado');
         // Sin parámetros: no se puede elegir la identidad de otra persona.
@@ -277,7 +277,7 @@ void main() {
         await tester.tap(find.widgetWithText(FilledButton, 'Reintentar'));
         await tester.pumpAndSettle();
         expect(find.text('Hola, Rosa Quispe'), findsOneWidget);
-        expect(api.solicitudes.where((s) => s.metodo == 'GET'), hasLength(2));
+        expect(api.contar('GET', '/auth/sesion'), 2);
       },
     );
 
@@ -333,10 +333,7 @@ void main() {
   });
 
   group('cierre de sesión (5.3)', () {
-    Future<void> cerrar(WidgetTester tester) async {
-      await tester.tap(find.widgetWithText(FilledButton, 'Cerrar sesión'));
-      await tester.pumpAndSettle();
-    }
+    Future<void> cerrar(WidgetTester tester) => cerrarSesionDesdePerfil(tester);
 
     testWidgets(
       'con conexión: revoca, borra los datos locales y vuelve al acceso público',
@@ -498,15 +495,14 @@ void main() {
     ) async {
       await montar(tester, guardada: guardadaVigente());
       expect(find.text('Hola, Rosa Quispe'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilledButton, 'Cerrar sesión'));
-      await tester.pumpAndSettle();
+      await cerrarSesionDesdePerfil(tester);
 
       // Intentos de volver: gesto/botón atrás del sistema y de la barra.
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.text('Hola, Rosa Quispe'), findsNothing);
       expect(find.textContaining('rosa@ejemplo.com'), findsNothing);
-      expect(find.text('Sesión iniciada'), findsNothing);
+      expect(find.text('Reportar un incidente'), findsNothing);
       expect(find.byType(AccesoPantalla), findsOneWidget);
       // El destino privado es la raíz: no queda una ruta que se pueda reabrir.
       final navegador = tester.state<NavigatorState>(find.byType(Navigator));

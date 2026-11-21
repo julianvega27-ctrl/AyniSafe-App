@@ -5,6 +5,8 @@ import 'package:ayni_safe/aplicacion/sesion_controlador.dart';
 import 'package:ayni_safe/datos/almacenamiento_sesion.dart';
 import 'package:ayni_safe/datos/auth_repositorio.dart';
 import 'package:ayni_safe/datos/cliente_http.dart';
+import 'package:ayni_safe/datos/contenido_repositorio.dart';
+import 'package:ayni_safe/datos/perfil_repositorio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,14 +31,20 @@ Future<void> esperar(
 }
 
 Future<SesionControlador> arrancar(WidgetTester tester) async {
-  final repositorio = AuthRepositorio(ClienteHttp());
+  final http = ClienteHttp();
+  final repositorio = AuthRepositorio(http);
   final sesion = SesionControlador(
     repositorio: repositorio,
     almacenamiento: AlmacenamientoSeguro(),
   );
   await sesion.restaurar();
   await tester.pumpWidget(
-    AyniSafeApp(repositorio: repositorio, sesion: sesion),
+    AyniSafeApp(
+      repositorio: repositorio,
+      sesion: sesion,
+      contenido: ContenidoRepositorio(http),
+      perfil: PerfilRepositorio(http),
+    ),
   );
   await tester.pumpAndSettle();
   return sesion;
@@ -118,7 +126,7 @@ void main() {
       // 4. Contraseña exacta: acceso inmediato, sin verificar el correo.
       await escribir(tester, 'Contraseña', clave);
       await tester.tap(find.widgetWithText(FilledButton, 'Ingresar'));
-      await esperar(tester, find.text('Sesión iniciada'));
+      await esperar(tester, find.text('Reportar un incidente'));
       await tester.pumpAndSettle();
       expect(find.text('Hola, Rosa Integración'), findsOneWidget);
       expect(find.textContaining(correo.toLowerCase()), findsOneWidget);
@@ -139,13 +147,17 @@ void main() {
       // 6. "Reinicio" de la app: nueva instancia que lee el almacén real y verifica con el servidor.
       await tester.pumpWidget(const SizedBox.shrink());
       final reiniciada = await arrancar(tester);
-      await esperar(tester, find.text('Sesión iniciada'));
+      await esperar(tester, find.text('Reportar un incidente'));
       expect(reiniciada.estado, isA<SesionAutenticada>());
       expect(find.text('Hola, Rosa Integración'), findsOneWidget);
       expect((await almacen.readAll())['ayni.sesion.token'], token);
 
       // 7. Cierre de sesión: revoca, limpia el almacén y vuelve al acceso público.
-      await tester.tap(find.widgetWithText(FilledButton, 'Cerrar sesión'));
+      await tester.tap(find.byTooltip('Perfil'));
+      await tester.pumpAndSettle();
+      final cerrarSesion = find.widgetWithText(FilledButton, 'Cerrar sesión');
+      await tester.ensureVisible(cerrarSesion);
+      await tester.tap(cerrarSesion);
       await esperar(tester, find.text('Cerraste sesión.'));
       await tester.pumpAndSettle();
       expect(await almacen.readAll(), isEmpty);

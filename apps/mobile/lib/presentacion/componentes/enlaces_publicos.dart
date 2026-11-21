@@ -7,9 +7,12 @@ import '../tema.dart';
 class EnlacesPublicos extends StatelessWidget {
   const EnlacesPublicos({super.key});
 
-  void _abrir(BuildContext context, Widget pantalla) {
-    Navigator.of(context)
-        .push<void>(MaterialPageRoute<void>(builder: (_) => pantalla));
+  void _abrir(BuildContext context, SeccionPublica seccion) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ContenidoPublicoPantalla(seccion: seccion),
+      ),
+    );
   }
 
   @override
@@ -19,13 +22,11 @@ class EnlacesPublicos extends StatelessWidget {
       runSpacing: Espaciado.s1,
       children: [
         TextButton(
-          onPressed: () =>
-              _abrir(context, ContenidoPublicoPantalla.privacidad()),
+          onPressed: () => _abrir(context, SeccionPublica.privacidad),
           child: const Text('Privacidad'),
         ),
         TextButton(
-          onPressed: () =>
-              _abrir(context, ContenidoPublicoPantalla.contactos()),
+          onPressed: () => _abrir(context, SeccionPublica.contactos),
           child: const Text('Contactos de emergencia'),
         ),
       ],

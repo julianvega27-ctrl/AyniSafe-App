@@ -60,6 +60,22 @@ class SesionControlador extends ChangeNotifier {
 
   EstadoSesion get estado => _estado;
 
+  /// Token de la sesión vigente, solo en memoria. Lo usan los repositorios privados (perfil).
+  /// `null` fuera de una sesión autenticada.
+  String? get token => _estado is SesionAutenticada ? _token : null;
+
+  /// Refleja un nombre editado en el perfil sin volver a iniciar sesión ni tocar el token.
+  void actualizarUsuario(UsuarioSesion usuario) {
+    final actual = _estado;
+    if (actual is! SesionAutenticada) return;
+    _fijar(SesionAutenticada(usuario: usuario, expiresAt: actual.expiresAt));
+  }
+
+  /// Un 401 en una llamada privada: el token ya no sirve. Se elimina y se pide iniciar sesión.
+  Future<void> alSesionInvalida() => _descartarLocal(
+    const Aviso(TipoAviso.info, 'Tu sesión terminó. Inicia sesión de nuevo.'),
+  );
+
   void _fijar(EstadoSesion nuevo) {
     _estado = nuevo;
     if (!_cerrado) notifyListeners();

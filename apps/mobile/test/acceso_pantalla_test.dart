@@ -128,12 +128,17 @@ void main() {
     });
 
     testWidgets(
-      'privacidad y contactos: contenido público, sin sesión, declarado como no disponible',
+      'privacidad y contactos: contenido público de la API, sin sesión, sin inventar teléfonos',
       (tester) async {
-        await abrirAcceso(tester);
+        final api = await abrirAcceso(tester);
+        api.siempre(() => respuestaJson(200, contenidoJson()));
         await tester.tap(find.widgetWithText(TextButton, 'Privacidad'));
         await tester.pumpAndSettle();
-        expect(find.textContaining('aún no está disponible'), findsOneWidget);
+        expect(find.text('Texto de privacidad de prueba.'), findsOneWidget);
+        // Información pública: sin Bearer ni sesión.
+        expect(api.solicitudes.last.ruta, endsWith('/publico/contenido'));
+        expect(api.solicitudes.last.cabeceras.containsKey('Authorization'), isFalse);
+        expect(api.solicitudes.last.cabeceras.containsKey('authorization'), isFalse);
         await tester.pageBack();
         await tester.pumpAndSettle();
 
@@ -147,6 +152,32 @@ void main() {
         expect(find.textContaining('no despacha emergencias'), findsOneWidget);
       },
     );
+
+    testWidgets('privacidad pendiente: se declara no disponible, sin texto supuesto', (
+      tester,
+    ) async {
+      final api = await abrirAcceso(tester);
+      api.siempre(() => respuestaJson(200, contenidoJson(privacidadAprobada: false)));
+      await tester.tap(find.widgetWithText(TextButton, 'Privacidad'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('aún no está disponible'), findsOneWidget);
+      expect(find.text('Texto de privacidad de prueba.'), findsNothing);
+    });
+
+    testWidgets('sin conexión: error con «Reintentar» y sin contenido supuesto', (
+      tester,
+    ) async {
+      final api = await abrirAcceso(tester);
+      api.sinRed();
+      await tester.tap(find.widgetWithText(TextButton, 'Privacidad'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('No hay conexión'), findsOneWidget);
+      expect(find.text('Texto de privacidad de prueba.'), findsNothing);
+      api.siempre(() => respuestaJson(200, contenidoJson()));
+      await tester.tap(find.widgetWithText(TextButton, 'Reintentar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Texto de privacidad de prueba.'), findsOneWidget);
+    });
 
     testWidgets('validación local: sin solicitudes y errores junto al campo', (
       tester,

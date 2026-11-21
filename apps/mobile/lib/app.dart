@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 
 import 'aplicacion/sesion_controlador.dart';
 import 'datos/auth_repositorio.dart';
+import 'datos/contenido_repositorio.dart';
+import 'datos/perfil_repositorio.dart';
 import 'datos/enlaces_cuenta.dart';
 import 'presentacion/flujo_recuperacion.dart';
 import 'presentacion/pantallas/acceso_pantalla.dart';
 import 'presentacion/pantallas/estados_sesion.dart';
-import 'presentacion/pantallas/sesion_iniciada_pantalla.dart';
+import 'presentacion/navegacion/shell_ciudadano.dart';
+import 'presentacion/servicios.dart';
 import 'presentacion/tema.dart';
 
 /// Raíz de la app ciudadana. La pantalla inicial depende únicamente del estado de la sesión:
@@ -19,12 +22,20 @@ class AyniSafeApp extends StatefulWidget {
     super.key,
     required this.repositorio,
     required this.sesion,
+    required this.contenido,
+    required this.perfil,
+    this.marcador = const LanzadorMarcadorSistema(),
     this.ahora,
     this.enlaces,
   });
 
   final AuthRepositorio repositorio;
   final SesionControlador sesion;
+
+  /// Contenido público (sin sesión) y perfil propio (con sesión). Los repositorios se inyectan.
+  final ContenidoRepositorio contenido;
+  final PerfilRepositorio perfil;
+  final LanzadorMarcador marcador;
   final DateTime Function()? ahora;
 
   /// Enlaces entrantes del correo (recuperación y activación). Opcional: sin él solo funciona el
@@ -126,7 +137,7 @@ class _AyniSafeAppState extends State<AyniSafeApp> {
       avisoDeSesion: aviso,
       ahora: widget.ahora,
     ),
-    SesionAutenticada() => SesionIniciadaPantalla(
+    SesionAutenticada() => ShellCiudadano(
       sesion: widget.sesion,
       estado: estado,
     ),
@@ -139,14 +150,20 @@ class _AyniSafeAppState extends State<AyniSafeApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AyniSafe',
-      debugShowCheckedModeBanner: false,
-      navigatorKey: _navegador,
-      theme: crearTema(),
-      home: ListenableBuilder(
-        listenable: widget.sesion,
-        builder: (context, _) => _pantalla(widget.sesion.estado),
+    // Los servicios quedan sobre el navegador: lo usan las pantallas públicas y las privadas.
+    return Servicios(
+      contenido: widget.contenido,
+      perfil: widget.perfil,
+      marcador: widget.marcador,
+      child: MaterialApp(
+        title: 'AyniSafe',
+        debugShowCheckedModeBanner: false,
+        navigatorKey: _navegador,
+        theme: crearTema(),
+        home: ListenableBuilder(
+          listenable: widget.sesion,
+          builder: (context, _) => _pantalla(widget.sesion.estado),
+        ),
       ),
     );
   }

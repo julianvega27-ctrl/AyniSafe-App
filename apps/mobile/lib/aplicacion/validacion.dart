@@ -64,3 +64,24 @@ String? errorDeContrasena(String valor) {
 /// Texto de ayuda visible bajo el campo de contraseña del registro.
 const String ayudaContrasena =
     'Entre 15 y 128 caracteres. Puedes usar espacios.';
+
+const int telefonoDigitosMin = 7;
+const int telefonoDigitosMax = 15;
+const String ayudaTelefono =
+    'Opcional. De 7 a 15 dígitos; puedes incluir + y espacios.';
+
+final RegExp _telefonoValido = RegExp(r'^\+?[0-9]{7,15}$');
+
+/// Teléfono normalizado (sin espacios, guiones, puntos ni paréntesis), `''` si está vacío
+/// (se borra) o `null` si no es válido. Equivale a la validación de la API.
+String? telefonoNormalizado(String valor) {
+  final crudo = valor.trim();
+  if (crudo.isEmpty) return '';
+  if (crudo.length > 40) return null;
+  final limpio = crudo.replaceAll(RegExp(r'[\s\-.()]'), '');
+  return _telefonoValido.hasMatch(limpio) ? limpio : null;
+}
+
+String? errorDeTelefono(String valor) => telefonoNormalizado(valor) == null
+    ? 'Ingresa un teléfono de 7 a 15 dígitos o déjalo vacío.'
+    : null;

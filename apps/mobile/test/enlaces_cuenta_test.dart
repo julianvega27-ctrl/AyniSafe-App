@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:ayni_safe/app.dart';
 import 'package:ayni_safe/datos/almacenamiento_sesion.dart';
 import 'package:ayni_safe/datos/enlaces_cuenta.dart';
 import 'package:ayni_safe/datos/resultados_recuperacion.dart';
@@ -69,7 +68,7 @@ void main() {
       final sesion = crearSesion(api, AlmacenamientoEnMemoria());
       if (restaurar) await sesion.restaurar();
       await tester.pumpWidget(
-        AyniSafeApp(repositorio: api.repositorio, sesion: sesion, ahora: () => ahoraFijo, enlaces: fuente),
+        appDePrueba(api, sesion, enlaces: fuente),
       );
       await tester.pumpAndSettle();
       addTearDown(fuente.controlador.close);
@@ -109,7 +108,7 @@ void main() {
       );
       final sesion = crearSesion(api, almacen);
       unawaited(sesion.restaurar());
-      await tester.pumpWidget(AyniSafeApp(repositorio: api.repositorio, sesion: sesion, ahora: () => ahoraFijo, enlaces: fuente));
+      await tester.pumpWidget(appDePrueba(api, sesion, enlaces: fuente));
       await tester.pump();
 
       fuente.controlador.add(_enlace('/cuenta/restablecer', _token));
@@ -184,6 +183,14 @@ void main() {
           .map((m) => m.group(1))
           .toList();
       expect(permisos, ['android.permission.INTERNET']);
+    });
+
+    test('declara solo la consulta del marcador (tel/DIAL), sin permiso de llamada', () {
+      expect(manifiesto, contains('android.intent.action.DIAL'));
+      expect(manifiesto, contains('android:scheme="tel"'));
+      expect(manifiesto, isNot(contains('CALL_PHONE')));
+      expect(manifiesto, isNot(contains('ACCESS_FINE_LOCATION')));
+      expect(manifiesto, isNot(contains('POST_NOTIFICATIONS')));
     });
   });
 }

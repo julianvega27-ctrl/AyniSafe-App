@@ -5,6 +5,8 @@ import 'package:ayni_safe/aplicacion/sesion_controlador.dart';
 import 'package:ayni_safe/datos/almacenamiento_sesion.dart';
 import 'package:ayni_safe/datos/auth_repositorio.dart';
 import 'package:ayni_safe/datos/cliente_http.dart';
+import 'package:ayni_safe/datos/contenido_repositorio.dart';
+import 'package:ayni_safe/datos/perfil_repositorio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,14 +54,20 @@ void main() {
           'perdida.${Random().nextInt(1 << 30).toRadixString(36)}@ejemplo.com';
       const clave = 'contraseña tras corte de red 789';
 
-      final repositorio = AuthRepositorio(ClienteHttp());
+      final http = ClienteHttp();
+      final repositorio = AuthRepositorio(http);
       final sesion = SesionControlador(
         repositorio: repositorio,
         almacenamiento: AlmacenamientoSeguro(),
       );
       await sesion.restaurar();
       await tester.pumpWidget(
-        AyniSafeApp(repositorio: repositorio, sesion: sesion),
+        AyniSafeApp(
+      repositorio: repositorio,
+      sesion: sesion,
+      contenido: ContenidoRepositorio(http),
+      perfil: PerfilRepositorio(http),
+    ),
       );
       await tester.pumpAndSettle();
 
@@ -84,7 +92,7 @@ void main() {
         find.textContaining('Tu cuenta fue creada'),
         findsNothing,
       ); // no se afirma éxito
-      expect(find.text('Sesión iniciada'), findsNothing);
+      expect(find.text('Reportar un incidente'), findsNothing);
       expect(campo(tester, 'Nombre'), 'Rosa Corte'); // se conservan los datos
       expect(campo(tester, 'Correo'), correo);
 
@@ -112,11 +120,15 @@ void main() {
       expect(campo(tester, 'Contraseña'), isEmpty);
       await escribir(tester, 'Contraseña', clave);
       await tester.tap(find.widgetWithText(FilledButton, 'Ingresar'));
-      await esperar(tester, find.text('Sesión iniciada'));
+      await esperar(tester, find.text('Reportar un incidente'));
       expect(find.text('Hola, Rosa Corte'), findsOneWidget);
 
       // Cierra para no dejar una sesión viva.
-      await tester.tap(find.widgetWithText(FilledButton, 'Cerrar sesión'));
+      await tester.tap(find.byTooltip('Perfil'));
+      await tester.pumpAndSettle();
+      final cerrarSesion = find.widgetWithText(FilledButton, 'Cerrar sesión');
+      await tester.ensureVisible(cerrarSesion);
+      await tester.tap(cerrarSesion);
       await esperar(tester, find.text('Cerraste sesión.'));
     },
   );
