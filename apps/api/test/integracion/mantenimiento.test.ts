@@ -49,7 +49,7 @@ describe('purga por lotes', () => {
       ('login_ip', 'actual', ${reloj.ahora()}::timestamptz, 1)`;
 
     const r = await new PurgarCaducadosUseCase(new PrismaPurgaAdapter(prisma), reloj).ejecutar();
-    expect(r).toEqual({ sesiones: 2, ventanas: 1 });
+    expect(r).toEqual({ sesiones: 2, ventanas: 1, tokens: 0, envios: 0 });
 
     const quedan = (await prisma.sesion.findMany()).map((s) => s.tokenHash).sort();
     expect(quedan).toEqual(['revocada-2d', 'vencida-6d', 'vigente']);
@@ -70,6 +70,8 @@ describe('purga por lotes', () => {
         return n;
       },
       purgarVentanasAnterioresA: (c, l) => real.purgarVentanasAnterioresA(c, l),
+      purgarTokensAnterioresA: (c, l) => real.purgarTokensAnterioresA(c, l),
+      purgarEnviosTerminadosAnterioresA: (c, l) => real.purgarEnviosTerminadosAnterioresA(c, l),
     };
     const r = await new PurgarCaducadosUseCase(espia, reloj, 3).ejecutar();
     expect(r.sesiones).toBe(7);
@@ -90,12 +92,44 @@ describe('purga por lotes', () => {
         return real.purgarSesionesAnterioresA(c, l);
       },
       purgarVentanasAnterioresA: (c, l) => real.purgarVentanasAnterioresA(c, l),
+      purgarTokensAnterioresA: (c, l) => real.purgarTokensAnterioresA(c, l),
+      purgarEnviosTerminadosAnterioresA: (c, l) => real.purgarEnviosTerminadosAnterioresA(c, l),
     };
     await expect(new PurgarCaducadosUseCase(inestable, reloj, 2).ejecutar()).rejects.toBeInstanceOf(ServicioNoDisponibleError);
     expect(await prisma.sesion.count()).toBe(5); // se borro un lote de 2; quedan 4 caducadas + 1 viva
     const r = await new PurgarCaducadosUseCase(real, reloj, 2).ejecutar();
     expect(r.sesiones).toBe(4);
     expect((await prisma.sesion.findMany()).map((s) => s.tokenHash)).toEqual(['viva']);
+  });
+});
+
+describe('purga de tokens de cuenta y envios de correo (7 dias)', () => {
+  const insertarToken = (usuarioId: string, hash: string, creado: Date, vence: Date, usado: Date | null = null) =>
+    prisma.$executeRaw`INSERT INTO tokens_cuenta (usuario_id, proposito, token_hash, created_at, expires_at, used_at)
+      VALUES (${usuarioId}::uuid, 'recuperacion', ${hash}, ${creado}::timestamptz, ${vence}::timestamptz, ${usado}::timestamptz)`;
+  const insertarEnvio = (usuarioId: string, tipo: string, estado: string, creado: Date) =>
+    prisma.$executeRaw`INSERT INTO envios_correo (tipo, usuario_id, estado, proximo_intento_at, vence_at, created_at)
+      VALUES (${tipo}::"PropositoToken", ${usuarioId}::uuid, ${estado}::"EstadoEnvio", ${creado}::timestamptz, ${creado}::timestamptz, ${creado}::timestamptz)`;
+
+  it('elimina tokens inservibles y envios terminados de mas de 7 dias, sin tocar los vigentes ni los activos', async () => {
+    const u = await usuario();
+    await insertarToken(u.id, 'vigente', hace(HORA), en(HORA));
+    await insertarToken(u.id, 'vencido-8d', hace(9 * DIA), hace(8 * DIA));
+    await insertarToken(u.id, 'vencido-2d', hace(3 * DIA), hace(2 * DIA));
+    await insertarToken(u.id, 'usado-8d', hace(9 * DIA), en(DIA), hace(8 * DIA));
+    await insertarEnvio(u.id, 'recuperacion', 'enviado', hace(8 * DIA));
+    await insertarEnvio(u.id, 'activacion', 'fallido', hace(8 * DIA));
+    await insertarEnvio(u.id, 'recuperacion', 'pendiente', hace(8 * DIA));
+    const u2 = await usuario('q@ejemplo.com');
+    await insertarEnvio(u2.id, 'recuperacion', 'enviado', hace(2 * DIA));
+
+    const r = await new PurgarCaducadosUseCase(new PrismaPurgaAdapter(prisma), reloj).ejecutar();
+
+    expect(r).toMatchObject({ tokens: 2, envios: 2 });
+    const tokens = await prisma.$queryRawUnsafe<{ token_hash: string }[]>('SELECT token_hash FROM tokens_cuenta ORDER BY token_hash');
+    expect(tokens.map((t) => t.token_hash)).toEqual(['vencido-2d', 'vigente']);
+    const envios = await prisma.$queryRawUnsafe<{ estado: string }[]>('SELECT estado::text FROM envios_correo ORDER BY estado');
+    expect(envios.map((e) => e.estado)).toEqual(['enviado', 'pendiente']);
   });
 });
 

@@ -2,8 +2,11 @@ import { Router, type Request } from 'express';
 import type { Logger } from '../../../compartido/logger';
 import type { CerrarSesionUseCase } from '../aplicacion/cerrar-sesion.use-case';
 import type { ConsultarSesionUseCase } from '../aplicacion/consultar-sesion.use-case';
+import type { ConsultarTokenUseCase } from '../aplicacion/consultar-token.use-case';
+import type { ConsumirTokenCuentaUseCase } from '../aplicacion/consumir-token.use-case';
 import type { IniciarSesionUseCase } from '../aplicacion/iniciar-sesion.use-case';
 import type { RegistrarCiudadanoUseCase } from '../aplicacion/registrar-ciudadano.use-case';
+import type { SolicitarRecuperacionUseCase } from '../aplicacion/solicitar-recuperacion.use-case';
 import {
   asignarRequestId,
   exigirJson,
@@ -18,6 +21,9 @@ export interface CasosDeUsoAuth {
   readonly iniciarSesion: IniciarSesionUseCase;
   readonly consultarSesion: ConsultarSesionUseCase;
   readonly cerrarSesion: CerrarSesionUseCase;
+  readonly solicitarRecuperacion: SolicitarRecuperacionUseCase;
+  readonly consultarToken: ConsultarTokenUseCase;
+  readonly consumirToken: ConsumirTokenCuentaUseCase;
 }
 
 /**
@@ -51,6 +57,28 @@ export function crearRutasAuth(casos: CasosDeUsoAuth, logger: Logger): Router {
       expiresAt: sesion.expiresAt.toISOString(),
       usuario: sesion.usuario,
     });
+  });
+
+  // Respuesta uniforme: no revela si el correo corresponde a una cuenta.
+  router.post('/auth/recuperaciones', exigirJson, leerJson, async (req, res) => {
+    await casos.solicitarRecuperacion.ejecutar({ cuerpo: req.body, ip: ipDelCliente(req) });
+    res.status(202).json({ estado: 'solicitud_recibida' });
+  });
+
+  // El cambio de contrasena no inicia sesion: 204 sin cuerpo ni token.
+  router.post('/auth/contrasena/restablecer', exigirJson, leerJson, async (req, res) => {
+    await casos.consumirToken.ejecutar({ cuerpo: req.body, proposito: 'recuperacion', ip: ipDelCliente(req) });
+    res.status(204).end();
+  });
+
+  router.post('/auth/activaciones', exigirJson, leerJson, async (req, res) => {
+    await casos.consumirToken.ejecutar({ cuerpo: req.body, proposito: 'activacion', ip: ipDelCliente(req) });
+    res.status(204).end();
+  });
+
+  router.post('/auth/tokens/consulta', exigirJson, leerJson, async (req, res) => {
+    const vigente = await casos.consultarToken.ejecutar(req.body, ipDelCliente(req));
+    res.status(200).json({ proposito: vigente.proposito, expiresAt: vigente.expiresAt.toISOString() });
   });
 
   router.get('/auth/sesion', async (req, res) => {

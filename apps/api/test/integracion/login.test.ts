@@ -126,6 +126,41 @@ describe('POST /auth/ciudadanos/sesiones', () => {
     expect(llamadas.verificar).toBe(1);
   });
 
+  it('cuenta pendiente de activacion (sin hash): mismo 401 uniforme, verificacion ficticia y sin sesion', async () => {
+    const real = new Argon2idHashAdapter();
+    const llamadas = { verificar: 0, ficticio: 0 };
+    const espia: HashContrasenaPort = {
+      hash: (c) => real.hash(c),
+      verificar: (h, c) => {
+        llamadas.verificar += 1;
+        return real.verificar(h, c);
+      },
+      verificarFicticio: (c) => {
+        llamadas.ficticio += 1;
+        return real.verificarFicticio(c);
+      },
+    };
+    const conEspia = crearArnes({ prisma, hash: espia });
+    await registrar(conEspia.app, 'real@ejemplo.com');
+    for (const [correo, rol] of [
+      ['pendiente@ejemplo.com', 'ciudadano'],
+      ['invitado@ejemplo.com', 'operador'],
+    ] as const) {
+      await prisma.usuario.create({
+        data: { nombre: 'Invitado', correoNormalizado: correo, passwordHash: null, rol, estado: 'pendiente_activacion' },
+      });
+    }
+    const desconocido = await request(conEspia.app).post(RUTA_LOGIN).send({ correo: 'nadie@ejemplo.com', contrasena: CLAVE });
+    for (const correo of ['pendiente@ejemplo.com', 'invitado@ejemplo.com']) {
+      const r = await request(conEspia.app).post(RUTA_LOGIN).send({ correo, contrasena: CLAVE });
+      expect(r.status).toBe(401);
+      expect(r.body.token).toBeUndefined();
+      expect(JSON.stringify(sinRequestId(r.body))).toBe(JSON.stringify(sinRequestId(desconocido.body)));
+    }
+    expect(llamadas).toEqual({ verificar: 0, ficticio: 3 });
+    expect(await prisma.sesion.count()).toBe(0);
+  });
+
   it('400: campos invalidos o no admitidos no producen sesion', async () => {
     const r1 = await request(app).post(RUTA_LOGIN).send({ correo: 'mal', contrasena: 'x' });
     expect(r1.status).toBe(400);
@@ -163,6 +198,7 @@ describe('emision de la sesion', () => {
       crearSiUsuarioHabilitado: () => Promise.reject(new ServicioNoDisponibleError(new Error('boom'))),
       buscarVigente: () => Promise.resolve(null),
       revocar: () => Promise.resolve(),
+      revocarTodasDe: () => Promise.resolve(0),
     };
     const conFallo = crearArnes({ prisma, sobrescribir: { sesiones: fallida } });
     const r = await request(conFallo.app).post(RUTA_LOGIN).send({ correo: 'rosa@ejemplo.com', contrasena: CLAVE });

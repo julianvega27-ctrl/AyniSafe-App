@@ -14,5 +14,7 @@ export function crearApp(opciones: OpcionesApp): Express {
   // Se confia solo en el numero de saltos configurado, nunca en un X-Forwarded-For arbitrario.
   app.set('trust proxy', opciones.saltosProxyConfianza);
   app.use('/api/v1', opciones.identidad.router);
+  // Paginas de respaldo del enlace del correo y assetlinks.json (fuera de /api/v1).
+  app.use(opciones.identidad.routerPublico);
   return app;
 }

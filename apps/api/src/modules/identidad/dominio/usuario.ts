@@ -1,12 +1,13 @@
 export type Rol = 'ciudadano' | 'operador' | 'administrador';
-export type EstadoUsuario = 'activo' | 'suspendido';
+export type EstadoUsuario = 'activo' | 'suspendido' | 'pendiente_activacion';
 
 /** Cuenta persistida. Contiene el hash: nunca se expone fuera del modulo. */
 export interface Usuario {
   readonly id: string;
   readonly nombre: string;
   readonly correoNormalizado: string;
-  readonly passwordHash: string;
+  /** Nulo solo si la cuenta esta pendiente de activacion: nadie puede autenticar con ella. */
+  readonly passwordHash: string | null;
   readonly rol: Rol;
   readonly estado: EstadoUsuario;
   readonly createdAt: Date;

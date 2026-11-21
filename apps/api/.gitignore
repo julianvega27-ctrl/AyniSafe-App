@@ -7,3 +7,9 @@ coverage/
 .pgdata/
 
 /src/generated/prisma
+
+# Correos de desarrollo (contienen enlaces con tokens)
+.correos-dev/
+
+# Clave de API de Render para el spike (tarea 1.2). Borrar al terminar.
+.render-key

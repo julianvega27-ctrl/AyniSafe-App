@@ -1,0 +1,9 @@
+{
+  "name": "ayni-spike-smtp-render",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Servicio desechable de la tarea 1.2 (correo-recuperacion-activacion). Eliminar al terminar.",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=22" },
+  "dependencies": { "nodemailer": "10.6.1" }
+}

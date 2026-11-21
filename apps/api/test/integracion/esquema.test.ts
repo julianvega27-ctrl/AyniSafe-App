@@ -34,7 +34,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await bd.query('TRUNCATE sesiones, usuarios, ventanas_intentos CASCADE');
+  await bd.query('TRUNCATE envios_correo, tokens_cuenta, sesiones, usuarios, ventanas_intentos CASCADE');
 });
 
 describe('migracion desde base vacia', () => {
@@ -42,7 +42,13 @@ describe('migracion desde base vacia', () => {
     const tablas = await bd.query<{ tablename: string }>(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`,
     );
-    expect(tablas.rows.map((t) => t.tablename).sort()).toEqual(['sesiones', 'usuarios', 'ventanas_intentos']);
+    expect(tablas.rows.map((t) => t.tablename).sort()).toEqual([
+      'envios_correo',
+      'sesiones',
+      'tokens_cuenta',
+      'usuarios',
+      'ventanas_intentos',
+    ]);
 
     const indices = await bd.query<{ indexname: string }>(
       `SELECT indexname FROM pg_indexes WHERE schemaname = 'public'`,
@@ -154,6 +160,96 @@ describe('ventanas_intentos', () => {
     const q = bd.query(
       `INSERT INTO ventanas_intentos (tipo, clave_hash, ventana_inicio, contador)
        VALUES ('login_ip', 'otra', now(), -1)`,
+    );
+    expect(await codigoDeError(q)).toBe('23514');
+  });
+});
+
+describe('cuentas pendientes de activacion', () => {
+  const insertar = (estado: string, hash: string | null, correo: string) =>
+    bd.query(
+      `INSERT INTO usuarios (nombre, correo_normalizado, password_hash, rol, estado, updated_at)
+       VALUES ('Op', $1, $2, 'operador', $3::"EstadoUsuario", now())`,
+      [correo, hash, estado],
+    );
+
+  it('incluye el estado pendiente_activacion', async () => {
+    const r = await bd.query<{ e: string }>(`SELECT unnest(enum_range(NULL::"EstadoUsuario"))::text AS e`);
+    expect(r.rows.map((x) => x.e)).toEqual(['activo', 'suspendido', 'pendiente_activacion']);
+  });
+
+  it('rechaza hash nulo en cuentas activas o suspendidas (check 23514)', async () => {
+    expect(await codigoDeError(insertar('activo', null, 'a@ejemplo.com'))).toBe('23514');
+    expect(await codigoDeError(insertar('suspendido', null, 'b@ejemplo.com'))).toBe('23514');
+  });
+
+  it('rechaza un hash presente en una cuenta pendiente (check 23514)', async () => {
+    expect(await codigoDeError(insertar('pendiente_activacion', 'hash', 'c@ejemplo.com'))).toBe('23514');
+  });
+
+  it('admite una cuenta pendiente sin hash', async () => {
+    expect(await codigoDeError(insertar('pendiente_activacion', null, 'd@ejemplo.com'))).toBeUndefined();
+  });
+});
+
+describe('tokens_cuenta', () => {
+  const insertarToken = (usuarioId: string, hash: string, minutos = 30) =>
+    bd.query(
+      `INSERT INTO tokens_cuenta (usuario_id, proposito, token_hash, created_at, expires_at)
+       VALUES ($1, 'recuperacion', $2, now(), now() + ($3 || ' minutes')::interval)`,
+      [usuarioId, hash, String(minutos)],
+    );
+
+  it('rechaza tokens huerfanos (FK 23503)', async () => {
+    expect(await codigoDeError(insertarToken('00000000-0000-4000-8000-000000000000', 'h1'))).toBe('23503');
+  });
+
+  it('rechaza huella repetida (unique 23505) y vencimiento anterior a la emision (check 23514)', async () => {
+    const id = await crearUsuario('t@ejemplo.com');
+    await insertarToken(id, 'h-igual');
+    expect(await codigoDeError(insertarToken(id, 'h-igual'))).toBe('23505');
+    expect(await codigoDeError(insertarToken(id, 'h-otro', -5))).toBe('23514');
+  });
+
+  it('elimina sus tokens si se elimina el usuario (solo entornos efimeros)', async () => {
+    const id = await crearUsuario('u@ejemplo.com');
+    await insertarToken(id, 'h-c');
+    await bd.query('DELETE FROM usuarios WHERE id = $1', [id]);
+    const r = await bd.query('SELECT count(*)::int AS n FROM tokens_cuenta');
+    expect(r.rows[0].n).toBe(0);
+  });
+});
+
+describe('envios_correo', () => {
+  const insertarEnvio = (usuarioId: string, estado = 'pendiente', tipo = 'recuperacion') =>
+    bd.query(
+      `INSERT INTO envios_correo (tipo, usuario_id, estado, proximo_intento_at, vence_at)
+       VALUES ($1::"PropositoToken", $2, $3::"EstadoEnvio", now(), now() + interval '15 minutes')`,
+      [tipo, usuarioId, estado],
+    );
+
+  it('impide apilar envios activos del mismo usuario y tipo (indice parcial 23505)', async () => {
+    const id = await crearUsuario('e@ejemplo.com');
+    await insertarEnvio(id, 'pendiente');
+    expect(await codigoDeError(insertarEnvio(id, 'pendiente'))).toBe('23505');
+    expect(await codigoDeError(insertarEnvio(id, 'enviando'))).toBe('23505');
+  });
+
+  it('permite un envio nuevo cuando el anterior termino, o de otro tipo', async () => {
+    const id = await crearUsuario('f@ejemplo.com');
+    await insertarEnvio(id, 'enviado');
+    await insertarEnvio(id, 'fallido');
+    expect(await codigoDeError(insertarEnvio(id, 'pendiente'))).toBeUndefined();
+    expect(await codigoDeError(insertarEnvio(id, 'pendiente', 'activacion'))).toBeUndefined();
+  });
+
+  it('rechaza envios huerfanos (FK 23503) e intentos negativos (check 23514)', async () => {
+    expect(await codigoDeError(insertarEnvio('00000000-0000-4000-8000-000000000000'))).toBe('23503');
+    const id = await crearUsuario('g@ejemplo.com');
+    const q = bd.query(
+      `INSERT INTO envios_correo (tipo, usuario_id, intentos, proximo_intento_at, vence_at)
+       VALUES ('recuperacion', $1, -1, now(), now())`,
+      [id],
     );
     expect(await codigoDeError(q)).toBe('23514');
   });

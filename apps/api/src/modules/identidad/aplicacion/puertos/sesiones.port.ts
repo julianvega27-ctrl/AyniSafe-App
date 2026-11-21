@@ -27,4 +27,9 @@ export interface SesionesPort {
   buscarVigente(tokenHash: string, ahora: Date): Promise<SesionConUsuario | null>;
   /** Revoca solo la sesion indicada. Idempotente: inexistente o ya revocada no es un error. */
   revocar(tokenHash: string, ahora: Date): Promise<void>;
+  /**
+   * Revoca todas las sesiones aun no revocadas del usuario y devuelve cuantas. Las de otros
+   * usuarios no se tocan. Idempotente. Un fallo lanza ServicioNoDisponibleError.
+   */
+  revocarTodasDe(usuarioId: string, ahora: Date): Promise<number>;
 }

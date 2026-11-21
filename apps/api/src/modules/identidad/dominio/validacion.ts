@@ -145,3 +145,67 @@ export function validarLogin(entrada: unknown): Resultado<LoginValido> {
   }
   return { ok: true, valor: { correoNormalizado, contrasena } };
 }
+
+/** Longitud maxima que se procesa de un token: el real mide 43 (32 bytes en base64url). */
+export const TOKEN_MAX = 200;
+
+export interface ConsultaTokenValida {
+  readonly token: string;
+}
+
+export interface ConsumoTokenValido {
+  readonly token: string;
+  /** Contrasena exacta, sin recortar ni normalizar. */
+  readonly contrasena: string;
+}
+
+export interface SolicitudRecuperacionValida {
+  readonly correoNormalizado: string;
+}
+
+function validarToken(valor: unknown, campos: ErroresPorCampo): string | undefined {
+  if (valor === undefined || (typeof valor === 'string' && valor === '')) {
+    campos.token = 'Falta el código del enlace.';
+    return undefined;
+  }
+  if (typeof valor !== 'string') {
+    campos.token = 'El código debe ser texto.';
+    return undefined;
+  }
+  // Un valor demasiado largo o con caracteres ajenos al formato simplemente no existira: se
+  // procesa como token desconocido (404), sin consultar la base con basura arbitraria.
+  return valor;
+}
+
+export function validarConsultaToken(entrada: unknown): Resultado<ConsultaTokenValida> {
+  const objeto = comoObjeto(entrada);
+  if (!objeto) return { ok: false, campos: { cuerpo: CUERPO_INVALIDO } };
+  const campos: ErroresPorCampo = {};
+  if (hayCamposExtra(objeto, ['token'])) campos.cuerpo = CAMPOS_EXTRA;
+  const token = validarToken(objeto.token, campos);
+  if (Object.keys(campos).length > 0 || token === undefined) return { ok: false, campos };
+  return { ok: true, valor: { token } };
+}
+
+export function validarConsumoToken(entrada: unknown): Resultado<ConsumoTokenValido> {
+  const objeto = comoObjeto(entrada);
+  if (!objeto) return { ok: false, campos: { cuerpo: CUERPO_INVALIDO } };
+  const campos: ErroresPorCampo = {};
+  if (hayCamposExtra(objeto, ['token', 'contrasena'])) campos.cuerpo = CAMPOS_EXTRA;
+  const token = validarToken(objeto.token, campos);
+  const contrasena = validarContrasena(objeto.contrasena, campos);
+  if (Object.keys(campos).length > 0 || token === undefined || contrasena === undefined) {
+    return { ok: false, campos };
+  }
+  return { ok: true, valor: { token, contrasena } };
+}
+
+export function validarSolicitudRecuperacion(entrada: unknown): Resultado<SolicitudRecuperacionValida> {
+  const objeto = comoObjeto(entrada);
+  if (!objeto) return { ok: false, campos: { cuerpo: CUERPO_INVALIDO } };
+  const campos: ErroresPorCampo = {};
+  if (hayCamposExtra(objeto, ['correo'])) campos.cuerpo = CAMPOS_EXTRA;
+  const correoNormalizado = validarCorreo(objeto.correo, campos);
+  if (Object.keys(campos).length > 0 || correoNormalizado === undefined) return { ok: false, campos };
+  return { ok: true, valor: { correoNormalizado } };
+}

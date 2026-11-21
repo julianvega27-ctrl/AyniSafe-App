@@ -93,4 +93,16 @@ export class PrismaSesionesAdapter implements SesionesPort {
       throw new ServicioNoDisponibleError(error);
     }
   }
+
+  async revocarTodasDe(usuarioId: string, ahora: Date): Promise<number> {
+    try {
+      const r = await this.prisma.sesion.updateMany({
+        where: { usuarioId, revokedAt: null },
+        data: { revokedAt: ahora },
+      });
+      return r.count;
+    } catch (error) {
+      throw new ServicioNoDisponibleError(error);
+    }
+  }
 }

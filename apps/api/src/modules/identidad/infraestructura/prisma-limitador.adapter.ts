@@ -28,17 +28,23 @@ export class PrismaLimitadorAdapter implements LimitadorPort {
   }
 
   async consumir(consumos: readonly ConsumoLimite[], ahora: Date): Promise<ResultadoLimite> {
-    const inicioMs = Math.floor(ahora.getTime() / this.ventanaMs) * this.ventanaMs;
-    const ventanaInicio = new Date(inicioMs);
-    const restanteSeg = Math.max(1, Math.ceil((inicioMs + this.ventanaMs - ahora.getTime()) / 1000));
+    // Cada limite puede tener su propia ventana fija (15 min, 1 hora, 1 dia), alineada al reloj.
+    const ventanas = consumos.map((c) => {
+      const duracion = c.ventanaMs ?? this.ventanaMs;
+      const inicioMs = Math.floor(ahora.getTime() / duracion) * duracion;
+      return {
+        inicio: new Date(inicioMs),
+        restanteSeg: Math.max(1, Math.ceil((inicioMs + duracion - ahora.getTime()) / 1000)),
+      };
+    });
 
     try {
       const contadores = await this.prisma.$transaction(async (tx) => {
         const resultado: number[] = [];
-        for (const consumo of consumos) {
+        for (const [i, consumo] of consumos.entries()) {
           const filas = await tx.$queryRaw<{ contador: number }[]>`
             INSERT INTO ventanas_intentos (tipo, clave_hash, ventana_inicio, contador)
-            VALUES (${consumo.tipo}, ${this.clave(consumo)}, ${ventanaInicio}::timestamptz, 1)
+            VALUES (${consumo.tipo}, ${this.clave(consumo)}, ${ventanas[i]!.inicio}::timestamptz, 1)
             ON CONFLICT (tipo, clave_hash, ventana_inicio)
             DO UPDATE SET contador = ventanas_intentos.contador + 1
             RETURNING contador`;
@@ -47,9 +53,11 @@ export class PrismaLimitadorAdapter implements LimitadorPort {
         return resultado;
       });
 
-      const superado = consumos.some((c, i) => (contadores[i] ?? 0) > c.maximo);
-      // Todas las ventanas terminan en el mismo limite alineado: ese es el mayor plazo restante.
-      return { permitido: !superado, reintentarEnSegundos: superado ? restanteSeg : 0 };
+      // Si se supera mas de un limite, se informa el mayor plazo restante entre los superados.
+      const superados = consumos
+        .map((c, i) => ((contadores[i] ?? 0) > c.maximo ? ventanas[i]!.restanteSeg : 0))
+        .filter((s) => s > 0);
+      return { permitido: superados.length === 0, reintentarEnSegundos: Math.max(0, ...superados) };
     } catch (error) {
       throw new ServicioNoDisponibleError(error);
     }

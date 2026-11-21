@@ -21,6 +21,20 @@ enum RolUsuario {
 enum EstadoUsuario {
   activo
   suspendido
+  /// Cuenta invitada que aun no definio su contrasena. No autentica ni tiene sesiones.
+  pendiente_activacion
+}
+
+enum PropositoToken {
+  recuperacion
+  activacion
+}
+
+enum EstadoEnvio {
+  pendiente
+  enviando
+  enviado
+  fallido
 }
 
 model Usuario {
@@ -28,13 +42,16 @@ model Usuario {
   nombre            String
   /// Correo recortado y en minusculas: clave de identidad unica.
   correoNormalizado String        @unique @map("correo_normalizado")
-  /// Hash Argon2id codificado (con parametros y sal). Nunca la contrasena.
-  passwordHash      String        @map("password_hash")
+  /// Hash Argon2id codificado (con parametros y sal). Nunca la contrasena. Es nulo si y solo si
+  /// la cuenta esta pendiente de activacion (CHECK en la migracion).
+  passwordHash      String?       @map("password_hash")
   rol               RolUsuario
   estado            EstadoUsuario
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   sesiones          Sesion[]
+  tokensCuenta      TokenCuenta[]
+  enviosCorreo      EnvioCorreo[]
 
   @@map("usuarios")
 }
@@ -65,4 +82,45 @@ model VentanaIntentos {
   @@id([tipo, claveHash, ventanaInicio])
   @@index([ventanaInicio])
   @@map("ventanas_intentos")
+}
+
+/// Token de un solo uso para recuperar contrasena o activar una cuenta invitada.
+model TokenCuenta {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId   String         @map("usuario_id") @db.Uuid
+  proposito   PropositoToken
+  /// SHA-256 (hex) del token. El token en claro no se guarda.
+  tokenHash   String         @unique @map("token_hash")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt   DateTime       @map("expires_at") @db.Timestamptz(3)
+  usedAt      DateTime?      @map("used_at") @db.Timestamptz(3)
+  /// Se marca al emitir un token nuevo del mismo usuario y proposito, o al consumir otro.
+  invalidadoAt DateTime?     @map("invalidado_at") @db.Timestamptz(3)
+  usuario     Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, proposito])
+  @@index([expiresAt])
+  @@map("tokens_cuenta")
+}
+
+/// Cola minima de correos. No guarda tokens ni enlaces: el token se genera al enviar.
+/// El indice unico parcial de envios activos vive en el SQL de la migracion.
+model EnvioCorreo {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo             PropositoToken
+  usuarioId        String      @map("usuario_id") @db.Uuid
+  estado           EstadoEnvio @default(pendiente)
+  intentos         Int         @default(0)
+  proximoIntentoAt DateTime    @map("proximo_intento_at") @db.Timestamptz(3)
+  reclamadoHasta   DateTime?   @map("reclamado_hasta") @db.Timestamptz(3)
+  venceAt          DateTime    @map("vence_at") @db.Timestamptz(3)
+  /// Codigo generico del fallo; nunca texto del proveedor.
+  ultimoCodigoError String?    @map("ultimo_codigo_error")
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  enviadoAt        DateTime?   @map("enviado_at") @db.Timestamptz(3)
+  usuario          Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([estado, proximoIntentoAt])
+  @@index([usuarioId])
+  @@map("envios_correo")
 }

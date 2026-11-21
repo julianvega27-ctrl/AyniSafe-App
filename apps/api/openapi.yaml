@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: AyniSafe API - Acceso ciudadano
-  version: 0.1.0
+  title: AyniSafe API - Acceso ciudadano, recuperacion y activacion
+  version: 0.2.0
   description: |
-    Contrato propuesto del modulo Identidad para registro, inicio de sesion, consulta y cierre de
-    sesion del ciudadano. Es el contrato objetivo de la entrega `registro-login-ciudadano`; no
-    acredita que los endpoints esten implementados.
+    Contrato del modulo Identidad: registro, inicio de sesion, consulta y cierre de sesion del
+    ciudadano (entrega `registro-login-ciudadano`), mas recuperacion de contrasena y activacion de
+    cuentas invitadas por correo (entrega `correo-recuperacion-activacion`).
 
     Reglas transversales:
     - Solo HTTPS en entornos compartidos. Credenciales unicamente en el cuerpo JSON.
@@ -15,11 +15,21 @@ info:
     - Limitacion de intentos (ventanas fijas de 15 minutos, configurables): registro 5 solicitudes por IP;
       acceso 30 por IP y 5 por combinacion correo+IP. Al superarlos se responde 429 con Retry-After.
     - La sesion dura 24 horas desde su creacion, sin renovacion.
-    - Fuera de alcance de esta entrega: recuperacion de contrasena y verificacion de correo.
+    - Recuperacion y activacion: rutas publicas sin Bearer; la credencial es un token de un solo uso en el
+      cuerpo (vence a los 30 min en recuperacion y a las 72 h en activacion). Cambiar la contrasena
+      revoca todas las sesiones del usuario y no inicia sesion. No se verifica el correo.
+    - Limites adicionales (configurables): recuperacion 10 por IP y 3 por correo+IP en 15 min, y 3 por
+      correo por hora; consulta y consumo de tokens 20 por IP en 15 min. Tope diario global de
+      solicitudes de recuperacion (por defecto 400, bajo la cuota de Gmail): al agotarse, 503 con Retry-After.
+    - No hay endpoints para crear operadores, administradores ni sedes en este contrato. La capacidad
+      de invitacion es interna (se invoca dentro de la transaccion de quien crea la cuenta).
+    - Las paginas de respaldo del enlace del correo (`GET /cuenta/restablecer`, `GET /cuenta/activar`) y
+      `GET /.well-known/assetlinks.json` no son parte de esta API JSON; se describen en el README.
 servers:
   - url: /api/v1
 tags:
   - name: Acceso ciudadano
+  - name: Recuperacion y activacion
 paths:
   /auth/ciudadanos/registro:
     post:
@@ -115,6 +125,121 @@ paths:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
         '500': { $ref: '#/components/responses/ErrorInterno' }
         '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /auth/recuperaciones:
+    post:
+      tags: [Recuperacion y activacion]
+      operationId: solicitarRecuperacion
+      summary: Solicitar el enlace para restablecer la contrasena
+      description: |
+        Respuesta uniforme: es la misma 202 exista o no la cuenta, este suspendida, pendiente o no
+        sea ciudadana. Solo una cuenta ciudadana activa recibe un correo, que se envia despues de
+        responder (el estado del proveedor no cambia la respuesta). Un 503 con Retry-After indica
+        que se agoto el tope diario global de correos, con independencia de la cuenta.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecuperacionSolicitud' }
+      responses:
+        '202':
+          description: Solicitud recibida. No confirma que exista una cuenta.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecuperacionRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponibleConCuota' }
+  /auth/tokens/consulta:
+    post:
+      tags: [Recuperacion y activacion]
+      operationId: consultarToken
+      summary: Consultar el estado de un enlace sin consumirlo
+      description: |
+        Indica si el token es vigente y para que sirve. No lo modifica. Se usa para mostrar las
+        pantallas de enlace usado o vencido antes de pedir una contrasena. El token viaja solo en
+        el cuerpo, nunca en la URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TokenSolicitud' }
+      responses:
+        '200':
+          description: Token vigente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsultaTokenRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '404': { $ref: '#/components/responses/TokenInvalido' }
+        '410': { $ref: '#/components/responses/TokenNoVigente' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /auth/contrasena/restablecer:
+    post:
+      tags: [Recuperacion y activacion]
+      operationId: restablecerContrasena
+      summary: Cambiar la contrasena con un token de recuperacion
+      description: |
+        Consumo atomico y de un solo uso: de varias solicitudes simultaneas con el mismo token solo
+        una responde 204. En la misma operacion se invalidan los demas tokens de la cuenta y se
+        revocan todas sus sesiones. No inicia sesion ni devuelve token de sesion. Un 400 por
+        contrasena no admitida no consume el token. Un token de otro proposito, o de una cuenta que
+        ya no puede usarlo, es 404 sin distinguir la causa.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsumoTokenSolicitud' }
+      responses:
+        '204':
+          description: Contrasena cambiada y sesiones revocadas. Sin cuerpo.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '404': { $ref: '#/components/responses/TokenInvalido' }
+        '410': { $ref: '#/components/responses/TokenNoVigente' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /auth/activaciones:
+    post:
+      tags: [Recuperacion y activacion]
+      operationId: activarCuenta
+      summary: Activar una cuenta invitada y definir su contrasena
+      description: |
+        Para cuentas en estado `pendiente_activacion` invitadas por otra entrega (por ejemplo, el
+        alta de operadores). Deja la cuenta activa con la contrasena elegida y no crea sesion. Esta
+        entrega no expone ninguna ruta que cree operadores.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsumoTokenSolicitud' }
+      responses:
+        '204':
+          description: Cuenta activada. Sin cuerpo y sin sesion.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '404': { $ref: '#/components/responses/TokenInvalido' }
+        '410': { $ref: '#/components/responses/TokenNoVigente' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
 components:
   securitySchemes:
     bearerAuth:
@@ -127,6 +252,10 @@ components:
       schema: { type: string, const: no-store }
     RetryAfter:
       description: Segundos de espera antes de reintentar (el mayor plazo restante aplicable).
+      schema: { type: integer, minimum: 1 }
+    RetryAfterOpcional:
+      description: Segundos hasta que se libere la cuota diaria. Solo cuando el 503 es por cuota agotada.
+      required: false
       schema: { type: integer, minimum: 1 }
   schemas:
     RegistroSolicitud:
@@ -204,6 +333,54 @@ components:
       properties:
         usuario: { $ref: '#/components/schemas/UsuarioPublico' }
         expiresAt: { type: string, format: date-time }
+    RecuperacionSolicitud:
+      type: object
+      additionalProperties: false
+      required: [correo]
+      example: { correo: "rosa@ejemplo.com" }
+      properties:
+        correo:
+          type: string
+          maxLength: 254
+          description: Misma validacion y normalizacion que el registro y el acceso.
+    RecuperacionRespuesta:
+      type: object
+      additionalProperties: false
+      required: [estado]
+      example: { estado: solicitud_recibida }
+      properties:
+        estado: { type: string, const: solicitud_recibida }
+    TokenSolicitud:
+      type: object
+      additionalProperties: false
+      required: [token]
+      example: { token: "Zm9vYmFyLWVqZW1wbG8tZGUtdG9rZW4tb3BhY28tMDAwMDA" }
+      properties:
+        token:
+          type: string
+          minLength: 1
+          description: Token opaco del enlace o codigo pegado a mano (43 caracteres base64url).
+    ConsumoTokenSolicitud:
+      type: object
+      additionalProperties: false
+      required: [token, contrasena]
+      example: { token: "Zm9vYmFyLWVqZW1wbG8tZGUtdG9rZW4tb3BhY28tMDAwMDA", contrasena: "una contraseña nueva de ejemplo" }
+      properties:
+        token: { type: string, minLength: 1 }
+        contrasena:
+          type: string
+          minLength: 15
+          maxLength: 128
+          writeOnly: true
+          description: "Misma politica que el registro: 15 a 128 puntos de codigo, sin recortar ni normalizar."
+    ConsultaTokenRespuesta:
+      type: object
+      additionalProperties: false
+      required: [proposito, expiresAt]
+      example: { proposito: recuperacion, expiresAt: "2026-11-21T12:30:00.000Z" }
+      properties:
+        proposito: { type: string, enum: [recuperacion, activacion] }
+        expiresAt: { type: string, format: date-time }
     Error:
       type: object
       additionalProperties: false
@@ -221,6 +398,9 @@ components:
                 - EMAIL_IN_USE
                 - INVALID_CREDENTIALS
                 - UNAUTHENTICATED
+                - TOKEN_INVALID
+                - TOKEN_USED
+                - TOKEN_EXPIRED
                 - PAYLOAD_TOO_LARGE
                 - UNSUPPORTED_MEDIA_TYPE
                 - RATE_LIMITED
@@ -308,3 +488,34 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
           example: { error: { code: INTERNAL_ERROR, message: "Ocurrió un error inesperado. Si persiste, indica el código de la solicitud.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    TokenInvalido:
+      description: Token desconocido, alterado, de otro proposito o de una cuenta que ya no puede usarlo.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: TOKEN_INVALID, message: "El enlace o el código no es válido.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    TokenNoVigente:
+      description: |
+        El token ya se uso o fue reemplazado por uno mas reciente (`TOKEN_USED`), o su plazo termino
+        (`TOKEN_EXPIRED`). La app ofrece solicitar otro enlace.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          examples:
+            usado: { value: { error: { code: TOKEN_USED, message: "Este enlace ya se usó o fue reemplazado por uno más reciente.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } } }
+            vencido: { value: { error: { code: TOKEN_EXPIRED, message: "Este enlace venció. Solicita uno nuevo.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } } }
+    ServicioNoDisponibleConCuota:
+      description: |
+        Dependencia interna no disponible, o tope diario global de correos agotado. En el segundo caso
+        incluye Retry-After; la respuesta es la misma para toda solicitud valida, exista o no la cuenta.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+        Retry-After: { $ref: '#/components/headers/RetryAfterOpcional' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: SERVICE_UNAVAILABLE, message: "No podemos enviar más correos por hoy. Inténtalo de nuevo más tarde.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }

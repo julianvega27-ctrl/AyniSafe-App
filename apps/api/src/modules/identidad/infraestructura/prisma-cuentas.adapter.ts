@@ -7,7 +7,7 @@ interface FilaUsuario {
   id: string;
   nombre: string;
   correoNormalizado: string;
-  passwordHash: string;
+  passwordHash: string | null;
   rol: Usuario['rol'];
   estado: Usuario['estado'];
   createdAt: Date;

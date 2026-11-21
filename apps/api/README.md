@@ -51,6 +51,7 @@ Copia `.env.example` como referencia de variables. `.env` y `.pgdata/` **nunca**
 | `RATE_LIMIT_HMAC_SECRET` | Obligatoria, minimo 32 caracteres. Deriva con HMAC las claves del limitador. |
 | `RL_REGISTRO_IP_MAX`, `RL_LOGIN_IP_MAX`, `RL_LOGIN_CORREO_IP_MAX` | Umbrales por ventana de 15 min (5, 30 y 5 por defecto). |
 | `HASH_MAX_CONCURRENCIA`, `HASH_MAX_COLA` | Hashes simultaneos y cola maxima antes de responder 503 (4 y 16 por defecto). |
+| `API_PUBLIC_URL`, `EMAIL_ADAPTER`, `GMAIL_*`, `SMTP_*`, `MAIL_REMITENTE_*`, `EMAIL_DIARIO_MAX`, `RL_RECUP_*`, `RL_TOKEN_IP_MAX`, `ANDROID_*` | Recuperacion y activacion por correo: ver la seccion «Recuperacion de contrasena y activacion de cuentas». |
 
 Los mensajes de error de configuracion y conexion no incluyen valores ni credenciales.
 
@@ -139,6 +140,8 @@ esquema `public` vacio de esa base y aplica las migraciones (solo actua si el no
 No existe alta publica de operadores ni administradores: el registro fija siempre rol `ciudadano` y estado
 `activo`, y rechaza cualquier campo de rol o institucion. Estas instrucciones no siembran cuentas
 privilegiadas ni contrasenas compartidas; su alta corresponde a un flujo administrativo posterior.
+La capacidad de invitacion y activacion (ver mas abajo) prepara ese flujo pero no crea operadores: las cuentas
+invitadas nacen sin contrasena y la definen con un enlace de un solo uso.
 
 ## API de acceso ciudadano
 
@@ -202,10 +205,148 @@ toma la IP del cliente `TRUST_PROXY_HOPS` saltos desde la derecha de `X-Forwarde
 (que un cliente puede falsificar) se ignoran. Con valor 0, la cabecera se ignora por completo. Un valor mal
 configurado hace que todos los clientes compartan una IP (se bloquearian entre si) o que el limite se eluda.
 
+## Recuperacion de contrasena y activacion de cuentas
+
+Entrega `correo-recuperacion-activacion` (RF03; soporte para RF29). Contrato en `openapi.yaml`.
+
+| Ruta | Resultado |
+|---|---|
+| `POST /api/v1/auth/recuperaciones` | **202 uniforme** (mismo cuerpo exista o no la cuenta). Solo una cuenta ciudadana activa recibe correo. |
+| `POST /api/v1/auth/tokens/consulta` | 200 `{proposito, expiresAt}`, 404 `TOKEN_INVALID`, 410 `TOKEN_USED` / `TOKEN_EXPIRED`. No consume el token. |
+| `POST /api/v1/auth/contrasena/restablecer` | 204. Cambia la contrasena, **revoca todas las sesiones** del usuario y no inicia sesion. |
+| `POST /api/v1/auth/activaciones` | 204. Activa una cuenta `pendiente_activacion` con la contrasena elegida; sin sesion. |
+| `GET /cuenta/restablecer`, `GET /cuenta/activar` | Pagina de respaldo del enlace (ver abajo). |
+| `GET /.well-known/assetlinks.json` | Asociacion de App Links de Android; 404 si no hay huellas configuradas. |
+
+### Tokens
+
+Opacos (32 bytes aleatorios, base64url); en la base solo se guarda su SHA-256. Un solo uso y vencimiento desde la
+emision: **30 minutos** en recuperacion y **72 horas** en activacion. Emitir uno nuevo invalida los pendientes de la
+misma cuenta y proposito; consumir uno invalida los demas de la cuenta. El consumo es atomico (una unica sentencia
+`UPDATE ... RETURNING` con el usuario bloqueado): de dos solicitudes simultaneas con el mismo token solo una gana.
+La contrasena nueva sigue la politica de Spec 01 (15 a 128 puntos de codigo, sin recortar ni normalizar) y se valida
+**antes** de tocar el token: un 400 no lo consume.
+
+### Entrega del correo
+
+La solicitud solo encola un envio (`envios_correo`) y responde; un trabajador dentro de la API lo entrega despues.
+Asi la respuesta no depende del proveedor ni revela por latencia si la cuenta existe.
+
+- **El token se genera al enviar**, no al encolar: la cola no guarda secretos ni enlaces. La entrega es al menos una
+  vez: si el proceso cae tras aceptar el proveedor y antes de marcar `enviado`, se reenvia con un token nuevo que
+  invalida el anterior (el correo avisa de que solo vale el enlace mas reciente).
+- Reintentos con espera creciente (1, 5, 15, 30 y 60 min). Recuperacion se abandona a los 15 min (`fallido`, codigo
+  `VENCIDO` o el del ultimo error); activacion reintenta hasta 24 h. Solo se guardan **codigos genericos** de error.
+- **Sin sondeo en reposo**: el trabajador corre al arrancar, tras encolar y mientras haya reintentos pendientes. Sin
+  envios activos no hay temporizador (Neon y Render Free no se mantienen despiertos).
+- Un envio `enviando` cuyo arrendamiento (2 min) vence lo retoma otro pase, asi se recupera de un reinicio.
+
+### Adaptadores de correo (`EMAIL_ADAPTER`)
+
+| Valor | Uso |
+|---|---|
+| `archivo` (por defecto en desarrollo) | Escribe cada correo como `.txt` en `.correos-dev/` (ignorado por Git). **Contiene el enlace**: solo local. No envia nada. |
+| `prueba` (por defecto en test) | En memoria, para las pruebas. **No valida el proveedor real.** |
+| `gmail-api` | Envio real por la **Gmail API (HTTPS, 443)** con OAuth. Es el de **produccion**: Render Free bloquea el SMTP. |
+| `smtp` | Envio real por SMTP de Gmail. Solo local u hosts que permitan SMTP. |
+
+En produccion solo se admiten `gmail-api` y `smtp`: con `archivo` o `prueba` el arranque falla. Sin `EMAIL_ADAPTER`
+en produccion se usa `gmail-api`.
+
+Variables (ver `.env.example`; nunca se suben credenciales): `API_PUBLIC_URL` (obligatoria y `https` en produccion),
+`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` y `MAIL_REMITENTE_DIRECCION` (obligatorias con
+`gmail-api`; la direccion debe ser la cuenta que autorizo el token), `MAIL_REMITENTE_NOMBRE` (`AyniSafe`),
+`SMTP_HOST` (por defecto `smtp.gmail.com`), `SMTP_PORT` (465), `SMTP_USUARIO`, `SMTP_CLAVE` (con `smtp`),
+`EMAIL_DIARIO_MAX` (400), `ANDROID_PACKAGE` y `ANDROID_CERT_SHA256`. Los mensajes de error de configuracion nunca
+incluyen valores.
+
+### Gmail API: configuracion
+
+**Por que la Gmail API y no SMTP.** El 21/11/2026 se comprobo que Render Free **bloquea el SMTP saliente** de Gmail
+(465 y 587, `ETIMEDOUT` en ~265 ms desde un servicio Free temporal). La Gmail API usa HTTPS (443), que Render no bloquea
+(no verificado aun desde Render: queda para la entrega de despliegue).
+
+**Cuenta y cuota.** Se envia desde una cuenta Gmail **dedicada** (remitente de piloto, no institucional). Cuota publicada
+de 500 correos al dia para cuentas personales (el tope propio es 400). **Usa una cuenta personal de Gmail, no una
+institucional:** el correo sale desde la cuenta que autoriza el token y una cuenta de organizacion puede impedir
+cambiar su nombre visible.
+
+**Pasos unicos en Google Cloud** (proyecto propio, por ejemplo «AyniSafe»):
+
+1. Habilita la **Gmail API** (APIs y servicios > Biblioteca).
+2. En «Acceso a los datos» agrega **solo** el permiso `https://www.googleapis.com/auth/gmail.send`.
+3. En «Publico»: tipo **Externo**; agrega la cuenta dedicada como **usuario de prueba**.
+4. En «Clientes» crea un cliente de tipo **Aplicacion web** (no «Android»): deja vacio «Origenes autorizados de
+   JavaScript» y en «URI de redireccionamiento autorizados» pon exactamente `http://localhost:8787/callback`.
+5. Copia el **Client ID** y el **Client secret** a `apps/api/.env` como `GMAIL_CLIENT_ID` y `GMAIL_CLIENT_SECRET`
+   (sin comillas; nunca en Git ni en el chat) y define `MAIL_REMITENTE_DIRECCION` con la cuenta dedicada.
+6. Obten el refresh token: `node scripts/obtener-refresh-token.mjs`. Abre la pantalla de autorizacion de Google;
+   inicia sesion con la **cuenta dedicada**, acepta el permiso (si dice «no verificada», «Avanzado» > «Ir a ...») y el
+   script guarda `GMAIL_REFRESH_TOKEN` en `.env` **sin imprimirlo**. Escucha solo en `localhost:8787`, valida un
+   `state` anti-CSRF y espera hasta 10 minutos.
+7. Prueba un envio real: `EMAIL_ADAPTER=gmail-api npx tsx scripts/probar-correo.ts tu-correo@ejemplo.com`. El correo no
+   lleva enlaces ni codigos y el script solo imprime el resultado, nunca credenciales.
+
+**Caducidad del token.** Con la pantalla de consentimiento en estado **«Prueba»**, Google puede caducar el refresh
+token a los 7 dias (dato no verificado contra la documentacion de Google en este proyecto): cuando todo funcione, pasa
+el estado a **«En produccion»**. Si los envios empiezan a fallar con el codigo `AUTENTICACION` (token caducado o
+autorizacion revocada), repite el paso 6. La solicitud de recuperacion seguira respondiendo 202 y el envio quedara
+reintentandose y despues `fallido`.
+
+**Como funciona el adaptador.** Renueva el token de acceso con el refresh token y lo guarda solo en memoria hasta
+poco antes de que venza; envia el mensaje (texto plano, RFC 2822 en base64url) a la Gmail API, con tiempo maximo por
+llamada. Traduce los errores a codigos genericos (`AUTENTICACION`, `CUOTA`, `CONEXION`, `TIEMPO_AGOTADO`, `RECHAZADO`,
+`DESCONOCIDO`) y nunca conserva tokens, el secreto del cliente, el destinatario ni el cuerpo. Rechaza direcciones con
+saltos de linea y elimina los saltos de linea del asunto y del nombre del remitente (sin inyeccion de cabeceras).
+
+**Limitacion conocida: nombre del remitente.** Con la Gmail API el correo sale como la cuenta que autorizo el token, y
+Gmail puede mostrar el nombre guardado en esa cuenta en lugar del de la cabecera `From`. En la prueba del 21/11/2026
+los correos llegaron a la bandeja de entrada en menos de un minuto con el asunto correcto, pero **sin** el nombre
+«AyniSafe» como remitente. Queda pendiente: poner ese nombre en la cuenta dedicada (Gmail > «Cuentas e importacion» >
+«Enviar como» > «editar informacion», o el nombre de la cuenta de Google).
+
+**SMTP (solo local).** `EMAIL_ADAPTER=smtp` con `SMTP_USUARIO` y `SMTP_CLAVE` (contrasena de aplicacion de la cuenta
+dedicada). Desde la maquina de desarrollo conecta en 465 y 587 y entrego correos reales a un buzon `@unsch.edu.pe` y otro
+`@gmail.com` con remitente «AyniSafe». **No sirve en Render Free.**
+
+Probar a mano sin enviar nada: con `EMAIL_ADAPTER=archivo`, `POST /auth/recuperaciones` con un correo registrado y
+abrir el `.txt` generado en `.correos-dev/`.
+
+### Limites y cuota
+
+Ventanas fijas persistidas (sobreviven a reinicios), claves con HMAC: recuperacion 10 por IP y 3 por correo+IP en
+15 min, y **3 por correo por hora** (frena el bombardeo sin bloquear de forma permanente); consulta y consumo de
+tokens 20 por IP en 15 min. Todos configurables (`RL_RECUP_IP_MAX`, `RL_RECUP_CORREO_IP_MAX`, `RL_RECUP_CORREO_MAX`,
+`RL_TOKEN_IP_MAX`). Ademas, un **tope diario global** (`EMAIL_DIARIO_MAX`, dia UTC) cuenta solo las solicitudes que ya
+pasaron los limites anteriores; al agotarse, toda solicitud valida recibe el mismo **503 con `Retry-After`**, exista o
+no la cuenta. Riesgo aceptado: quien tenga muchas IP podria agotar la cuota y frenar la recuperacion de todos.
+
+### Enlace del correo y App Links
+
+El enlace es `https://<API_PUBLIC_URL>/cuenta/restablecer#t=<token>` (activacion: `/cuenta/activar`). El token va en el
+**fragmento**, que no se envia al servidor ni queda en sus registros de acceso. En Android el enlace abre la app si el
+dominio esta verificado (`assetlinks.json` con `ANDROID_PACKAGE` y las huellas de `ANDROID_CERT_SHA256`, en formato
+`AA:BB:...` separadas por comas). Si la app no esta instalada, la pagina de respaldo muestra el codigo para copiarlo y
+retira el fragmento de la direccion; el codigo tambien se pega en «Tengo un codigo» dentro de la app. Las paginas llevan
+CSP por hash (sin `unsafe-inline`), `no-store` y `Referrer-Policy: no-referrer`, y no reflejan ningun parametro.
+
+### Invitacion de cuentas (capacidad para Spec 06)
+
+`modulo.invitarCuenta.ejecutar(usuarioId, tx)` encola el correo de activacion **dentro de la transaccion de quien
+llama**: si esta se revierte no queda ni cuenta ni envio. **No crea cuentas, operadores ni sedes**, y esta entrega no
+expone ninguna ruta que lo haga. Tras el commit, el llamador debe invocar `modulo.gestorEnvios.despertar()`. La cuenta
+invitada queda `pendiente_activacion` con `password_hash` nulo (restriccion `CHECK`); no puede iniciar sesion ni
+recuperarse hasta activarse.
+
+### Mantenimiento
+
+La purga horaria elimina ademas tokens inservibles y envios terminados con mas de 7 dias, por lotes de 500.
+
 ### Limitaciones de esta entrega
 
-- **Sin recuperacion de contrasena (RF03).** No hay endpoints de recuperacion ni envio de correo: quien olvide su
-  contrasena no tiene salida autoservicio. La app lo indica con un texto informativo.
+- **La recuperacion depende del proveedor de correo.** Con la Gmail API (HTTPS) ya implementada, falta comprobar el
+  envio desde Render Free y el enlace verificado en un dispositivo real (entrega de despliegue): hasta entonces RF03 no
+  se debe declarar completo en produccion. El adaptador de pruebas y el servidor SMTP local no validan el proveedor real.
 - **Correo sin verificar.** Se puede acceder de inmediato; el correo no prueba identidad ni propiedad del buzon.
 - El `409 EMAIL_IN_USE` revela que un correo esta registrado (compromiso aceptado en el diseno); el login, en cambio,
   responde igual ante cualquier credencial invalida.

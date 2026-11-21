@@ -52,14 +52,16 @@ export class IniciarSesionUseCase {
     );
 
     const usuario = await this.cuentas.buscarPorCorreo(correoNormalizado);
-    const habilitado = usuario !== null && esCiudadanoActivo(usuario);
+    // Una cuenta pendiente de activacion no tiene hash (nulo) y esta excluida por no estar activa.
+    const hashDeLaCuenta =
+      usuario !== null && esCiudadanoActivo(usuario) ? usuario.passwordHash : null;
 
-    // Cuentas inexistentes o no admitidas ejecutan una verificacion de costo comparable.
+    // Cuentas inexistentes, no admitidas o sin hash ejecutan una verificacion de costo comparable.
     const coincide =
-      habilitado && usuario
-        ? await this.hash.verificar(usuario.passwordHash, contrasena)
+      hashDeLaCuenta !== null
+        ? await this.hash.verificar(hashDeLaCuenta, contrasena)
         : await this.hash.verificarFicticio(contrasena);
-    if (!habilitado || !usuario || !coincide) throw new CredencialesInvalidasError();
+    if (hashDeLaCuenta === null || !usuario || !coincide) throw new CredencialesInvalidasError();
 
     const { token, tokenHash } = this.tokens.generar();
     const ahora = this.reloj.ahora();

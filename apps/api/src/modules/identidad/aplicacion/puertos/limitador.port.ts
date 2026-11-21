@@ -1,10 +1,20 @@
-export type TipoLimite = 'registro_ip' | 'login_ip' | 'login_correo_ip';
+export type TipoLimite =
+  | 'registro_ip'
+  | 'login_ip'
+  | 'login_correo_ip'
+  | 'recuperacion_ip'
+  | 'recuperacion_correo_ip'
+  | 'recuperacion_correo'
+  | 'token_ip'
+  | 'correo_dia';
 
 export interface ConsumoLimite {
   readonly tipo: TipoLimite;
   /** Identificador en claro (IP o correo+IP); la implementacion solo persiste su HMAC. */
   readonly identificador: string;
   readonly maximo: number;
+  /** Duracion de la ventana fija de este limite; por defecto la del limitador (15 min). */
+  readonly ventanaMs?: number;
 }
 
 export interface ResultadoLimite {

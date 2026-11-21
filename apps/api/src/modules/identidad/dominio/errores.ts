@@ -50,3 +50,57 @@ export class LimiteExcedidoError extends Error {
     this.name = 'LimiteExcedidoError';
   }
 }
+
+/** Token desconocido, alterado, de otro proposito o de una cuenta que ya no puede usarlo. */
+export class TokenInvalidoError extends Error {
+  constructor() {
+    super('Token invalido');
+    this.name = 'TokenInvalidoError';
+  }
+}
+
+/** Token ya consumido o invalidado por uno posterior. */
+export class TokenUsadoError extends Error {
+  constructor() {
+    super('Token usado');
+    this.name = 'TokenUsadoError';
+  }
+}
+
+/** Token cuyo plazo de vigencia termino. */
+export class TokenVencidoError extends Error {
+  constructor() {
+    super('Token vencido');
+    this.name = 'TokenVencidoError';
+  }
+}
+
+/**
+ * Se agoto el tope diario de correos. Es un estado global del servicio, igual para toda solicitud
+ * valida, exista o no la cuenta: por eso puede informarse sin filtrar informacion de cuentas.
+ */
+export class CuotaCorreoAgotadaError extends Error {
+  constructor(readonly reintentarEnSegundos: number) {
+    super('Cuota diaria de correo agotada');
+    this.name = 'CuotaCorreoAgotadaError';
+  }
+}
+
+export type CodigoFalloCorreo =
+  | 'CONEXION'
+  | 'TIEMPO_AGOTADO'
+  | 'AUTENTICACION'
+  | 'RECHAZADO'
+  | 'CUOTA'
+  | 'DESCONOCIDO';
+
+/**
+ * Fallo al entregar un correo al proveedor. Solo lleva un codigo generico: nunca el texto del
+ * proveedor, el destinatario, el cuerpo ni credenciales.
+ */
+export class FalloEnvioCorreoError extends Error {
+  constructor(readonly codigo: CodigoFalloCorreo) {
+    super('Fallo al enviar el correo');
+    this.name = 'FalloEnvioCorreoError';
+  }
+}

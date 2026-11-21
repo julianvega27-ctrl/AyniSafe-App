@@ -1,14 +1,21 @@
 import type { PurgaPort } from './puertos/purga.port';
 import type { RelojPort } from './puertos/reloj.port';
 
-/** Sesiones revocadas o vencidas se conservan siete dias; ventanas de intentos, 24 horas. */
+/**
+ * Sesiones revocadas o vencidas, tokens de cuenta inservibles y envios terminados se conservan
+ * siete dias; las ventanas de intentos, 24 horas.
+ */
 export const RETENCION_SESIONES_MS = 7 * 24 * 60 * 60 * 1000;
+export const RETENCION_TOKENS_MS = 7 * 24 * 60 * 60 * 1000;
+export const RETENCION_ENVIOS_MS = 7 * 24 * 60 * 60 * 1000;
 export const RETENCION_VENTANAS_MS = 24 * 60 * 60 * 1000;
 export const LOTE_PURGA = 500;
 
 export interface ResultadoPurga {
   readonly sesiones: number;
   readonly ventanas: number;
+  readonly tokens: number;
+  readonly envios: number;
 }
 
 export class PurgarCaducadosUseCase {
@@ -30,7 +37,13 @@ export class PurgarCaducadosUseCase {
     const ventanas = await this.hastaVaciar((lote) =>
       this.purga.purgarVentanasAnterioresA(new Date(ahora - RETENCION_VENTANAS_MS), lote),
     );
-    return { sesiones, ventanas };
+    const tokens = await this.hastaVaciar((lote) =>
+      this.purga.purgarTokensAnterioresA(new Date(ahora - RETENCION_TOKENS_MS), lote),
+    );
+    const envios = await this.hastaVaciar((lote) =>
+      this.purga.purgarEnviosTerminadosAnterioresA(new Date(ahora - RETENCION_ENVIOS_MS), lote),
+    );
+    return { sesiones, ventanas, tokens, envios };
   }
 
   private async hastaVaciar(paso: (lote: number) => Promise<number>): Promise<number> {

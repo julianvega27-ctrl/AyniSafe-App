@@ -32,11 +32,16 @@ async function main(): Promise<void> {
   };
   const temporizador = setInterval(purgar, INTERVALO_PURGA_MS);
   temporizador.unref();
+  // Retoma los correos que quedaron pendientes antes de un reinicio.
+  identidad.gestorEnvios.iniciar();
 
   const cerrar = (): void => {
     clearInterval(temporizador);
     servidor.close(() => {
-      void prisma.$disconnect().finally(() => process.exit(0));
+      void identidad.gestorEnvios
+        .detener()
+        .then(() => prisma.$disconnect())
+        .finally(() => process.exit(0));
     });
   };
   process.on('SIGTERM', cerrar);

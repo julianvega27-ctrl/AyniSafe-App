@@ -3,10 +3,14 @@ import express, { type ErrorRequestHandler, type RequestHandler } from 'express'
 import type { Logger } from '../../../compartido/logger';
 import {
   CorreoEnUsoError,
+  CuotaCorreoAgotadaError,
   CredencialesInvalidasError,
   LimiteExcedidoError,
   NoAutenticadoError,
   ServicioNoDisponibleError,
+  TokenInvalidoError,
+  TokenUsadoError,
+  TokenVencidoError,
   ValidacionError,
 } from '../dominio/errores';
 
@@ -18,6 +22,9 @@ export type CodigoError =
   | 'EMAIL_IN_USE'
   | 'INVALID_CREDENTIALS'
   | 'UNAUTHENTICATED'
+  | 'TOKEN_INVALID'
+  | 'TOKEN_USED'
+  | 'TOKEN_EXPIRED'
   | 'PAYLOAD_TOO_LARGE'
   | 'UNSUPPORTED_MEDIA_TYPE'
   | 'RATE_LIMITED'
@@ -114,9 +121,26 @@ export function manejadorDeErrores(logger: Logger): ErrorRequestHandler {
       responderError(res, 401, 'UNAUTHENTICATED', 'Tu sesión no es válida. Inicia sesión de nuevo.');
       return;
     }
+    if (error instanceof TokenInvalidoError) {
+      responderError(res, 404, 'TOKEN_INVALID', 'El enlace o el código no es válido.');
+      return;
+    }
+    if (error instanceof TokenUsadoError) {
+      responderError(res, 410, 'TOKEN_USED', 'Este enlace ya se usó o fue reemplazado por uno más reciente.');
+      return;
+    }
+    if (error instanceof TokenVencidoError) {
+      responderError(res, 410, 'TOKEN_EXPIRED', 'Este enlace venció. Solicita uno nuevo.');
+      return;
+    }
     if (error instanceof LimiteExcedidoError) {
       res.setHeader('Retry-After', String(error.reintentarEnSegundos));
       responderError(res, 429, 'RATE_LIMITED', 'Demasiados intentos. Espera antes de volver a intentar.');
+      return;
+    }
+    if (error instanceof CuotaCorreoAgotadaError) {
+      res.setHeader('Retry-After', String(error.reintentarEnSegundos));
+      responderError(res, 503, 'SERVICE_UNAVAILABLE', 'No podemos enviar más correos por hoy. Inténtalo de nuevo más tarde.');
       return;
     }
     if (error instanceof ServicioNoDisponibleError) {

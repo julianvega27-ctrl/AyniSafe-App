@@ -18,6 +18,32 @@ export class PrismaPurgaAdapter implements PurgaPort {
     }
   }
 
+  async purgarTokensAnterioresA(corte: Date, lote: number): Promise<number> {
+    try {
+      return await this.prisma.$executeRaw`
+        DELETE FROM tokens_cuenta WHERE id IN (
+          SELECT id FROM tokens_cuenta
+          WHERE expires_at < ${corte}::timestamptz
+             OR (used_at IS NOT NULL AND used_at < ${corte}::timestamptz)
+             OR (invalidado_at IS NOT NULL AND invalidado_at < ${corte}::timestamptz)
+          LIMIT ${lote})`;
+    } catch (error) {
+      throw new ServicioNoDisponibleError(error);
+    }
+  }
+
+  async purgarEnviosTerminadosAnterioresA(corte: Date, lote: number): Promise<number> {
+    try {
+      return await this.prisma.$executeRaw`
+        DELETE FROM envios_correo WHERE id IN (
+          SELECT id FROM envios_correo
+          WHERE estado IN ('enviado', 'fallido') AND created_at < ${corte}::timestamptz
+          LIMIT ${lote})`;
+    } catch (error) {
+      throw new ServicioNoDisponibleError(error);
+    }
+  }
+
   async purgarVentanasAnterioresA(corte: Date, lote: number): Promise<number> {
     try {
       return await this.prisma.$executeRaw`
