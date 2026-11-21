@@ -1,0 +1,281 @@
+{
+  "descripcion": "Vectores de prueba compartidos por la API (TypeScript) y la app (Dart). Un valor puede ser una cadena, {repetir, veces} o una lista de ambos que se concatena. Longitudes en puntos de codigo Unicode.",
+  "nombre": [
+    {
+      "caso": "nombre simple",
+      "valor": "Rosa",
+      "valido": true,
+      "normalizado": "Rosa"
+    },
+    {
+      "caso": "recorta extremos",
+      "valor": "  Rosa Quispe  ",
+      "valido": true,
+      "normalizado": "Rosa Quispe"
+    },
+    {
+      "caso": "vacio",
+      "valor": "",
+      "valido": false
+    },
+    {
+      "caso": "solo espacios",
+      "valor": "   ",
+      "valido": false
+    },
+    {
+      "caso": "100 puntos de codigo",
+      "valor": {
+        "repetir": "a",
+        "veces": 100
+      },
+      "valido": true
+    },
+    {
+      "caso": "101 puntos de codigo",
+      "valor": {
+        "repetir": "a",
+        "veces": 101
+      },
+      "valido": false
+    },
+    {
+      "caso": "100 caracteres fuera del plano basico",
+      "valor": {
+        "repetir": "😀",
+        "veces": 100
+      },
+      "valido": true
+    },
+    {
+      "caso": "101 caracteres fuera del plano basico",
+      "valor": {
+        "repetir": "😀",
+        "veces": 101
+      },
+      "valido": false
+    }
+  ],
+  "correo": [
+    {
+      "caso": "simple",
+      "valor": "vecina@ejemplo.com",
+      "valido": true,
+      "normalizado": "vecina@ejemplo.com"
+    },
+    {
+      "caso": "mayusculas y espacios externos",
+      "valor": " Vecina@Ejemplo.com ",
+      "valido": true,
+      "normalizado": "vecina@ejemplo.com"
+    },
+    {
+      "caso": "conserva puntos",
+      "valor": "ana.maria@ejemplo.com",
+      "valido": true,
+      "normalizado": "ana.maria@ejemplo.com"
+    },
+    {
+      "caso": "conserva sufijo +",
+      "valor": "ana+reportes@ejemplo.com",
+      "valido": true,
+      "normalizado": "ana+reportes@ejemplo.com"
+    },
+    {
+      "caso": "puntos y sufijos distintos no se fusionan",
+      "valor": "a.na@ejemplo.com",
+      "valido": true,
+      "normalizado": "a.na@ejemplo.com"
+    },
+    {
+      "caso": "sin arroba",
+      "valor": "vecinaejemplo.com",
+      "valido": false
+    },
+    {
+      "caso": "sin dominio",
+      "valor": "vecina@",
+      "valido": false
+    },
+    {
+      "caso": "sin parte local",
+      "valor": "@ejemplo.com",
+      "valido": false
+    },
+    {
+      "caso": "dominio sin punto",
+      "valor": "vecina@ejemplo",
+      "valido": false
+    },
+    {
+      "caso": "espacio interno",
+      "valor": "ve cina@ejemplo.com",
+      "valido": false
+    },
+    {
+      "caso": "puntos consecutivos",
+      "valor": "a..b@ejemplo.com",
+      "valido": false
+    },
+    {
+      "caso": "vacio",
+      "valor": "",
+      "valido": false
+    },
+    {
+      "caso": "254 caracteres en total",
+      "valor": [
+        {
+          "repetir": "a",
+          "veces": 64
+        },
+        "@",
+        {
+          "repetir": "b",
+          "veces": 63
+        },
+        ".",
+        {
+          "repetir": "c",
+          "veces": 63
+        },
+        ".",
+        {
+          "repetir": "d",
+          "veces": 61
+        }
+      ],
+      "valido": true
+    },
+    {
+      "caso": "255 caracteres en total",
+      "valor": [
+        {
+          "repetir": "a",
+          "veces": 64
+        },
+        "@",
+        {
+          "repetir": "b",
+          "veces": 63
+        },
+        ".",
+        {
+          "repetir": "c",
+          "veces": 63
+        },
+        ".",
+        {
+          "repetir": "d",
+          "veces": 62
+        }
+      ],
+      "valido": false
+    },
+    {
+      "caso": "parte local de 65 caracteres",
+      "valor": [
+        {
+          "repetir": "a",
+          "veces": 65
+        },
+        "@ejemplo.com"
+      ],
+      "valido": false
+    }
+  ],
+  "contrasena": [
+    {
+      "caso": "14 puntos de codigo",
+      "valor": {
+        "repetir": "a",
+        "veces": 14
+      },
+      "valido": false
+    },
+    {
+      "caso": "15 puntos de codigo",
+      "valor": {
+        "repetir": "a",
+        "veces": 15
+      },
+      "valido": true
+    },
+    {
+      "caso": "128 puntos de codigo",
+      "valor": {
+        "repetir": "a",
+        "veces": 128
+      },
+      "valido": true
+    },
+    {
+      "caso": "129 puntos de codigo",
+      "valor": {
+        "repetir": "a",
+        "veces": 129
+      },
+      "valido": false
+    },
+    {
+      "caso": "15 caracteres fuera del plano basico (30 unidades UTF-16)",
+      "valor": {
+        "repetir": "😀",
+        "veces": 15
+      },
+      "valido": true
+    },
+    {
+      "caso": "14 caracteres fuera del plano basico",
+      "valor": {
+        "repetir": "😀",
+        "veces": 14
+      },
+      "valido": false
+    },
+    {
+      "caso": "128 caracteres fuera del plano basico (256 unidades UTF-16)",
+      "valor": {
+        "repetir": "😀",
+        "veces": 128
+      },
+      "valido": true
+    },
+    {
+      "caso": "129 caracteres fuera del plano basico",
+      "valor": {
+        "repetir": "😀",
+        "veces": 129
+      },
+      "valido": false
+    },
+    {
+      "caso": "15 espacios no se recortan",
+      "valor": {
+        "repetir": " ",
+        "veces": 15
+      },
+      "valido": true
+    },
+    {
+      "caso": "espacios en los extremos cuentan",
+      "valor": " clave larga con espacios ",
+      "valido": true
+    },
+    {
+      "caso": "los espacios cuentan para el minimo (11 letras y 4 espacios)",
+      "valor": "  abcdefghijk  ",
+      "valido": true
+    },
+    {
+      "caso": "acentos y eñe",
+      "valor": "contraseña-muy-ñandú",
+      "valido": true
+    },
+    {
+      "caso": "sin reglas de composicion",
+      "valor": "aaaaaaaaaaaaaaaa",
+      "valido": true
+    }
+  ]
+}

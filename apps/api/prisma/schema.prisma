@@ -1,0 +1,68 @@
+// Esquema del modulo Identidad (acceso ciudadano). Ver
+// openspec/changes/registro-login-ciudadano/design.md, seccion 5.
+// Las restricciones que Prisma no expresa (CHECK) viven en el SQL de la migracion.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RolUsuario {
+  ciudadano
+  operador
+  administrador
+}
+
+enum EstadoUsuario {
+  activo
+  suspendido
+}
+
+model Usuario {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre            String
+  /// Correo recortado y en minusculas: clave de identidad unica.
+  correoNormalizado String        @unique @map("correo_normalizado")
+  /// Hash Argon2id codificado (con parametros y sal). Nunca la contrasena.
+  passwordHash      String        @map("password_hash")
+  rol               RolUsuario
+  estado            EstadoUsuario
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sesiones          Sesion[]
+
+  @@map("usuarios")
+}
+
+model Sesion {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId String    @map("usuario_id") @db.Uuid
+  /// SHA-256 (hex) del token opaco. El token en claro no se guarda.
+  tokenHash String    @unique @map("token_hash")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([usuarioId])
+  @@map("sesiones")
+}
+
+model VentanaIntentos {
+  /// 'registro_ip', 'login_ip' o 'login_correo_ip'.
+  tipo          String
+  /// HMAC del identificador (IP o correo+IP). Nunca valores en claro.
+  claveHash     String   @map("clave_hash")
+  ventanaInicio DateTime @map("ventana_inicio") @db.Timestamptz(3)
+  contador      Int
+
+  @@id([tipo, claveHash, ventanaInicio])
+  @@index([ventanaInicio])
+  @@map("ventanas_intentos")
+}

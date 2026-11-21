@@ -1,0 +1,310 @@
+openapi: 3.1.0
+info:
+  title: AyniSafe API - Acceso ciudadano
+  version: 0.1.0
+  description: |
+    Contrato propuesto del modulo Identidad para registro, inicio de sesion, consulta y cierre de
+    sesion del ciudadano. Es el contrato objetivo de la entrega `registro-login-ciudadano`; no
+    acredita que los endpoints esten implementados.
+
+    Reglas transversales:
+    - Solo HTTPS en entornos compartidos. Credenciales unicamente en el cuerpo JSON.
+    - La sesion viaja solo en `Authorization: Bearer <token>`; nunca en la URL.
+    - Todas las respuestas de este contrato llevan `Cache-Control: no-store`.
+    - Cuerpos JSON de hasta 8 KiB. Campos no declarados se rechazan con 400.
+    - Limitacion de intentos (ventanas fijas de 15 minutos, configurables): registro 5 solicitudes por IP;
+      acceso 30 por IP y 5 por combinacion correo+IP. Al superarlos se responde 429 con Retry-After.
+    - La sesion dura 24 horas desde su creacion, sin renovacion.
+    - Fuera de alcance de esta entrega: recuperacion de contrasena y verificacion de correo.
+servers:
+  - url: /api/v1
+tags:
+  - name: Acceso ciudadano
+paths:
+  /auth/ciudadanos/registro:
+    post:
+      tags: [Acceso ciudadano]
+      operationId: registrarCiudadano
+      summary: Crear una cuenta de ciudadano
+      description: |
+        Crea la cuenta con rol ciudadano y estado activo, fijados por el servidor. No inicia sesion
+        ni exige verificar el correo. El correo se compara sin distinguir mayusculas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegistroSolicitud' }
+      responses:
+        '201':
+          description: Cuenta creada. No incluye sesion, contrasena ni hash.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegistroRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '409': { $ref: '#/components/responses/CorreoEnUso' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /auth/ciudadanos/sesiones:
+    post:
+      tags: [Acceso ciudadano]
+      operationId: iniciarSesionCiudadano
+      summary: Iniciar sesion con correo y contrasena
+      description: |
+        Emite una sesion opaca de 24 horas solo tras validar credenciales y persistirla. Correo
+        desconocido, contrasena incorrecta, cuenta suspendida o no ciudadana producen el mismo 401.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginSolicitud' }
+      responses:
+        '200':
+          description: Sesion iniciada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/CredencialesInvalidas' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /auth/sesion:
+    get:
+      tags: [Acceso ciudadano]
+      operationId: consultarSesion
+      summary: Consultar la sesion actual
+      description: |
+        Devuelve unicamente la identidad del propietario de la sesion presentada. No acepta
+        parametros para elegir otro usuario.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sesion vigente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SesionRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+    delete:
+      tags: [Acceso ciudadano]
+      operationId: cerrarSesion
+      summary: Cerrar la sesion actual
+      description: |
+        Revoca solo la sesion presentada. Es idempotente: token ausente, desconocido o ya revocado
+        tambien responde 204 sin afectar otras sesiones.
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '204':
+          description: Sesion revocada o inexistente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token opaco de sesion (32 bytes aleatorios en base64url).
+  headers:
+    NoStore:
+      description: Las respuestas de autenticacion no se almacenan en cache.
+      schema: { type: string, const: no-store }
+    RetryAfter:
+      description: Segundos de espera antes de reintentar (el mayor plazo restante aplicable).
+      schema: { type: integer, minimum: 1 }
+  schemas:
+    RegistroSolicitud:
+      type: object
+      additionalProperties: false
+      required: [nombre, correo, contrasena]
+      example: { nombre: "Rosa Quispe", correo: "rosa@ejemplo.com", contrasena: "contraseña de ejemplo 123" }
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 1 a 100 puntos de codigo Unicode tras recortar extremos.
+        correo:
+          type: string
+          maxLength: 254
+          description: |
+            Sintaxis valida, hasta 254 caracteres tras recortar extremos. Se guarda en minusculas;
+            no se eliminan puntos ni sufijos `+`.
+        contrasena:
+          type: string
+          minLength: 15
+          maxLength: 128
+          writeOnly: true
+          description: |
+            15 a 128 puntos de codigo Unicode, con espacios, sin reglas de composicion. No se
+            recorta, normaliza ni trunca.
+    LoginSolicitud:
+      type: object
+      additionalProperties: false
+      required: [correo, contrasena]
+      example: { correo: "rosa@ejemplo.com", contrasena: "contraseña de ejemplo 123" }
+      properties:
+        correo:
+          type: string
+          maxLength: 254
+        contrasena:
+          type: string
+          minLength: 15
+          maxLength: 128
+          writeOnly: true
+    UsuarioPublico:
+      type: object
+      additionalProperties: false
+      required: [id, nombre, correo, rol]
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string }
+        correo: { type: string }
+        rol: { type: string, const: ciudadano }
+    RegistroRespuesta:
+      type: object
+      additionalProperties: false
+      required: [usuario]
+      example: { usuario: { id: "5482bbd9-ef53-4049-a095-19a9d0144eeb", nombre: "Rosa Quispe", correo: "rosa@ejemplo.com", rol: ciudadano } }
+      properties:
+        usuario: { $ref: '#/components/schemas/UsuarioPublico' }
+    LoginRespuesta:
+      type: object
+      additionalProperties: false
+      required: [token, expiresAt, usuario]
+      example: { token: "Zm9vYmFyLWVqZW1wbG8tZGUtdG9rZW4tb3BhY28tMDAwMDA", expiresAt: "2026-11-22T13:48:50.555Z", usuario: { id: "5482bbd9-ef53-4049-a095-19a9d0144eeb", nombre: "Rosa Quispe", correo: "rosa@ejemplo.com", rol: ciudadano } }
+      properties:
+        token: { type: string }
+        expiresAt:
+          type: string
+          format: date-time
+          description: Vencimiento absoluto, 24 horas despues de la creacion. Sin renovacion.
+        usuario: { $ref: '#/components/schemas/UsuarioPublico' }
+    SesionRespuesta:
+      type: object
+      additionalProperties: false
+      required: [usuario, expiresAt]
+      example: { usuario: { id: "5482bbd9-ef53-4049-a095-19a9d0144eeb", nombre: "Rosa Quispe", correo: "rosa@ejemplo.com", rol: ciudadano }, expiresAt: "2026-11-22T13:48:50.555Z" }
+      properties:
+        usuario: { $ref: '#/components/schemas/UsuarioPublico' }
+        expiresAt: { type: string, format: date-time }
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - EMAIL_IN_USE
+                - INVALID_CREDENTIALS
+                - UNAUTHENTICATED
+                - PAYLOAD_TOO_LARGE
+                - UNSUPPORTED_MEDIA_TYPE
+                - RATE_LIMITED
+                - SERVICE_UNAVAILABLE
+                - INTERNAL_ERROR
+            message: { type: string }
+            fields:
+              type: object
+              description: Mensaje por campo. Nunca contiene el valor enviado.
+              additionalProperties: { type: string }
+            requestId:
+              type: string
+              description: Identificador aleatorio de la solicitud; no contiene datos de cuenta.
+  responses:
+    ValidacionInvalida:
+      description: Campos ausentes, tipos incorrectos, valores fuera de regla o campos no admitidos.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: VALIDATION_ERROR, message: "Revisa los datos ingresados.", fields: { correo: "Ingresa un correo válido." }, requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    CorreoEnUso:
+      description: El correo normalizado ya esta registrado. No revela nombre, rol ni estado.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: EMAIL_IN_USE, message: "Este correo ya está registrado. Inicia sesión.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    CredencialesInvalidas:
+      description: Correo o contrasena incorrectos (mismo mensaje para todas las causas).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: INVALID_CREDENTIALS, message: "Correo o contraseña incorrectos.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    NoAutenticado:
+      description: Token ausente, invalido, vencido, revocado o de cuenta no habilitada.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: UNAUTHENTICATED, message: "Tu sesión no es válida. Inicia sesión de nuevo.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    CuerpoDemasiadoGrande:
+      description: El cuerpo JSON supera 8 KiB.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: PAYLOAD_TOO_LARGE, message: "La solicitud es demasiado grande.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    TipoNoSoportado:
+      description: Content-Type distinto de application/json.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: UNSUPPORTED_MEDIA_TYPE, message: "El contenido debe enviarse como application/json en UTF-8.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    LimiteExcedido:
+      description: Limite de intentos superado. No se crea cuenta ni sesion.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: RATE_LIMITED, message: "Demasiados intentos. Espera antes de volver a intentar.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    ServicioNoDisponible:
+      description: Base de datos, hash o dependencia interna no disponible. Reintento manual.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: SERVICE_UNAVAILABLE, message: "El servicio no está disponible por ahora. Inténtalo de nuevo en unos minutos.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    ErrorInterno:
+      description: Error inesperado. Mensaje generico y requestId, sin detalles internos.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: INTERNAL_ERROR, message: "Ocurrió un error inesperado. Si persiste, indica el código de la solicitud.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
