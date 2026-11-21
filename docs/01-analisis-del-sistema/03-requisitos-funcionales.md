@@ -5,7 +5,7 @@
 | RF01 | El sistema debe permitir autorregistro ciudadano con nombre, correo y contraseña, sin DNI obligatorio y con teléfono opcional en perfil; el alta de administradores es controlada y la de operadores corresponde al administrador. | HU01 |
 | RF02 | El sistema debe permitir el inicio de sesión de los usuarios registrados. | HU01 |
 | RF03 | El sistema debe recuperar acceso mediante correo con token de un solo uso y vencimiento. Proveedor y remitente de piloto: Gmail API (HTTPS) con cuenta dedicada, porque el SMTP de Gmail está bloqueado desde Render Free; su verificación en el entorno desplegado sigue pendiente. | HU01 |
-| RF04 | El sistema debe permitir al ciudadano editar la información básica de su perfil desde la app. | HU18 |
+| RF04 | El sistema debe permitir al ciudadano editar la información básica de su perfil desde la app: nombre y teléfono opcional, con la autorización revocable para compartirlo. El correo se muestra de solo lectura: su cambio requiere una entrega independiente que lo verifique. | HU18 |
 | RF05 | El sistema debe gestionar permisos diferenciados para exactamente tres roles: ciudadano, administrador y operador. «Personal autorizado» significa operador. La API debe aplicar permisos por propiedad, institución, sede, categoría y cobertura territorial. | HU01, HU07, HU11 |
 | RF06 | El sistema debe permitir registrar reportes de seguridad y emergencias con una de las 16 categorías del catálogo inicial, especificando su categoría, descripción, fecha y hora de ocurrencia. | HU02 |
 | RF07 | El sistema debe incorporar la ubicación georreferenciada del incidente únicamente con autorización del usuario. | HU03 |

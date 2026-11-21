@@ -114,6 +114,22 @@ Estas decisiones resuelven los pendientes de «Política de contraseña» y «Ve
 - **Sesión:** token opaco de 24 horas desde su creación, sin renovación. Al reabrir la app se verifica con el servidor antes de mostrar contenido privado. Al salir se borran los datos locales; sin conexión se avisa de que la sesión remota vencerá en su plazo.
 - **Enlaces públicos:** privacidad y contactos de emergencia se declaran «aún no disponibles» mientras no exista contenido aprobado; no se muestran números inventados.
 
+### 2.8 Perfil, navegación y contenido público (entrega `perfil-navegacion-movil`)
+
+Implementa la navegación de la sección 2.2 con lo que existe hoy y declara con honestidad lo que aún no.
+
+| Vista | Contenido y comportamiento |
+|---|---|
+| Inicio | Saludo con el nombre; «Reportar un incidente» **deshabilitado** con el texto «Disponible próximamente» (no abre ningún flujo); últimos reportes como «aún no disponible»; contactos de emergencia aprobados o el aviso de que aún no los hay. |
+| Mapa, Mis reportes, Alertas | Estado «Aún no disponible» con texto e icono. Sin mapas, reportes, avisos ni cifras de ejemplo y sin solicitar ubicación ni notificaciones. |
+| Perfil (cabecera) | Datos personales, preferencias (aún no disponibles), Privacidad, Acerca de AyniSafe, Desarrolladores, Contactos de emergencia y Cerrar sesión. El cierre de sesión vive aquí. |
+| Editar datos | Nombre y teléfono opcional, con la autorización «Autorizo compartir mi teléfono». El correo **no** se edita y no se presenta como verificado. |
+| Páginas informativas | Leen el contenido público versionado de la API. Una sección pendiente se declara «no disponible»; ante un fallo de red se ofrece «Reintentar». |
+
+Reglas del teléfono: es opcional (7 a 15 dígitos); la autorización es revocable sin borrar el número, se revoca al borrarlo o cambiarlo, y **por ahora no se comparte con ninguna institución**: solo se guarda la preferencia que consumirá el registro de reportes. El retroceso del sistema en una pestaña distinta de Inicio vuelve a Inicio; tras cerrar sesión no queda historial que reabra datos privados.
+
+Contenido público: finalidad, funcionamiento, desarrolladores, privacidad y contactos salen de una fuente versionada en la API (`GET /publico/contenido`) que también podrá usar la web. Los **contactos de emergencia están vacíos**: ninguno está aprobado y el 105 sigue por verificar. El texto de privacidad publicado está redactado solo con lo que la app trata hoy y **queda pendiente de revisión por el equipo**. Sin caché en disco: un contacto de emergencia no se vería sin red; la entrega de administración de contenido decidirá la caché persistente antes de publicar contactos reales.
+
 ## 3. Aspectos pendientes
 
 Los siguientes puntos no constituyen decisiones cerradas ni deben presentarse como requisitos ya aprobados:
@@ -126,6 +142,8 @@ Los siguientes puntos no constituyen decisiones cerradas ni deben presentarse co
 | Política de contraseña | **Resuelto** para el acceso ciudadano: ver sección 2.7. |
 | Verificación de correo | **Resuelto** para esta entrega (no se verifica): ver sección 2.7. Una verificación futura se decide por separado de la recuperación. |
 | Correo de recuperación | **Resuelto para el piloto con reservas:** Gmail API por HTTPS con cuenta dedicada (ver sección 2.5), porque el SMTP de Gmail está **bloqueado** desde Render Free (comprobado el 21/11/2026). Probado desde la máquina de desarrollo con envío real a dos buzones (entrega a bandeja de entrada en menos de un minuto, asunto correcto). **Pendiente:** que el nombre «AyniSafe» aparezca como remitente, comprobar el envío desde Render, el enlace verificado en un dispositivo real y la entrega a más proveedores de correo. |
+| Cambio de correo | **Pendiente (entrega futura).** El correo es la clave de identidad y el destino de la recuperación y no se verifica; editarlo sin verificación permitiría que una sesión robada redirija el enlace de recuperación a un buzón ajeno. Mínimo necesario: correo pendiente, token al **nuevo** buzón, aviso al anterior, reautenticación y revocación de sesiones. Hasta entonces el perfil lo muestra de solo lectura. |
+| Texto de privacidad y contenido público | Redactado en la entrega `perfil-navegacion-movil` con los datos que la app trata hoy; falta la revisión del equipo, la aprobación de los contactos (incluido el 105) y la caché persistente de contactos. |
 | Distribución adaptable | Detallar dimensiones, puntos de cambio y comportamiento del panel en pantallas estrechas. |
 | Pantallas y mensajes finales | Afinar wireframes y textos de privacidad. Los mensajes de validación, conexión y recuperación ya están definidos en la implementación y se revisan con las pruebas de usabilidad. |
 | Validación visual y accesibilidad | Comprobar contraste, escalado, foco, lectores de pantalla y comprensión de los flujos. Los criterios acordados no equivalen a pruebas superadas. |
