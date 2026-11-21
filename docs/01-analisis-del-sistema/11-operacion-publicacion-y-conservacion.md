@@ -4,7 +4,7 @@ Fecha: 19 de noviembre de 2026. Incorpora las decisiones del usuario sobre estad
 
 ## 1. Registro ciudadano y contactos
 
-Registro: nombre, correo y contraseña. No exigir DNI. El teléfono es opcional en el perfil, no otro campo obligatorio al reportar; compartirlo con una institución requiere autorización explícita y acceso limitado al caso asignado. No publicarlo ni incluirlo en notificaciones. Recuperar acceso por correo mediante token de un solo uso y con vencimiento; canal acordado, proveedor gratuito y remitente aún pendientes. Mantener la misma política para activación del operador sin distribuir contraseñas compartidas.
+Registro: nombre, correo y contraseña. No exigir DNI. El teléfono es opcional en el perfil, no otro campo obligatorio al reportar; compartirlo con una institución requiere autorización explícita y acceso limitado al caso asignado. No publicarlo ni incluirlo en notificaciones. Recuperar acceso por correo mediante token de un solo uso y con vencimiento; canal acordado; proveedor y remitente de piloto: Gmail API por HTTPS con una cuenta dedicada (cuota publicada de 500 correos al día, límite propio de 400), porque el SMTP de Gmail está bloqueado desde Render Free (comprobado el 21/11/2026); falta verificar el envío desde el entorno desplegado. Mantener la misma política para activación del operador sin distribuir contraseñas compartidas.
 
 La sesión identifica al autor. El ciudadano puede reportar sin fotografía y con ubicación pendiente. La categoría «Otra emergencia» se asigna a **Serenazgo** y requiere que la descripción aclare qué emergencia no está categorizada; no agregar un segundo campo narrativo ni una categoría nueva. Si faltan distrito o sede habilitada, el administrador resuelve la asignación con metadatos suficientes y sin acceso sanitario adicional.
 
@@ -107,4 +107,4 @@ No se asume que el plan gratuito incluya backups adecuados. La rotación, la exp
 
 ## 8. Pendientes concretos
 
-Se acordaron cinco nombres distritales, pero faltan geometrías/UBIGEO y coberturas de las sedes. Las sedes candidatas no acreditan operación. Siguen pendientes proveedor de correo, validación de almacenamiento privado/backup, parámetros de correlación y confirmación de disponibilidad real de operadores. La principal condicionada y aviso SAMU en accidentes, así como «Asumir caso», ya están definidos.
+Se acordaron cinco nombres distritales, pero faltan geometrías/UBIGEO y coberturas de las sedes. Las sedes candidatas no acreditan operación. Siguen pendientes la verificación del proveedor de correo desde el entorno desplegado, validación de almacenamiento privado/backup, parámetros de correlación y confirmación de disponibilidad real de operadores. La principal condicionada y aviso SAMU en accidentes, así como «Asumir caso», ya están definidos.

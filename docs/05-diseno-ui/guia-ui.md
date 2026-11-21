@@ -70,9 +70,24 @@ La cuenta se confirmará como creada únicamente después de la respuesta satisf
 
 La pantalla de inicio de sesión incluye correo, contraseña con control Mostrar/Ocultar, acción «Ingresar» y enlaces «Olvidé mi contraseña» y «Crear cuenta».
 
-La recuperación utiliza correo con token de un solo uso y vencimiento, conforme a las reglas existentes. Se contemplan las vistas de solicitud de recuperación, nueva contraseña y enlace vencido o usado; el envío real depende de resolver el proveedor y remitente pendientes.
+La recuperación utiliza correo con token de un solo uso y vencimiento (30 minutos), conforme a las reglas existentes. Desde el acceso, el enlace «Olvidé mi contraseña» abre la solicitud del enlace; la contraseña se cambia con un enlace que abre la app o con un código pegado a mano («Tengo un código»). Al cambiarla se cierran **todas** las sesiones de la cuenta y no se inicia sesión automáticamente: se vuelve al acceso con un aviso.
 
-**Excepción temporal (entrega `registro-login-ciudadano`):** la recuperación (RF03) queda diferida a una entrega posterior. Hasta entonces el acceso **no** muestra el enlace «Olvidé mi contraseña»: muestra el texto informativo no interactivo «Recuperación de contraseña: próximamente», sin ruta ni envío de correo. Al habilitar RF03 se reemplaza por el enlace descrito arriba. Mientras tanto, quien olvide su contraseña no tiene salida autoservicio.
+Vistas de la recuperación (entrega `correo-recuperacion-activacion`):
+
+| Vista | Contenido y comportamiento |
+|---|---|
+| Solicitar enlace | Correo precargado desde el acceso, acción «Enviar enlace» y acceso a «Tengo un código». Un solo envío en curso. |
+| Confirmación neutral | «Si el correo corresponde a una cuenta, te enviaremos instrucciones… Revisa también la carpeta de spam». No afirma que la cuenta exista ni repite el correo. |
+| Nueva contraseña | Campo «Contraseña nueva» con Mostrar/Ocultar, pegado permitido y la ayuda de 15 a 128 caracteres. El servidor indica si el enlace es de recuperación o de activación y el texto y el botón se adaptan. |
+| Enlace usado, vencido o inválido | Mensaje con icono y texto, sin pedir contraseña, y acción «Solicitar otro enlace». |
+| Tengo un código | Campo para pegar el código del correo; continúa como el enlace. |
+| Estados de red | Sin conexión, servicio no disponible, espera por demasiados intentos y tope diario de correos: se explican sin afirmar que el correo se envió ni reintentar solos. |
+
+Los mismos criterios de accesibilidad de la sección 2.6 aplican a estas vistas (etiquetas persistentes, texto base de 16, controles de al menos 48, errores con texto e icono y texto ampliable al 200 %).
+
+**Remitente de piloto:** los correos salen de una cuenta de Gmail dedicada mediante la **Gmail API por HTTPS** (el SMTP de Gmail está bloqueado en Render Free; ver sección 3). No es un remitente institucional ni un dominio propio, y su cuota publicada es de 500 correos al día (el sistema limita las solicitudes a 400). El nombre «AyniSafe» como remitente **aún no se muestra** en el buzón (Gmail usa el nombre guardado en la cuenta): queda pendiente de corregir.
+
+**Activación de cuentas invitadas:** la misma pantalla de nueva contraseña sirve para activar una cuenta invitada («Activa tu cuenta»). Esta entrega no crea operadores ni muestra pantallas de administración.
 
 Los errores de formato o validación se muestran junto al campo correspondiente. Las credenciales incorrectas utilizan un mensaje general. Ante problemas de conexión se informa el problema y se ofrece reintentar, sin indicar un éxito no confirmado.
 
@@ -110,9 +125,9 @@ Los siguientes puntos no constituyen decisiones cerradas ni deben presentarse co
 | Marca | Resolver logotipo y otros recursos propios de identidad. Los motivos geométricos de la alternativa comunitaria no fueron adoptados. |
 | Política de contraseña | **Resuelto** para el acceso ciudadano: ver sección 2.7. |
 | Verificación de correo | **Resuelto** para esta entrega (no se verifica): ver sección 2.7. Una verificación futura se decide por separado de la recuperación. |
-| Correo de recuperación | Seleccionar proveedor y remitente y validar entrega, vencimiento y uso único. |
+| Correo de recuperación | **Resuelto para el piloto con reservas:** Gmail API por HTTPS con cuenta dedicada (ver sección 2.5), porque el SMTP de Gmail está **bloqueado** desde Render Free (comprobado el 21/11/2026). Probado desde la máquina de desarrollo con envío real a dos buzones (entrega a bandeja de entrada en menos de un minuto, asunto correcto). **Pendiente:** que el nombre «AyniSafe» aparezca como remitente, comprobar el envío desde Render, el enlace verificado en un dispositivo real y la entrega a más proveedores de correo. |
 | Distribución adaptable | Detallar dimensiones, puntos de cambio y comportamiento del panel en pantallas estrechas. |
-| Pantallas y mensajes finales | Afinar wireframes, textos de privacidad y mensajes concretos de validación, conexión y recuperación. |
+| Pantallas y mensajes finales | Afinar wireframes y textos de privacidad. Los mensajes de validación, conexión y recuperación ya están definidos en la implementación y se revisan con las pruebas de usabilidad. |
 | Validación visual y accesibilidad | Comprobar contraste, escalado, foco, lectores de pantalla y comprensión de los flujos. Los criterios acordados no equivalen a pruebas superadas. |
 
 Una versión ciudadana completa para navegador requeriría una decisión explícita de ampliación de alcance. No se considera una entrega pendiente del alcance actual.
