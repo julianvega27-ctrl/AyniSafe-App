@@ -87,37 +87,30 @@ void main() {
     );
 
     testWidgets(
-      'la recuperación aparece solo como texto informativo no interactivo',
+      '«Olvidé mi contraseña» es un enlace interactivo de al menos 48 de alto y ya no aparece «próximamente»',
       (tester) async {
         final api = await abrirAcceso(tester);
-        final texto = find.text('Recuperación de contraseña: próximamente');
-        expect(texto, findsOneWidget);
-        // Sin enlace, botón ni área táctil: ni él ni sus ancestros son interactivos.
-        for (final tipo in [
-          TextButton,
-          InkWell,
-          InkResponse,
-          GestureDetector,
-          FilledButton,
-          OutlinedButton,
-        ]) {
-          expect(
-            find.ancestor(of: texto, matching: find.byType(tipo)),
-            findsNothing,
-            reason: tipo.toString(),
-          );
-        }
-        // Ningún texto interactivo ofrece recuperar la contraseña.
-        expect(
-          find.widgetWithText(TextButton, 'Olvidé mi contraseña'),
-          findsNothing,
-        );
-        expect(find.textContaining('Olvidé'), findsNothing);
-        // Tocarlo no navega ni envía nada.
-        await tester.tap(texto);
+        final enlace = find.widgetWithText(TextButton, 'Olvidé mi contraseña');
+        expect(enlace, findsOneWidget);
+        expect(find.textContaining('próximamente'), findsNothing);
+        expect(tester.getSize(enlace).height, greaterThanOrEqualTo(48));
+        // Abrir la pantalla no envía nada: la solicitud solo se hace al pulsar «Enviar enlace».
+        await tester.tap(enlace);
         await tester.pumpAndSettle();
-        expect(find.byType(AccesoPantalla), findsOneWidget);
+        expect(find.text('Recuperar contraseña'), findsOneWidget);
         expect(api.solicitudes, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'el correo escrito se precarga al abrir la recuperación y el acceso no pide verificar el correo',
+      (tester) async {
+        await abrirAcceso(tester);
+        await escribirEn(tester, 'Correo', 'rosa@ejemplo.com');
+        await tester.tap(find.widgetWithText(TextButton, 'Olvidé mi contraseña'));
+        await tester.pumpAndSettle();
+        expect(textoDe(tester, 'Correo'), 'rosa@ejemplo.com');
+        expect(find.textContaining('verific'), findsNothing);
       },
     );
 

@@ -180,6 +180,30 @@ class SesionControlador extends ChangeNotifier {
     _fijar(SesionAnonima(aviso: _avisoDeCierre(revocada)));
   }
 
+  /// Tras definir una contraseña nueva (recuperación o activación) el servidor revoca todas las
+  /// sesiones de la cuenta y no emite ninguna nueva: se descarta el token local y se vuelve al
+  /// acceso con un aviso. No se inicia sesión automáticamente.
+  Future<void> alDefinirContrasena(PropositoToken proposito) async {
+    _token = null;
+    final aviso = switch (proposito) {
+      PropositoToken.recuperacion => const Aviso(
+        TipoAviso.exito,
+        'Cambiaste tu contraseña. Cerramos tus otras sesiones: inicia sesión con la nueva.',
+      ),
+      PropositoToken.activacion => const Aviso(
+        TipoAviso.exito,
+        'Tu cuenta quedó activada. Inicia sesión con tu contraseña nueva.',
+      ),
+    };
+    try {
+      await _almacen.borrar();
+    } on AlmacenamientoSesionFallo {
+      _fijar(const SesionLimpiezaPendiente(revocadaEnServidor: true));
+      return;
+    }
+    _fijar(SesionAnonima(aviso: aviso));
+  }
+
   /// Reintenta el borrado seguro tras un fallo. Hasta lograrlo no se restaura ninguna sesión.
   Future<void> reintentarLimpieza() async {
     final actual = _estado;

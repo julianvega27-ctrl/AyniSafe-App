@@ -11,11 +11,12 @@ import '../componentes/campo_formulario.dart';
 import '../componentes/enlaces_publicos.dart';
 import '../componentes/estructura_pantalla.dart';
 import '../componentes/mensaje_accesible.dart';
+import '../flujo_recuperacion.dart';
 import '../tema.dart';
 import 'registro_pantalla.dart';
 
-/// Inicio de sesión con correo y contraseña. La recuperación de contraseña se muestra solo como
-/// texto informativo no interactivo: no hay ruta ni envío de correo en esta entrega.
+/// Inicio de sesión con correo y contraseña. El enlace «Olvidé mi contraseña» abre la recuperación
+/// por correo; el acceso ciudadano no exige haber verificado el correo.
 class AccesoPantalla extends StatefulWidget {
   const AccesoPantalla({
     super.key,
@@ -32,8 +33,7 @@ class AccesoPantalla extends StatefulWidget {
   final Aviso? avisoDeSesion;
   final DateTime Function()? ahora;
 
-  static const String textoRecuperacion =
-      'Recuperación de contraseña: próximamente';
+  static const String textoOlvide = 'Olvidé mi contraseña';
 
   @override
   State<AccesoPantalla> createState() => _AccesoPantallaState();
@@ -95,6 +95,14 @@ class _AccesoPantallaState extends State<AccesoPantalla> {
     }
   }
 
+  void _irARecuperacion() {
+    FlujoRecuperacion(
+      repositorio: widget.repositorio,
+      sesion: widget.sesion,
+      ahora: widget.ahora,
+    ).abrirSolicitud(Navigator.of(context), correoInicial: _correo.text.trim());
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -140,10 +148,12 @@ class _AccesoPantallaState extends State<AccesoPantalla> {
               alPulsar: _ingresar,
             ),
             const SizedBox(height: Espaciado.s2),
-            // Texto informativo, no interactivo: sin ruta, sin envío de correo.
-            const Text(
-              AccesoPantalla.textoRecuperacion,
-              style: TextStyle(fontSize: 14, color: Colores.textoSecundario),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: _irARecuperacion,
+                child: const Text(AccesoPantalla.textoOlvide),
+              ),
             ),
             const SizedBox(height: Espaciado.s1),
             // Wrap: con texto ampliado el enlace baja de línea en vez de desbordar.

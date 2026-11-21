@@ -1,4 +1,7 @@
 import 'cliente_http.dart';
+import 'resultados_recuperacion.dart';
+
+export 'resultados_recuperacion.dart';
 
 /// Identidad básica del ciudadano devuelta por la API. Nunca incluye hash ni datos internos.
 class UsuarioSesion {
@@ -248,6 +251,133 @@ class AuthRepositorio {
     }
     if (r.estado == 401) return const ConsultaInvalida();
     return const ConsultaNoVerificable();
+  }
+
+  String? _codigoDeError(RespuestaApi r) {
+    final error = r.cuerpo?['error'];
+    final codigo = error is Map<String, dynamic> ? error['code'] : null;
+    return codigo is String ? codigo : null;
+  }
+
+  /// Pide el enlace de recuperación. La respuesta 202 es la misma exista o no la cuenta; no se
+  /// reintenta automáticamente y un fallo de red no se presenta como solicitud enviada.
+  Future<ResultadoSolicitudRecuperacion> solicitarRecuperacion({
+    required String correo,
+  }) async {
+    final RespuestaApi r;
+    try {
+      r = await _http.enviar(
+        'POST',
+        '/auth/recuperaciones',
+        cuerpo: {'correo': correo},
+      );
+    } on Exception {
+      return const SolicitudSinConexion();
+    }
+    switch (r.estado) {
+      case 202:
+        return const SolicitudAceptada();
+      case 400:
+        return SolicitudInvalida(_campos(r));
+      case 429:
+        return SolicitudLimite(_espera(r));
+      case 503:
+        // Retry-After solo viene cuando se agotó el tope diario de correos.
+        final espera = int.tryParse(r.cabeceras['retry-after'] ?? '');
+        return espera == null
+            ? const SolicitudNoDisponible()
+            : SolicitudSinCupoDiario(espera);
+      default:
+        return SolicitudErrorInesperado(_requestId(r));
+    }
+  }
+
+  /// Consulta el estado de un enlace o código sin consumirlo. El token viaja en el cuerpo.
+  Future<ResultadoConsultaToken> consultarToken(String token) async {
+    final RespuestaApi r;
+    try {
+      r = await _http.enviar(
+        'POST',
+        '/auth/tokens/consulta',
+        cuerpo: {'token': token},
+      );
+    } on Exception {
+      return const ConsultaTokenSinConexion();
+    }
+    switch (r.estado) {
+      case 200:
+        final proposito = switch (r.cuerpo?['proposito']) {
+          'recuperacion' => PropositoToken.recuperacion,
+          'activacion' => PropositoToken.activacion,
+          _ => null,
+        };
+        final vence = r.cuerpo?['expiresAt'];
+        final expiresAt = vence is String ? DateTime.tryParse(vence) : null;
+        if (proposito != null && expiresAt != null) {
+          return TokenVigente(proposito: proposito, expiresAt: expiresAt);
+        }
+        return ConsultaTokenErrorInesperado(_requestId(r));
+      case 404:
+        return const TokenInvalido();
+      case 410:
+        return _codigoDeError(r) == 'TOKEN_EXPIRED'
+            ? const TokenVencido()
+            : const TokenUsado();
+      case 429:
+        return ConsultaTokenLimite(_espera(r));
+      case 503:
+        return const ConsultaTokenNoDisponible();
+      default:
+        return ConsultaTokenErrorInesperado(_requestId(r));
+    }
+  }
+
+  /// Cambia la contraseña con un token de recuperación. No inicia sesión.
+  Future<ResultadoCambioContrasena> restablecerContrasena({
+    required String token,
+    required String contrasena,
+  }) => _cambiarContrasena('/auth/contrasena/restablecer', token, contrasena);
+
+  /// Activa una cuenta invitada y define su contraseña. No inicia sesión.
+  Future<ResultadoCambioContrasena> activarCuenta({
+    required String token,
+    required String contrasena,
+  }) => _cambiarContrasena('/auth/activaciones', token, contrasena);
+
+  Future<ResultadoCambioContrasena> _cambiarContrasena(
+    String ruta,
+    String token,
+    String contrasena,
+  ) async {
+    final RespuestaApi r;
+    try {
+      r = await _http.enviar(
+        'POST',
+        ruta,
+        cuerpo: {'token': token, 'contrasena': contrasena},
+      );
+    } on Exception {
+      // No se distingue "no llegó" de "se perdió la respuesta": el cambio podría haberse aplicado.
+      return const CambioIncierto();
+    }
+    switch (r.estado) {
+      case 204:
+        return const CambioExitoso();
+      case 400:
+        return CambioCamposInvalidos(_campos(r));
+      case 404:
+        return const CambioTokenInvalido();
+      case 410:
+        return _codigoDeError(r) == 'TOKEN_EXPIRED'
+            ? const CambioTokenVencido()
+            : const CambioTokenUsado();
+      case 429:
+        return CambioLimite(_espera(r));
+      case 503:
+        return const CambioNoDisponible();
+      default:
+        return CambioErrorInesperado(_requestId(r));
+    }
   }
 
   /// Intenta revocar la sesión actual. `true` solo si el servidor confirmó (204).
