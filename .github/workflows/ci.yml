@@ -1,0 +1,143 @@
+# Integracion continua de AyniSafe: API, app Flutter, web y escaneo de secretos.
+#
+# Principios (specs plataforma/integracion-continua):
+#   - No requiere ningun secreto del repositorio: las copias (forks) ejecutan todo igualmente.
+#   - Permisos del token limitados a lectura de contenidos; sin `pull_request_target`.
+#   - Acciones de terceros fijadas por SHA de commit (el comentario indica la version).
+#   - Sin trazas de comandos ni volcado del entorno; los valores generados se enmascaran.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (tipos, compilacion, contrato y pruebas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      # Base efimera del trabajo. Sin contrasena: la autenticacion "trust" solo es alcanzable desde este runner.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ayni
+          POSTGRES_DB: ayni_safe_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ayni -d ayni_safe_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - name: Instalar dependencias
+        run: npm ci
+        env:
+          # `prisma generate` no se conecta: solo necesita que la variable exista.
+          DATABASE_URL: postgresql://ayni@127.0.0.1:5432/ayni_safe_test
+      - name: Comprobar tipos
+        run: npm run typecheck
+      - name: Compilar
+        run: npm run build
+      - name: Validar contrato OpenAPI
+        run: npm run contrato:validar
+      - name: Generar secreto efimero del limitador
+        run: |
+          secreto="$(openssl rand -hex 32)"
+          echo "::add-mask::${secreto}"
+          echo "RATE_LIMIT_HMAC_SECRET=${secreto}" >> "${GITHUB_ENV}"
+      - name: Pruebas de unidad e integracion (PostgreSQL efimero)
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://ayni@127.0.0.1:5432/ayni_safe_test
+          TEST_DATABASE_URL: postgresql://ayni@127.0.0.1:5432/ayni_safe_test
+
+  mobile:
+    name: Flutter (analisis y pruebas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      - name: Instalar dependencias
+        run: flutter pub get
+      - name: Analisis estatico
+        run: flutter analyze
+      # Las pruebas de `integration_test/` necesitan un dispositivo o emulador y no se ejecutan aqui:
+      # ver apps/mobile/README.md para correrlas en un dispositivo.
+      - name: Pruebas de unidad y de widgets
+        run: flutter test
+
+  web:
+    name: Web (lint, tipos, compilacion y pruebas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Comprobar tipos
+        run: npm run typecheck
+      - name: Compilar
+        run: npm run build
+      - name: Verificar el artefacto compilado
+        run: npm run verificar:dist
+      - name: Pruebas
+        run: npm test
+
+  secretos:
+    name: Escaneo de secretos del repositorio
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      # Falla ante credenciales versionadas y nunca imprime el valor encontrado.
+      - name: Escanear archivos versionados
+        run: node scripts/escanear-secretos.mjs

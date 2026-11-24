@@ -33,6 +33,12 @@ flutter run --dart-define=API_BASE_URL=https://api.ejemplo.pe
   release exige HTTPS. No se despliega nada desde aquí.
 - Las dependencias quedan fijadas en `pubspec.lock`.
 
+### Integración continua
+
+En GitHub Actions (`.github/workflows/ci.yml`) corren `flutter analyze` y `flutter test` (unidad y widgets) con la
+versión de Flutter fijada. **Las pruebas de `integration_test/` no se ejecutan en CI**: necesitan un dispositivo o
+emulador Android y la API con su base de datos; se corren a mano como se explica a continuación.
+
 ### Prueba de integración en Android
 
 Con el emulador encendido y la API (y su base de datos) en marcha:
