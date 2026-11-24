@@ -62,7 +62,28 @@ describe('alta controlada del administrador (5.1)', () => {
   });
 
   it('dos altas simultaneas del mismo correo dejan una sola cuenta', async () => {
-    const resultados = await Promise.all([alta(), alta()]);
+    // Forzar que ambas transacciones lean ausencia antes de insertar. Sin esta barrera,
+    // el resultado dependía de si la segunda lectura alcanzaba a ver el primer commit.
+    type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+    type Buscador = { bloquear(tx: Tx, correo: string): Promise<unknown> };
+    const servicios = [servicio(), servicio()];
+    let llegadas = 0;
+    let liberar!: () => void;
+    const barrera = new Promise<void>((resolver) => { liberar = resolver; });
+    for (const s of servicios) {
+      const buscador = s as unknown as Buscador;
+      const buscar = buscador.bloquear.bind(buscador);
+      jest.spyOn(buscador, 'bloquear').mockImplementation(async (tx, correo) => {
+        const fila = await buscar(tx, correo);
+        if (!fila && llegadas < 2) {
+          if (++llegadas === 2) liberar();
+          await barrera;
+        }
+        return fila;
+      });
+    }
+    const resultados = await Promise.all(servicios.map((s) => alta(s)));
+    expect(llegadas).toBe(2);
     expect(resultados.map((r) => r.resultado).sort()).toEqual(['creada', 'reencolada']);
     expect(await prisma.usuario.count()).toBe(1);
     expect(await prisma.envioCorreo.count()).toBe(1);

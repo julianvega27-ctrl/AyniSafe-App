@@ -63,8 +63,17 @@ interface FilaCuenta {
 }
 
 function esChoqueDeUnicidad(error: unknown): boolean {
-  const e = error as { code?: unknown; meta?: { code?: unknown } } | null;
-  return e?.code === 'P2002' || e?.meta?.code === '23505';
+  const e = error as {
+    code?: unknown;
+    meta?: {
+      code?: unknown;
+      driverAdapterError?: { cause?: { originalCode?: unknown } };
+    };
+  } | null;
+  // En Prisma 7 con adapter-pg, las consultas raw envuelven SQLSTATE en la causa
+  // del adaptador (P2010); no aparece directamente en meta.code.
+  return e?.code === 'P2002' || e?.meta?.code === '23505'
+    || (e?.code === 'P2010' && e.meta?.driverAdapterError?.cause?.originalCode === '23505');
 }
 
 export class AprovisionamientoAdministrador {
