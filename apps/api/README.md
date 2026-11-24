@@ -129,11 +129,45 @@ entorno compartido; si satura, se ajusta la concurrencia o el plan, sin bajar lo
 npm run test:unidad        # validacion y hash; no necesita base de datos
 npm run test:integracion   # esquema y alta de cuentas contra la base aislada de pruebas
 npm test                   # todo
+npm run test:tipos          # tipos estrictos de fuentes y tests
+npm run test:cobertura      # Jest completo y HTML/LCOV/JSON en coverage/
+npm run arquitectura:verificar
 ```
 
 Las pruebas de integracion usan `TEST_DATABASE_URL`. Antes de ejecutarlas, `test/preparar-bd.ts` recrea el
 esquema `public` vacio de esa base y aplica las migraciones (solo actua si el nombre de la base termina en
 `_test`), lo que reproduce el esquema desde cero en cada ejecucion.
+
+La API usa **Jest** con versiones fijadas en package-lock.json; la web conserva Vitest y Flutter sus propias
+herramientas. Los comandos llaman a un lanzador Node multiplataforma que activa VM modules para el escáner ESM.
+La transformación de tests es CommonJS con programa TypeScript completo (incluye const enums de Argon2), mientras
+`test:tipos` valida Node16/strict por separado. Un entorno Jest conserva la identidad de Error de Node para las
+excepciones de fetch/AbortSignal; no se reemplaza el adaptador de correo por un doble para hacer pasar su timeout.
+
+`test:unidad` no carga la preparación de BD aunque exista .env. Integración, suite completa y cobertura requieren
+TEST_DATABASE_URL explícita (entorno o .env), nunca usan DATABASE_URL como respaldo y rechazan valores vacíos,
+inválidos o cuyo nombre no termine en `_test` **antes de conectar**. La preparación borra únicamente el esquema de
+esa base de pruebas y aplica migraciones; no usar datos que se quieran conservar. Los casos comparten una BD y se
+ejecutan secuencialmente. Una selección sin pruebas o que omita todos los casos devuelve fallo; no se usa forceExit.
+
+La cobertura V8 incluye todos los fuentes propios `src/**/*.ts` y comandos propios de `scripts/` aunque no se
+ejerciten. Excluye Prisma generado, declaraciones, tests y `scripts/spike-render/` (experimento desechable anterior,
+no comando de API). `coverage/index.html`, `coverage/lcov.info` y `coverage/coverage-summary.json` presentan métricas
+reales; no hay umbral porcentual impuesto ni se excluyen adaptadores o arranque por tener baja cobertura. No
+versionar coverage. No confundir reportes API con el escáner raíz o herramientas de otros clientes.
+
+`arquitectura:verificar` usa el parser/resolución TypeScript: imports/exports de tipos y valores, require e imports
+dinámicos literales. Rechaza dependencias de dominio/aplicación hacia capas externas, tecnología HTTP/BD/proveedores
+y acceso a internos de otros módulos. Recorre utilidades compartidas/reexports para evitar ocultar esos acoplamientos.
+Main/app y las composiciones de módulo explícitas pueden conectar implementaciones, sin eximir a las capas internas.
+Los destinos computados se cuentan como límite de revisión manual; el chequeo no demuestra por sí solo SOLID ni todos
+los escenarios EQ-06. Para validar un fixture aislado: `node scripts/verificar-arquitectura.cjs --raiz <directorio>`.
+
+CI ejecuta tipos, build, contrato, arquitectura y Jest/cobertura con PostgreSQL efímero; conserva únicamente coverage
+como artefacto `api-cobertura-<sha>` durante 14 días, incluso si una prueba falla y hay reportes disponibles. Si no se
+generaron, declara la ausencia sin inventar éxito. La publicación real solo queda verificada al ejecutar GitHub Actions;
+la configuración y sus pruebas locales no la sustituyen. Evidencia de este incremento en
+`openspec/changes/api-jest-cobertura-arquitectura/informe.md` desde la raíz del repositorio.
 
 ## Cuentas privilegiadas
 

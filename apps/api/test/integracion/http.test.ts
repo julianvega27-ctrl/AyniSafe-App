@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import type { CuentasPort } from '../../src/modules/identidad/aplicacion/puertos/cuentas.port';
 import { CLAVE, crearArnes, limpiarBd, RUTA_LOGIN, RUTA_REGISTRO, RUTA_SESION } from './arnes';
 
@@ -102,7 +102,7 @@ describe('cabeceras', () => {
 
 describe('registros sin secretos', () => {
   it('ni contrasenas, tokens, correos, cuerpos ni cabeceras Authorization llegan a logs o consola', async () => {
-    const consola = [vi.spyOn(console, 'log'), vi.spyOn(console, 'error'), vi.spyOn(console, 'warn'), vi.spyOn(console, 'info')];
+    const consola = [jest.spyOn(console, 'log'), jest.spyOn(console, 'error'), jest.spyOn(console, 'warn'), jest.spyOn(console, 'info')];
     const arnes = crearArnes({ prisma });
     const claveUnica = 'clave-unica-detectable-7c1e9b';
     const correoUnico = 'detectable.7c1e9b@ejemplo.com';

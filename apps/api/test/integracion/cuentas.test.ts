@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { CorreoEnUsoError, ServicioNoDisponibleError } from '../../src/modules/identidad/dominio/errores';
 import { validarRegistro } from '../../src/modules/identidad/dominio/validacion';
 import { PrismaCuentasAdapter } from '../../src/modules/identidad/infraestructura/prisma-cuentas.adapter';

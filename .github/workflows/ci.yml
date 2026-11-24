@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   api:
-    name: API (tipos, compilacion, contrato y pruebas)
+    name: API (tipos, arquitectura, contrato y Jest con cobertura)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -58,20 +58,35 @@ jobs:
           DATABASE_URL: postgresql://ayni@127.0.0.1:5432/ayni_safe_test
       - name: Comprobar tipos
         run: npm run typecheck
+      - name: Comprobar tipos de las pruebas
+        run: npm run test:tipos
       - name: Compilar
         run: npm run build
       - name: Validar contrato OpenAPI
         run: npm run contrato:validar
+      - name: Verificar limites arquitectonicos
+        run: npm run arquitectura:verificar
       - name: Generar secreto efimero del limitador
         run: |
           secreto="$(openssl rand -hex 32)"
           echo "::add-mask::${secreto}"
           echo "RATE_LIMIT_HMAC_SECRET=${secreto}" >> "${GITHUB_ENV}"
-      - name: Pruebas de unidad e integracion (PostgreSQL efimero)
-        run: npm test
+      - name: Jest unidad e integracion con cobertura (PostgreSQL efimero)
+        run: npm run test:cobertura
         env:
           DATABASE_URL: postgresql://ayni@127.0.0.1:5432/ayni_safe_test
           TEST_DATABASE_URL: postgresql://ayni@127.0.0.1:5432/ayni_safe_test
+      - name: Conservar cobertura disponible aun si fallan pruebas
+        if: ${{ always() && hashFiles('apps/api/coverage/**') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-cobertura-${{ github.sha }}
+          path: apps/api/coverage/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Informar ausencia de cobertura
+        if: ${{ always() && hashFiles('apps/api/coverage/**') == '' }}
+        run: echo "No se genero cobertura; revisar el fallo previo. No hay evidencia de cobertura para esta ejecucion."
 
   mobile:
     name: Flutter (analisis y pruebas)

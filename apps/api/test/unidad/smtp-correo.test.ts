@@ -1,6 +1,6 @@
 import type { AddressInfo } from 'node:net';
 import { SMTPServer } from 'smtp-server';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from '@jest/globals';
 import { FalloEnvioCorreoError } from '../../src/modules/identidad/dominio/errores';
 import { SmtpCorreoAdapter } from '../../src/modules/identidad/infraestructura/smtp-correo.adapter';
 

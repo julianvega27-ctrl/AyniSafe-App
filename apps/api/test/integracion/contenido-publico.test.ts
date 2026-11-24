@@ -1,5 +1,6 @@
+import { expectConContexto } from '../expect-contexto';
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { CLAVE, crearArnes, limpiarBd, RUTA_LOGIN, RUTA_REGISTRO } from './arnes';
 
 const { app, prisma } = crearArnes();
@@ -57,7 +58,7 @@ describe('GET /publico/contenido', () => {
   it('solo admite lectura: otros metodos responden 405', async () => {
     for (const metodo of ['post', 'put', 'patch', 'delete'] as const) {
       const r = await request(app)[metodo](RUTA);
-      expect(r.status, metodo).toBe(405);
+      expectConContexto(r.status, metodo).toBe(405);
       expect(r.headers.allow).toContain('GET');
     }
   });

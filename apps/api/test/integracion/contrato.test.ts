@@ -1,9 +1,10 @@
+import { expectConContexto } from '../expect-contexto';
 import SwaggerParser from '@apidevtools/swagger-parser';
 import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { resolve } from 'node:path';
 import request, { type Response } from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import type { CuentasPort } from '../../src/modules/identidad/aplicacion/puertos/cuentas.port';
 import type { SesionesPort } from '../../src/modules/identidad/aplicacion/puertos/sesiones.port';
 import { ServicioNoDisponibleError } from '../../src/modules/identidad/dominio/errores';
@@ -37,20 +38,20 @@ const vistos = new Set<string>();
 
 function verificar(ruta: string, metodo: string, r: Response): void {
   const operacion = api.paths[ruta]?.[metodo];
-  expect(operacion, `operacion documentada ${metodo.toUpperCase()} ${ruta}`).toBeDefined();
+  expectConContexto(operacion, `operacion documentada ${metodo.toUpperCase()} ${ruta}`).toBeDefined();
   const doc = operacion!.responses[String(r.status)];
-  expect(doc, `${metodo.toUpperCase()} ${ruta} -> ${r.status} debe estar documentado`).toBeDefined();
+  expectConContexto(doc, `${metodo.toUpperCase()} ${ruta} -> ${r.status} debe estar documentado`).toBeDefined();
   const esquema = doc!.content?.['application/json']?.schema;
   if (esquema) {
     const valido = ajv.validate(esquema, r.body);
-    expect(valido, JSON.stringify(ajv.errors)).toBe(true);
+    expectConContexto(valido, JSON.stringify(ajv.errors)).toBe(true);
   } else {
     expect(r.text).toBe('');
   }
   for (const [cabecera, def] of Object.entries(doc!.headers ?? {})) {
     // Una cabecera marcada `required: false` puede faltar (por ejemplo, Retry-After solo en el 503 por cuota).
     if ((def as { required?: boolean }).required === false) continue;
-    expect(r.headers[cabecera.toLowerCase()], `cabecera ${cabecera} documentada`).toBeDefined();
+    expectConContexto(r.headers[cabecera.toLowerCase()], `cabecera ${cabecera} documentada`).toBeDefined();
   }
   if (r.headers['retry-after'] !== undefined) expect(Number(r.headers['retry-after'])).toBeGreaterThanOrEqual(1);
   vistos.add(`${metodo.toUpperCase()} ${ruta} ${r.status}`);
@@ -212,7 +213,10 @@ describe('respuestas reales conforme a openapi.yaml', () => {
       prisma,
       sobrescribir: {
         tokensCuenta: tokensRotos,
-        cuentas: { crearCiudadano: noDisponible, buscarPorCorreo: noDisponible, buscarPorId: noDisponible },
+        cuentas: {
+          crearCiudadano: noDisponible, buscarPorCorreo: noDisponible, buscarPorId: noDisponible,
+          obtenerPerfil: noDisponible, actualizarPerfil: noDisponible,
+        },
       },
     }).app;
     const caida = await request(a503).post(URL_REC).send({ correo: 'u30@ejemplo.com' });

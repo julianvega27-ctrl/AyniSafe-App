@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Client } from 'pg';
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import type { HashContrasenaPort } from '../../src/modules/identidad/aplicacion/puertos/hash-contrasena.port';
 import type { SesionesPort } from '../../src/modules/identidad/aplicacion/puertos/sesiones.port';
 import { ServicioNoDisponibleError } from '../../src/modules/identidad/dominio/errores';

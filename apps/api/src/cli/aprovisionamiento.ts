@@ -106,7 +106,17 @@ export async function ejecutarCli(e: EntradaCli): Promise<number> {
     } else if (salida.resultado === 'creada' || salida.resultado === 'reencolada' || salida.resultado === 'reiniciada') {
       // El correo se entrega desde este proceso; si no se logra, la API lo retoma al iniciar.
       modulo.gestorEnvios.despertar();
-      await Promise.race([modulo.gestorEnvios.esperarReposo(), new Promise((r) => setTimeout(r, ESPERA_ENVIO_MS))]);
+      let limite: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          modulo.gestorEnvios.esperarReposo(),
+          new Promise((r) => { limite = setTimeout(r, ESPERA_ENVIO_MS); }),
+        ]);
+      } finally {
+        // Promise.race no cancela la alternativa perdedora: cerrar el temporizador evita
+        // mantener vivo el CLI (o Jest) cuando el envio ya termino.
+        if (limite) clearTimeout(limite);
+      }
       const envio = await servicio.estadoEnvioActivacion(salida.usuarioId as string);
       e.salida(`[admin:${e.comando}] envio=${envio} adaptador=${entorno.correo.adaptador}`);
       if (envio !== 'enviado') {

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Client } from 'pg';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 
 const url = process.env.TEST_DATABASE_URL;
 let bd: Client;

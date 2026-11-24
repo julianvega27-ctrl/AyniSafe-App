@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { ProcesarEnviosCorreoUseCase } from '../../src/modules/identidad/aplicacion/procesar-envios-correo.use-case';
 import { PLAZO_ENVIO_MS } from '../../src/modules/identidad/dominio/envio-correo';
 import { GestorEnvios } from '../../src/modules/identidad/infraestructura/gestor-envios';

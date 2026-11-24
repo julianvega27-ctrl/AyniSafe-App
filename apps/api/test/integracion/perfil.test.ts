@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import type { CuentasPort } from '../../src/modules/identidad/aplicacion/puertos/cuentas.port';
 import { CLAVE, crearArnes, limpiarBd, RUTA_LOGIN, RUTA_REGISTRO, RUTA_SESION } from './arnes';
 

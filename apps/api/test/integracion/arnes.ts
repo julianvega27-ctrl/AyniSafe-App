@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { afterAll } from '@jest/globals';
 import type { Express } from 'express';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultas } from '../../src/modules/consultas';
@@ -96,6 +97,15 @@ export function urlPruebas(): string {
   return url;
 }
 
+const modulosCreados = new Set<ModuloIdentidad>();
+const clientesCreados = new Set<PrismaClient>();
+afterAll(async () => {
+  // Las rutas de recuperacion despiertan consumidores asincronos. Primero detenerlos
+  // y esperar su pasada; desconectar Prisma antes permite trabajo tras el teardown VM.
+  await Promise.all([...modulosCreados].map((m) => m.gestorEnvios.detener()));
+  await Promise.all([...clientesCreados].map((p) => p.$disconnect()));
+});
+
 /** App completa sobre la base aislada, con reloj controlable y logger capturado. */
 export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   const prisma = opciones.prisma ?? crearPrismaClient(urlPruebas());
@@ -127,6 +137,8 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     ...opciones.sobrescribir,
   };
   const modulo = crearModuloIdentidad(deps);
+  modulosCreados.add(modulo);
+  clientesCreados.add(prisma);
   const app = crearApp({ saltosProxyConfianza: opciones.saltosProxy ?? 0, identidad: modulo, consultas: crearModuloConsultas() });
   return { app, prisma, reloj, logger, modulo, deps, correo };
 }

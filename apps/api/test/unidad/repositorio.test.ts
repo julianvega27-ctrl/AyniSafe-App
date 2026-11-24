@@ -1,10 +1,22 @@
+import { expectConContexto } from '../expect-contexto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
-// @ts-expect-error modulo ESM sin tipos (script de la raiz del repositorio)
-import { escanearRepositorio, escanearTexto, esArchivoDeEntorno } from '../../../../scripts/escanear-secretos.mjs';
+import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
+
+type Hallazgo = { regla: string; linea: number; ruta?: string };
+let escanearRepositorio: (archivos?: string[]) => Hallazgo[];
+let escanearTexto: (texto: string) => Hallazgo[];
+let esArchivoDeEntorno: (ruta: string) => boolean;
+beforeAll(async () => {
+  const modulo = await (require('../cargar-escaner.cjs') as () => Promise<{
+    escanearRepositorio: typeof escanearRepositorio;
+    escanearTexto: typeof escanearTexto;
+    esArchivoDeEntorno: typeof esArchivoDeEntorno;
+  }>)();
+  ({ escanearRepositorio, escanearTexto, esArchivoDeEntorno } = modulo);
+});
 
 const RAIZ = resolve(__dirname, '../../../..');
 const SCRIPT = join(RAIZ, 'scripts', 'escanear-secretos.mjs');
@@ -32,8 +44,8 @@ describe('escaner de secretos', () => {
     const h = escanearTexto(`config = "${valor}"`);
     expect(h).toHaveLength(1);
     expect(JSON.stringify(h)).not.toContain(valor);
-    expect(Object.keys(h[0]).sort()).toEqual(['linea', 'regla']);
-    expect(h[0].linea).toBe(1);
+    expect(Object.keys(h[0]!).sort()).toEqual(['linea', 'regla']);
+    expect(h[0]!.linea).toBe(1);
   });
 
   it('no marca marcadores ni hosts locales', () => {
@@ -116,7 +128,7 @@ describe('flujo de integracion continua (ci.yml)', () => {
     const usos = [...ciCompleto.matchAll(/^\s*-?\s*uses:\s*(\S+)(.*)$/gm)];
     expect(usos.length).toBeGreaterThanOrEqual(7);
     for (const m of usos) {
-      expect(m[1], `uses sin fijar: ${m[1]}`).toMatch(/^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/);
+      expectConContexto(m[1], `uses sin fijar: ${m[1]}`).toMatch(/^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/);
       expect(m[2]).toMatch(/#\s*v\d/);
     }
   });
@@ -129,7 +141,7 @@ describe('flujo de integracion continua (ci.yml)', () => {
   });
 
   it('API: base efimera aislada *_test y todas las comprobaciones', () => {
-    for (const paso of ['npm run typecheck', 'npm run build', 'npm run contrato:validar', 'npm test']) expect(ci).toContain(paso);
+    for (const paso of ['npm run typecheck', 'npm run test:tipos', 'npm run build', 'npm run contrato:validar', 'npm run arquitectura:verificar', 'npm run test:cobertura']) expect(ci).toContain(paso);
     expect(ci).toMatch(/POSTGRES_DB: ayni_safe_test/);
     expect(ci).toMatch(/TEST_DATABASE_URL: postgresql:\/\/[^\s]+\/ayni_safe_test\s*$/m);
     expect(ci).not.toMatch(/TEST_DATABASE_URL:.*neon|onrender/i);
@@ -150,5 +162,18 @@ describe('flujo de integracion continua (ci.yml)', () => {
 
   it('incluye el escaneo de secretos', () => {
     expect(ci).toContain('node scripts/escanear-secretos.mjs');
+  });
+
+  it('conserva solo cobertura con SHA fijado, retencion y condiciones de fallo', () => {
+    expect(ci).toMatch(/uses: actions\/upload-artifact@[0-9a-f]{40}/);
+    expect(ci).toContain("always() && hashFiles('apps/api/coverage/**') != ''");
+    expect(ci).toContain("always() && hashFiles('apps/api/coverage/**') == ''");
+    expect(ci).toMatch(/name: api-cobertura-\$\{\{ github.sha \}\}/);
+    expect(ci).toMatch(/path: apps\/api\/coverage\//);
+    expect(ci).toMatch(/retention-days: 14/);
+    expect(ci).toMatch(/if-no-files-found: error/);
+    expect(ci).not.toMatch(/continue-on-error:\s*true/);
+    const upload = ci.slice(ci.indexOf('uses: actions/upload-artifact'), ci.indexOf('\n  mobile:'));
+    expect(upload).not.toMatch(/path:.*(?:\.env|node_modules|\.pgdata|\.log|correos)/);
   });
 });

@@ -1,7 +1,8 @@
+import { expectConContexto } from '../expect-contexto';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@jest/globals';
 import { validarContenido } from '../../src/modules/consultas/dominio/contenido';
 import { crearModuloConsultas } from '../../src/modules/consultas';
 
@@ -37,7 +38,7 @@ describe('fuente de contenido publico', () => {
   it('el contenido no cambia sin subir la version (huella registrada)', () => {
     const esperada = HUELLAS_POR_VERSION[fuente.version];
     // Primera ejecucion: imprime la huella para registrarla. Despues debe coincidir.
-    expect(esperada, `Registra la huella de la version ${fuente.version}: ${huella()}`).toBeDefined();
+    expectConContexto(esperada, `Registra la huella de la version ${fuente.version}: ${huella()}`).toBeDefined();
     expect(huella()).toBe(esperada);
   });
 
@@ -91,7 +92,7 @@ describe('validarContenido', () => {
       const item = { ...completo } as Record<string, unknown>;
       delete item[falta];
       c.contactos = { estado: 'aprobado', items: [item] };
-      expect(errores(c).length, falta).toBeGreaterThan(0);
+      expectConContexto(errores(c).length, falta).toBeGreaterThan(0);
     }
     const c2 = copia();
     c2.contactos = { estado: 'aprobado', items: [{ ...completo, verificadoAt: '01/11/2026' }] };

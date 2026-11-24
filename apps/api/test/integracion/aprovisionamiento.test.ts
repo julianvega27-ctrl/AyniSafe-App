@@ -2,7 +2,7 @@ import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { ejecutarCli, leerArgumentos } from '../../src/cli/aprovisionamiento';
 import {
   AprovisionamientoAdministrador,
@@ -372,7 +372,7 @@ describe('CLI de aprovisionamiento (5.4)', () => {
 
   it('el logger real del envio no registra correo, nombre, token ni enlace', async () => {
     const registrado: string[] = [];
-    const espia = vi.spyOn(console, 'log').mockImplementation((...a: unknown[]) => {
+    const espia = jest.spyOn(console, 'log').mockImplementation((...a: unknown[]) => {
       registrado.push(a.map(String).join(' '));
     });
     try {

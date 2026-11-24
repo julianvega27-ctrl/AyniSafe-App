@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@jest/globals';
 import { cargarEntorno, cargarOrigenesWeb } from '../../src/config/entorno';
 
 const BASE = {
@@ -53,12 +53,14 @@ describe('origen web (WEB_ORIGIN / WEB_PUBLIC_URL)', () => {
 
   it('los mensajes de error no incluyen el valor configurado', () => {
     const secreto = 'https://usuario:clave-identificable-77@web.test';
+    let mensaje: string | undefined;
     try {
       cargarOrigenesWeb({ WEB_ORIGIN: secreto, WEB_PUBLIC_URL: secreto }, 'production');
-      expect.unreachable();
     } catch (e) {
-      expect(String((e as Error).message)).not.toContain('clave-identificable-77');
+      mensaje = String((e as Error).message);
     }
+    expect(mensaje).toBeDefined();
+    expect(mensaje).not.toContain('clave-identificable-77');
   });
 
   it('cargarEntorno expone los origenes y los limites institucionales', () => {

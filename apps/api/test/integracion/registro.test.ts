@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { crearPrismaClient } from '../../src/modules/identidad/infraestructura/prisma-cliente';
 import { CLAVE, crearArnes, limpiarBd, RUTA_REGISTRO, urlPruebas } from './arnes';
 
@@ -34,7 +34,8 @@ describe('POST /auth/ciudadanos/registro', () => {
     expect(texto.toLowerCase()).not.toContain('token');
     expect(await prisma.sesion.count()).toBe(0);
     const fila = await prisma.usuario.findFirstOrThrow();
-    expect(fila.passwordHash.startsWith('$argon2id$')).toBe(true);
+    expect(fila.passwordHash).not.toBeNull();
+    expect(fila.passwordHash!.startsWith('$argon2id$')).toBe(true);
     expect(fila.passwordHash).not.toContain(CLAVE);
   });
 

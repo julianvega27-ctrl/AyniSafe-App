@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import type { TokensCuentaPort } from '../../src/modules/identidad/aplicacion/puertos/tokens-cuenta.port';
 import { ServicioNoDisponibleError } from '../../src/modules/identidad/dominio/errores';
 import {

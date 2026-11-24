@@ -43,16 +43,18 @@ El proyecto se desarrollará utilizando **Scrum**, mediante iteraciones que perm
 
 | Parte | Carpeta | Comandos | Más información |
 |---|---|---|---|
-| API | `apps/api` | `npm run dev`, `npm test` (con `TEST_DATABASE_URL`), `npm run typecheck`, `npm run contrato:validar` | [README de la API](apps/api/README.md) |
+| API | `apps/api` | `npm run dev`, `npm test` / `npm run test:cobertura` (Jest con `TEST_DATABASE_URL`), `npm run test:unidad` (sin BD), `npm run test:tipos`, `npm run arquitectura:verificar` | [README de la API](apps/api/README.md) |
 | App ciudadana | `apps/mobile` | `flutter run`, `flutter analyze`, `flutter test` | [README de la app](apps/mobile/README.md) |
 | Web | `apps/web` | `npm run dev`, `npm run lint`, `npm test`, `npm run build` | [README de la web](apps/web/README.md) |
 | Administrador inicial | `apps/api` | `npm run admin:bootstrap -- --correo ... --nombre ...` | [procedimiento](apps/api/README.md#administrador-inicial) |
 
 **Integración continua** (`.github/workflows/ci.yml`, GitHub Actions): en cada empuje a `main` y en cada solicitud de
-cambios verifica la API (tipos, compilación, contrato y pruebas con PostgreSQL efímero), la app (`flutter analyze` y
+cambios verifica la API (tipos de producto/pruebas, compilación, contrato, arquitectura y Jest con cobertura sobre PostgreSQL efímero), la app (`flutter analyze` y
 `flutter test`, sin `integration_test`, que necesita un dispositivo), la web (lint, tipos, compilación, artefacto y
 pruebas) y busca credenciales versionadas (`scripts/escanear-secretos.mjs`). No usa ningún secreto del repositorio,
 solo permisos de lectura y acciones fijadas por SHA. Su ejecución real en GitHub aún no se ha comprobado.
+
+La API conserva reportes de cobertura disponibles como artefacto durante 14 días. La evidencia local de P1 y sus límites están en el [informe de validación](openspec/changes/api-jest-cobertura-arquitectura/informe.md).
 
 Las cuentas de administrador se crean con el procedimiento controlado anterior (sin contraseñas en Git); las de
 operador llegarán con la gestión de cuentas. Ninguna ruta pública crea cuentas privilegiadas.

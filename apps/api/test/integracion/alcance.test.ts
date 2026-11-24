@@ -1,5 +1,5 @@
 import type { Router } from 'express';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from '@jest/globals';
 import { crearModuloConsultas } from '../../src/modules/consultas';
 import { crearArnes } from './arnes';
 

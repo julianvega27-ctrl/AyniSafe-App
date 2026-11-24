@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@jest/globals';
 import { normalizarTelefono, validarCambiosPerfil } from '../../src/modules/identidad/dominio/validacion';
 
 describe('normalizarTelefono', () => {

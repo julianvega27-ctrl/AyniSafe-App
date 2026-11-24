@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@jest/globals';
 import { cargarEntorno } from '../../src/config/entorno';
 import { CorreoArchivoAdapter } from '../../src/modules/identidad/infraestructura/correo-archivo.adapter';
 import { CorreoPruebaAdapter } from '../../src/modules/identidad/infraestructura/correo-prueba.adapter';

@@ -1,6 +1,6 @@
 import { Client } from 'pg';
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { PrismaSesionesAdapter } from '../../src/modules/identidad/infraestructura/prisma-sesiones.adapter';
 import {
   CLAVE,

@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { PurgarCaducadosUseCase } from '../../src/modules/identidad/aplicacion/purgar-caducados.use-case';
 import type { HashContrasenaPort } from '../../src/modules/identidad/aplicacion/puertos/hash-contrasena.port';
 import type { PurgaPort } from '../../src/modules/identidad/aplicacion/puertos/purga.port';
