@@ -103,3 +103,26 @@ La inspección de códigos (sin datos de cuenta) confirmó `P2010`, `meta.code` 
 Tras la corrección, tipos de pruebas y las 32 pruebas completas de aprovisionamiento pasaron con Node 22.23.5, incluida la colisión forzada. Tipos productivos, build, 16 operaciones OpenAPI y verificación arquitectónica (68 fuentes, cero infracciones estáticas/destinos calculados) también pasaron.
 
 La suite completa con cobertura terminó con **30 archivos, 461 pruebas aprobadas, cero fallidas/omitidas y salida 0**, en 107,074 s. Se conservan los 429 nombres de casos de la línea base. Cobertura de esta revisión: líneas/sentencias 4541/5287 (85,88 %), ramas 1204/1339 (89,91 %) y funciones 278/300 (92,66 %). [Resultado de concurrencia](resultado-concurrencia-ci.json) conserva el resumen sin sobrescribir las evidencias previas. No se repitieron web/Flutter: sus jobs remotos aprobaron y esta corrección solo modifica la API y su evidencia. La nueva validación remota requiere otro commit/push del responsable.
+
+## Validación remota aprobada — cierre de P1
+
+Fecha: 24/11/2026.
+Commit validado: `95d1316461747bcff44c3e025c56b35e0ccdddd6`.
+
+Ejecución CI:
+https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45473150359
+
+Resultado: workflow aprobado en GitHub Actions.
+
+### Artefacto de cobertura remoto
+
+Artefacto descargado: [api-cobertura-95d1316461747bcff44c3e025c56b35e0ccdddd6](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45473150359/artifacts/14959055563).
+Procedencia: ejecución CI 45473150359.
+Reporte consultado: `coverage-summary.json`, sección `total`.
+
+| Métrica | Porcentaje |
+|---|---|
+| Líneas | 85.88 % |
+| Sentencias | 85.88 % |
+| Funciones | 92.66 % |
+| Ramas | 89.91 % |
