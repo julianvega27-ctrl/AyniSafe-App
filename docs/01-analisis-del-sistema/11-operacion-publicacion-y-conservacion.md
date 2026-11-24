@@ -4,32 +4,30 @@ Fecha: 19 de noviembre de 2026. Incorpora las decisiones del usuario sobre estad
 
 ## 1. Registro ciudadano y contactos
 
-Registro: nombre, correo y contraseña. No exigir DNI. El teléfono es opcional en el perfil, no otro campo obligatorio al reportar; compartirlo con una institución requiere autorización explícita y acceso limitado al caso asignado. No publicarlo ni incluirlo en notificaciones. Recuperar acceso por correo mediante token de un solo uso y con vencimiento; canal acordado; proveedor y remitente de piloto: Gmail API por HTTPS con una cuenta dedicada (cuota publicada de 500 correos al día, límite propio de 400), porque el SMTP de Gmail está bloqueado desde Render Free (comprobado el 21/11/2026); falta verificar el envío desde el entorno desplegado. Mantener la misma política para activación del operador sin distribuir contraseñas compartidas.
+Registro de cuenta: nombre, correo y contraseña, sin DNI obligatorio. Con cuenta, el teléfono es opcional en el perfil, no se solicita de nuevo al reportar y compartirlo requiere autorización explícita. Como invitado, el teléfono de contacto es obligatorio para enviar (decisión 23/11/2026); explicar su finalidad y acceso limitado a personal competente del caso. No implica identidad verificada ni se publica, se incluye en notificaciones o permite consultar seguimiento por sí solo. Recuperar acceso a cuentas por correo mediante token de un solo uso y vencimiento; proveedor de piloto Gmail API por HTTPS con cuenta dedicada, con verificación desde Render pendiente. Mantener la activación de operadores sin distribuir contraseñas compartidas.
 
-La sesión identifica al autor. El ciudadano puede reportar sin fotografía y con ubicación pendiente. La categoría «Otra emergencia» se asigna a **Serenazgo** y requiere que la descripción aclare qué emergencia no está categorizada; no agregar un segundo campo narrativo ni una categoría nueva. Si faltan distrito o sede habilitada, el administrador resuelve la asignación con metadatos suficientes y sin acceso sanitario adicional.
+El ciudadano puede enviar como invitado o con cuenta. La sesión identifica al autor con cuenta; para el invitado se registra esa modalidad sin inventar identidad ni rol. No se incorpora el envío a una cuenta por coincidencia de correo, teléfono o dispositivo. El invitado consulta estado y resumen ciudadano con código secreto según sección 3, sin vinculación posterior a cuenta. Puede enviar sin fotografía, pero necesita un punto confirmado por GPS autorizado o selección manual; no se admite ubicación pendiente. El distrito puede quedar pendiente por frontera o cobertura. «Otra emergencia» se asigna a Serenazgo y requiere descripción concreta sin otro campo narrativo. Si faltan distrito o sede habilitada, el administrador resuelve la asignación con metadatos suficientes y sin acceso sanitario adicional.
 
 En esa categoría, el campo existente de descripción muestra «¿Qué otra emergencia está ocurriendo?». La API exige texto no vacío según su política de longitud; el operador verifica que explique el hecho. No usar un clasificador semántico ni bloquear automáticamente por palabras desconocidas. Una designación administrativa por territorio pendiente no inventa coordenadas ni permite acceso fuera del caso asignado.
 
 ## 2. Reporte, incidente y participación institucional
 
-El reporte conserva el envío original. La revisión operativa no sobrescribe la categoría, evaluación ni evidencias originales; registra correcciones con autor, fecha y motivo. El incidente agrupa uno o varios reportes validados. Las personas notificadas, la institución coordinadora y las actuaciones son relaciones del caso, no copias del reporte para cada entidad.
+**Decisión del 23 de noviembre de 2026:** cada envío confirmado crea directamente un incidente, sin una entidad Reporte independiente que deba validarse antes de crear el caso. «Reportar» sigue siendo la acción ciudadana. Se conservan los datos originales del envío y todas sus correcciones con actor, fecha y motivo; la modalidad invitado no elimina esa trazabilidad. Las personas notificadas, la institución coordinadora y las actuaciones son relaciones del caso, no copias para cada entidad.
 
-| Estado del reporte | Entrada o transición | Qué se muestra al autor |
-|---|---|---|
-| REGISTRADO | Transacción de envío confirmada. | Identificador, momento de recepción y seguimiento pendiente. |
-| EN_REVISION | Un operador autorizado inicia su revisión. | Revisión en curso e institución asignada. |
-| VALIDADO | El operador confirma el hecho; crea o vincula un incidente. | Enlace al seguimiento de ese incidente y categoría revisada. No significa atención física confirmada. |
-| DESCARTADO | El operador descarta con motivo. | Estado y explicación comprensible; conservar la decisión auditada. |
+Esta decisión sustituye el modelo anterior de cuatro estados de reporte y tres estados de incidente. Etapas operativas confirmadas el 23/11/2026: **REGISTRADO → EN_REVISION → EN_ATENCION → CERRADO**. No se incorporan estados Asignado, En camino ni Resuelto. Verificar el hecho es una decisión separada del estado operativo: no crea un segundo caso ni acredita llegada al lugar. La publicación sigue siendo expresa y restringida a hechos verificados y autorizados. El descarte permite cerrar desde la revisión sin simular una etapa de atención; no añade otro estado terminal.
 
-No descartar por falta de foto, respuestas SAMU desconocidas o falta temporal de cobertura. Un posible duplicado se vincula al mismo incidente tras revisión, sin borrar autoría ni presentarlo como falso. La consolidación no es otro estado del reporte.
-
-| Estado del incidente | Transición autorizada |
+| Estado | Significado |
 |---|---|
-| PENDIENTE_ATENCION | Creación al validar el primer reporte. Los avisos provisionales ya pueden existir antes. |
-| EN_ATENCION | La institución principal registra el inicio de gestión con una actuación. Las entidades de apoyo registran su participación independientemente. |
-| CERRADO | La institución principal registra motivo y resumen ciudadano de cierre. No cerrar por el simple hecho de derivar o notificar; la atención externa debe registrarse de forma explícita. |
+| REGISTRADO | Envío persistido y confirmado por el servidor; no implica verificación ni atención. |
+| EN_REVISION | Un operador autorizado inicia la revisión del incidente. |
+| EN_ATENCION | La principal registra inicio de gestión; no implica llegada física. |
+| CERRADO | La principal registra cierre con motivo y resumen ciudadano, distinguiendo resultado Atendido o Descartado. |
 
-La principal coordina y cierra el caso; cada institución registra solo sus propias actuaciones. Una intervención urgente comunicada durante la revisión se registra de inmediato sin esperar la publicación; al validar, se enlaza al incidente y su estado refleja las actuaciones ya registradas. Registrar inicio de gestión no equivale a confirmar llegada al lugar. Solo registrar movilización, llegada o atención si el operador puede acreditarlas dentro de sus funciones.
+No descartar por falta de foto, respuestas SAMU desconocidas o falta temporal de cobertura. El descarte requiere decisión de un operador competente, motivo y resumen ciudadano; registra CERRADO con resultado DESCARTADO. Se distingue de CERRADO con resultado ATENDIDO en seguimiento e indicadores: un descarte no cuenta como atención realizada. No transitar artificialmente por EN_ATENCION para descartar.
+
+**Duplicados, decisión 23/11/2026:** un operador competente vincula los casos del mismo hecho a un incidente principal para coordinar su atención. Cada envío creó inicialmente un incidente y conserva su identificador, originales, autoría o modalidad invitado, código de consulta cuando corresponda e historial; no se agrega una entidad Reporte con ciclo separado. El seguimiento de cada envío refleja la coordinación con el principal, sin revelar datos privados de los demás informantes. La vinculación es auditada y no implica falsedad, descarte ni cierre como atendido. Evitar ciclos y cadenas ambiguas; resolver responsables activos y permisos de forma transaccional sin duplicar la atención. Solo se comparten los datos que autoricen los permisos vigentes, no todos los adjuntos por pertenecer al mismo grupo.
+
+La principal coordina y cierra el caso; cada institución registra solo sus propias actuaciones. Una intervención urgente comunicada durante la revisión se registra de inmediato sobre el incidente, sin esperar verificación ni publicación. Registrar inicio de gestión no equivale a confirmar llegada al lugar. Solo registrar movilización, llegada o atención si el operador puede acreditarlas dentro de sus funciones.
 
 Correcciones de un descarte o reapertura de un incidente cerrado requieren motivo, operador competente de la principal y trazabilidad. Reabrir crea una nueva revisión/etapa de atención; no restaura información ya eliminada por conservación. Las reasignaciones por ausencia de cobertura o sede las realiza el administrador con motivo, sin tomar decisiones clínicas. Una reasignación no borra las actuaciones de la institución anterior.
 
@@ -39,11 +37,11 @@ La regla confirmada cambia también la principal del expediente: **SAMU es princ
 
 ### Asumir caso: un responsable por institución
 
-Los operadores autorizados pueden consultar la bandeja y ver quién es responsable dentro de su institución. Para realizar actuaciones o transiciones, uno debe pulsar **«Asumir caso»**. Mantener una sola asignación activa por caso e institución; las instituciones de apoyo tienen sus propios responsables. Asumir no cambia por sí solo el estado a EN_ATENCION ni acredita movilización de unidades.
+Los operadores autorizados pueden consultar la bandeja y ver quién es responsable dentro de su institución. Para realizar actuaciones o transiciones, uno debe pulsar **«Asumir caso»**. Mantener una sola asignación activa por caso e institución; las instituciones de apoyo tienen sus propios responsables. Asumir no cambia por sí solo el estado a EN_ATENCION ni acredita movilización de unidades. Confirmado el 23/11/2026: la toma inicial corresponde al operador; el administrador puede liberar o reasignar con motivo como excepción administrativa, sin adquirir permisos de atención. No se incorpora asignación inicial directa por el administrador como flujo ordinario.
 
 La adquisición se verifica y persiste en una transacción con restricción de unicidad o bloqueo equivalente. Dos operadores que pulsan al mismo tiempo no pueden quedar asignados: uno obtiene el caso y el otro recibe conflicto con la asignación actual. Repetir la solicitud por el mismo responsable devuelve su asignación vigente sin duplicarla. No confiar únicamente en deshabilitar el botón en el cliente.
 
-Antes de validar, la asignación se vincula al reporte en revisión; al crear o vincular un incidente, conservar historial y trasladarla a su participación institucional. Si el incidente consolidado ya tiene otro responsable activo en esa institución, conservar ese responsable y resolver la transferencia auditada, sin crear una segunda asignación vigente. Compartir un ID de incidente no concede acceso a reportes privados de otros autores.
+La asignación se vincula desde el comienzo al incidente y a su participación institucional; no se traslada de Reporte a Incidente al verificarlo. Al vincular duplicados, conservar responsables e historial y resolver transferencias de forma auditada para mantener un responsable activo por institución en la atención coordinada. Compartir un ID de incidente no concede acceso a datos privados de otros informantes.
 
 El responsable puede solicitar transferencia de turno. El administrador puede liberar/reasignar con motivo a otro operador activo, competente y autorizado de la misma institución; no necesita acceso al detalle sanitario para ello. No liberar automáticamente por cerrar el navegador ni por perder conexión. Deshabilitar una cuenta o sede deja una tarea visible de reasignación. El nuevo responsable y los anteriores quedan en el historial.
 
@@ -51,15 +49,50 @@ Si nuevas observaciones activan SAMU como principal en un accidente ya asignado 
 
 ## 3. Seguimiento ciudadano
 
-El autor ve estado de su reporte, incidente vinculado, institución responsable, fecha de recepción, resumen público para el autor de actuaciones y motivos de descarte/cierre. La vista es privada y puede ser más detallada que el mapa público. No muestra nombres/cuentas de operadores, notas internas, credenciales, información de otros reportantes ni fichas sanitarias ajenas. El autor conserva acceso a su propia evaluación mientras siga retenida según la sección 7.
+**Invitado, decisión 23/11/2026:** puede consultar únicamente estado y resumen ciudadano mediante un código secreto, diferente de la referencia pública. El código no permite acceder a notas internas, evidencias, datos personales o evaluación sanitaria. No se incluye vinculación posterior con una cuenta. Su posesión autoriza solo esta vista limitada: no identifica civilmente al informante. No incluir el secreto en referencias públicas, logs ni enlaces del mapa. Generación, almacenamiento protegido, vigencia y límites de intentos se concretarán como controles técnicos antes de implementar.
+
+El ciudadano con cuenta ve el estado del incidente que informó, institución responsable, fecha de recepción, resumen ciudadano de actuaciones y motivos de descarte/cierre. La vista es privada y puede ser más detallada que el mapa público. No muestra nombres/cuentas de operadores, notas internas, credenciales, información de otros informantes ni fichas sanitarias ajenas. El autor conserva acceso a su propia evaluación mientras siga retenida según la sección 7. El invitado accede solo a estado y resumen ciudadano mediante código secreto, según lo definido arriba; el identificador público no concede acceso privado.
 
 ## 4. Bandeja por llegada y etiquetas de prioridad
 
 La bandeja de pendientes usa **orden de llegada: más antiguos primero**, con desempate por ID. Cambiar prioridad no altera silenciosamente ese orden. El operador puede filtrar por estado, distrito, categoría y etiqueta; si se habilita otro orden debe mostrarse expresamente como una selección del usuario.
 
-La prioridad es una etiqueta operativa asignada/revisada por un operador: **Sin evaluar** (gris, icono reloj), **Normal** (azul, icono información), **Alta** (ámbar, icono alerta) y **Urgente** (rojo, icono alarma). Son valores iniciales del diseño, no un triaje clínico. Combinar texto, icono y color; no depender solo del color. Al registrar, queda **Sin evaluar**; no asumir normalidad si hay respuestas desconocidas.
+Decisión del 23/11/2026: la categoría **propone una prioridad inicial**, que el operador confirma o corrige con motivo y fecha. La etiqueta propuesta se distingue de la revisada por una persona. Conservar el valor inicial, origen, versión de configuración y cambios auditados. Las etiquetas son **Sin evaluar** (gris, icono reloj), **Normal** (azul, icono información), **Alta** (ámbar, icono alerta) y **Urgente** (rojo, icono alarma), siempre con texto e icono además de color. Si falta configuración válida, queda Sin evaluar; no asumir Normal. La tabla de prioridades por categoría debe cerrarse antes de activar esta función.
 
-Conservar el mecanismo de sugerencias mediante reglas explícitas como opción de evolución deshabilitada inicialmente; ninguna regla médica automática decide el despacho. El operador asigna etiqueta con motivo y fecha. Análisis permanece para correlación por categoría, distancia y tiempo; los parámetros de duplicados aún deben definirse. No bloquear la creación de avisos por esperar prioridad o análisis.
+La propuesta por categoría no es triaje clínico ni decide despacho; no interpreta respuestas sanitarias desconocidas como negativas. No reordena la bandeja FIFO ni bloquea registro o avisos. Análisis conserva correlación por categoría, distancia y tiempo; los parámetros de duplicados aún deben definirse. No se importa la tabla de prioridades del origen sin revisarla.
+
+**Configuración acordada, respuesta 16B confirmada el 23/11/2026:** mantener la tabla inicial aprobada de las 16 categorías como configuración versionada, con versión, fecha y trazabilidad. No se incorpora edición libre de esa tabla desde el panel. Al crear un incidente, su categoría propone el valor aprobado; el operador competente puede confirmarlo, elevarlo o reducirlo con motivo e historial. No interpretar la tabla como escala clínica. Si la configuración falta o es inválida, utilizar Sin evaluar. Cambiar categoría no sobrescribe silenciosamente una prioridad ya revisada por una persona: conservar decisiones y solicitar confirmación cuando corresponda.
+
+### Tabla inicial de prioridades — aprobada el 23/11/2026
+
+Tabla revisada y aprobada explícitamente por el responsable el 23/11/2026, incluida la facultad del operador de elevar o reducir la prioridad. Sustituye la copia inicial del seed: iguala Agresión y Asalto en Alta e incorpora Urgente en Emergencia médica e Incendio. Es una configuración operativa de AyniSafe, no una escala clínica ni una clasificación institucional acreditada. La agrupación por etiqueta en este documento no cambia FIFO. Versión documental inicial: prioridad-categoria-v1; su implementación ejecutable sigue pendiente.
+
+| Categoría | Prioridad inicial aprobada |
+|---|---|
+| Emergencia médica | Urgente |
+| Incendio | Urgente |
+| Accidente de tránsito | Alta |
+| Acoso | Alta |
+| Agresión | Alta |
+| Asalto | Alta |
+| Daños por sismo | Alta |
+| Deslizamiento | Alta |
+| Inundación | Alta |
+| Pelea | Alta |
+| Robo | Alta |
+| Violencia | Alta |
+| Actividad sospechosa | Normal |
+| Otra emergencia | Normal |
+| Otro incidente de seguridad | Normal |
+| Vandalismo | Normal |
+
+Justificación de la propuesta: usar Urgente como etiqueta inicial para las dos categorías explícitas de emergencia médica/incendio; Alta para categorías de violencia, afectación personal o eventos físicos que ameritan revisión operativa destacada; Normal para señales o categorías amplias sin gravedad determinada por el nombre. Normal no significa seguro ni sin riesgo: un caso de cualquier categoría puede requerir corrección a Alta o Urgente. Esta tabla no estima gravedad individual; el operador confirma o corrige con motivo a partir de la información disponible. Las observaciones sanitarias desconocidas no se convierten en condiciones normales ni generan reglas clínicas automáticas.
+
+Sin configuración válida se mantiene Sin evaluar. No introducir Baja como equivalente: son conceptos diferentes. La prioridad propuesta no altera FIFO ni determina despacho. «Otra emergencia» puede contener situaciones graves: la etiqueta inicial Normal nunca sustituye su revisión ni impide elevarla.
+
+La prioridad se copia de la categoría al crear el incidente en el origen y puede cambiar por revisión. La migración inspeccionada modifica valores de categorías, sin actualizar las prioridades de incidentes ya creados. Esto permite que registros de la misma categoría tengan valores diferentes; la captura no prueba por sí sola cuál es el valor inicial vigente ni por qué cambió una fila concreta.
+
+**Aprobación registrada:** «apruebo y el operador puede elevarlo o reducirlo». El cambio individual registra valor anterior/nuevo, operador, fecha y motivo; no modifica la tabla por categoría ni reordena la bandeja FIFO. La implementación versionará esta configuración sin reescribir prioridades históricas o ya revisadas. Aprobación documental no equivale a funcionalidad implementada ni probada.
 
 ## 5. Publicación y mapa ciudadano
 
@@ -106,5 +139,7 @@ Al vencer el plazo, el backend rechaza acceso aunque la eliminación física est
 No se asume que el plan gratuito incluya backups adecuados. La rotación, la exportación cifrada y una restauración probada deben configurarse y validarse antes de usar datos reales; si no se consigue dentro del presupuesto, limitar el piloto a datos ficticios en lugar de afirmar que existe recuperación garantizada.
 
 ## 8. Pendientes concretos
+
+Evaluación sanitaria, decisión 23/11/2026: se simplifica a una persona principal, conservando cantidad total de heridos conocida/desconocida y preguntas con «No sé». Sin fichas múltiples ni extrapolación a otros afectados. Se mantienen versiones, acceso de SAMU competente y del autor autenticado, y exclusión de datos sanitarios del mapa, notificaciones y consulta del invitado. Pendiente de implementación.
 
 Se acordaron cinco nombres distritales, pero faltan geometrías/UBIGEO y coberturas de las sedes. Las sedes candidatas no acreditan operación. Siguen pendientes la verificación del proveedor de correo desde el entorno desplegado, validación de almacenamiento privado/backup, parámetros de correlación y confirmación de disponibilidad real de operadores. La principal condicionada y aviso SAMU en accidentes, así como «Asumir caso», ya están definidos.

@@ -30,4 +30,4 @@ Se mantienen los seis módulos; no se crean microservicios para instituciones. I
 
 El SVG de estilo es una vista lógica simplificada con nombres Controller/Service/Repository; las cuatro capas de Clean Architecture se detallan en el enfoque y diseño interno. S3 es un adaptador ilustrativo y el proveedor real sigue pendiente según ADR-006. La cartografía base se consume en los clientes; Consultas calcula los indicadores del negocio a partir de los datos propios.
 
-La etiqueta de prioridad es manual en el MVP y no reordena la bandeja FIFO. Análisis conserva la correlación por categoría, distancia y tiempo. La política operativa y de conservación se define en [documento 11](../01-analisis-del-sistema/11-operacion-publicacion-y-conservacion.md).
+La categoría propone prioridad inicial, confirmable o corregible por el operador, sin reordenar FIFO (decisión 23/11/2026). Análisis conserva la correlación por categoría, distancia y tiempo. La política operativa y de conservación se define en [documento 11](../01-analisis-del-sistema/11-operacion-publicacion-y-conservacion.md).

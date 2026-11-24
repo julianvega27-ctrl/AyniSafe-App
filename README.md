@@ -22,6 +22,10 @@ Desarrollar una plataforma móvil modular y escalable que facilite el reporte, l
 
 ## Metodología
 
+Los criterios de revisión y las brechas de preparación del entregable se encuentran en la [matriz del Sprint 2](docs/criterios-entrega-sprint-2.md).
+
+Para trabajar en interfaces, comienza por [AGENTS.md](AGENTS.md). El contexto del producto está en [PRODUCT.md](PRODUCT.md), el sistema visual compartido en [DESIGN.md](DESIGN.md) y los flujos y navegación en la [guía UI](docs/05-diseno-ui/guia-ui.md). La dirección elegida es reproducir la UI del proyecto de origen; falta implementarla y validar su fidelidad. Las exploraciones anteriores no son diseños aprobados.
+
 La revisión de la documentación, los vacíos detectados y la propuesta de despliegue gratuito se encuentran en [Revisión de consistencia y costos](docs/revision-consistencia-y-costos.md).
 
 El proyecto se desarrollará utilizando **Scrum**, mediante iteraciones que permitan planificar, implementar, evaluar y entregar incrementos funcionales del sistema.
@@ -34,3 +38,21 @@ El proyecto se desarrollará utilizando **Scrum**, mediante iteraciones que perm
 
 - [Cinco distritos y sedes candidatas](docs/01-analisis-del-sistema/10-catalogo-territorial-y-sedes.md): catálogo documental, sin asumir funcionamiento ni cobertura real.
 - [Operación, publicación y conservación](docs/01-analisis-del-sistema/11-operacion-publicacion-y-conservacion.md): estados, seguimiento, FIFO/etiquetas, privacidad del mapa, alertas, cuentas, fotografías y plazos de eliminación.
+
+## Ejecutar y verificar
+
+| Parte | Carpeta | Comandos | Más información |
+|---|---|---|---|
+| API | `apps/api` | `npm run dev`, `npm test` (con `TEST_DATABASE_URL`), `npm run typecheck`, `npm run contrato:validar` | [README de la API](apps/api/README.md) |
+| App ciudadana | `apps/mobile` | `flutter run`, `flutter analyze`, `flutter test` | [README de la app](apps/mobile/README.md) |
+| Web | `apps/web` | `npm run dev`, `npm run lint`, `npm test`, `npm run build` | [README de la web](apps/web/README.md) |
+| Administrador inicial | `apps/api` | `npm run admin:bootstrap -- --correo ... --nombre ...` | [procedimiento](apps/api/README.md#administrador-inicial) |
+
+**Integración continua** (`.github/workflows/ci.yml`, GitHub Actions): en cada empuje a `main` y en cada solicitud de
+cambios verifica la API (tipos, compilación, contrato y pruebas con PostgreSQL efímero), la app (`flutter analyze` y
+`flutter test`, sin `integration_test`, que necesita un dispositivo), la web (lint, tipos, compilación, artefacto y
+pruebas) y busca credenciales versionadas (`scripts/escanear-secretos.mjs`). No usa ningún secreto del repositorio,
+solo permisos de lectura y acciones fijadas por SHA. Su ejecución real en GitHub aún no se ha comprobado.
+
+Las cuentas de administrador se crean con el procedimiento controlado anterior (sin contraseñas en Git); las de
+operador llegarán con la gestión de cuentas. Ninguna ruta pública crea cuentas privilegiadas.

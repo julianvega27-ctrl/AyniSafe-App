@@ -1,0 +1,711 @@
+{
+  "fecha": "2026-11-23",
+  "zona": "America/Lima",
+  "head": "73d22edce985236b137d9beb47c839de4667a80a",
+  "rama": "main",
+  "indiceVacio": true,
+  "estado": "Snapshot de archivos previos a P0 tras conciliacion documental; no es commit ni evidencia de orden historico de autoria.",
+  "excluye": [
+    "docs/validacion/p0-inventario.json",
+    "docs/validacion/p0-linea-base.md"
+  ],
+  "resumen": {
+    "modificados": 41,
+    "nuevos": 73,
+    "total": 114,
+    "grupos": {
+      "G1-especificacion-existente": 10,
+      "G2-api-y-compatibilidad-mobile": 42,
+      "G3-web": 38,
+      "G4-ci-y-seguridad": 4,
+      "G5-evidencia-entrega-web": 4,
+      "G6-acuerdos-y-plan": 16
+    }
+  },
+  "archivos": [
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/.openspec.yaml",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "5354b7028230e74b1f9295986352ad4a8253375220377f8a7a98bdbaf9251dc9"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/design.md",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "b6d26d86570b1ae8c05ed190e15e5937b7d72b812c87189d0905b1db2f8bf08f"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/proposal.md",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "f8fbe383d2cab8de9c6f425c36646a143adc6304f6e47f44eb4a79302df9c032"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/specs/consultas/contenido-publico/spec.md",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "76b4b60dca257db48ab6a5362b8ed9799c49c9b2a128f220e08ff2c4b5089d18"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/specs/identidad/acceso-institucional/spec.md",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "639aec46799bf1fe35ca6dca2640ccd190b820da5612a4a319b14e3d83462a66"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/specs/identidad/aprovisionamiento-administrador/spec.md",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "5a4211a20d103367fb38b6f7702242b1ce679c4ae07f4ea4984fe79447fbf7b2"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/specs/identidad/recuperacion-activacion-cuenta/spec.md",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "3fb86fa3b964b84a5e86c064341f37d4857a28abcefd9df0782226a3debefe80"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/specs/plataforma/integracion-continua/spec.md",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "6d15028320a220070b1e6c87e407ba1a22b9572fcd02d913504ee906a8d0f55b"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/specs/web/panel-institucional/spec.md",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "f74b2bebf8a4e0d81193b68166dcb94ef2e555a2061aec105117f92444a4a476"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/specs/web/portada-publica/spec.md",
+      "estado": "nuevo",
+      "grupo": "G1-especificacion-existente",
+      "sha256": "81aa3917ecd5cbf643fceb005ac58e8f7698d3e171b276035a2ce8a41ae4c2eb"
+    },
+    {
+      "ruta": "apps/api/.env.example",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "e5c48f1731f89b3582461c404161c69a013f5356ad25cb271f07841e8c703047"
+    },
+    {
+      "ruta": "apps/api/openapi.yaml",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "0deab92648fe867d1b974fbdf23acf4385984abdc7746ea438cd6c12320987a6"
+    },
+    {
+      "ruta": "apps/api/package.json",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "752fdbfa72d8d8e85cb390315fc67a8edcb1ae619d06b4d7c09c26405530314a"
+    },
+    {
+      "ruta": "apps/api/scripts/admin-bootstrap.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "405aa69231fbbb8238548829650a6db629ff17f72c673cf47632d093638bd93f"
+    },
+    {
+      "ruta": "apps/api/scripts/admin-reiniciar.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "5101462330eb03033ffbd95d41150aaafcc5a4a0ce9858d57c7b14d1667608d7"
+    },
+    {
+      "ruta": "apps/api/src/cli/aprovisionamiento.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "a05186393748fcb0488511b58a69f89c155ac16fa1eb2a3b544b2bac89205a75"
+    },
+    {
+      "ruta": "apps/api/src/config/entorno.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "f1dd8c919cd920ba415fe9631b42747b3fb2d7aa3dfbf1f8f83a3668101adcd3"
+    },
+    {
+      "ruta": "apps/api/src/modules/consultas/contenido/contenido-publico.json",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "f1d3b44c9cb7779df342287b2131756842b110acddd8388ea57a5834fce3ef05"
+    },
+    {
+      "ruta": "apps/api/src/modules/consultas/dominio/contenido.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "82016ceeac1a4248a32d678686d48cc81a1846d1110f3dacf935e59c02616b5e"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/aplicacion/consultar-sesion-institucional.use-case.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "91d9c7f476ded7e4c2e4cc9486a8e86615c7e8242731aaf26f59a2565d5c0cab"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/aplicacion/consultar-sesion.use-case.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "b75785b02b236a2a103dad7851578a6ff004a58b36ae68bbef544650f4a9c967"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/aplicacion/iniciar-sesion-institucional.use-case.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "6a1278519d5fdc74a9830603d1f13c2a74e5d5ae47c1b6e2ef3c42af96b16fd5"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/aplicacion/iniciar-sesion.use-case.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "d14e635d29a145edb072054cab091e254f0a40e787774684bce96f19908fd64e"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/aplicacion/politica-limites.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "8820bc3597783b5b393e57e9754754d5c0e5947bb537324b9fcdc166e13da903"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/aplicacion/procesar-envios-correo.use-case.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "3d5d0939a6f269d8ba7dbf4666f3d075f5cdd8ae34b76d7fedc5abfed8c316e7"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/aplicacion/puertos/limitador.port.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "7beca90465bd01bd2539388dce2a3e9e743f85b871cccc8705196e734a5ad95b"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/aplicacion/puertos/sesiones.port.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "6ccaacd27880c6961ca46db06bebf853d26149d0409a51807750631af668ef27"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/dominio/errores.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "6cdfd882274acfdbc9689f25bdf1871a8bf10ccc567d0b173e41c1edc66cacee"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/dominio/paneles.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "d1d7561b23b96e728c42c76bec0b5cbe2eca430de0ad3a603b6aff7dc5d51eab"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/dominio/usuario.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "6ab1cfe09c5828d04d55d1641f5488a0f4598423cb697a8d293b6b3440508ac0"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/identidad.module.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "d4749c92bdfbf0d5154b0235001ee990b65ba86d271b81bdacede3e2b93a4f23"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/infraestructura/aprovisionamiento-administrador.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "3e61a47ecc8efb55c2bb21c3f076c024bd4af30847bf8010c972cb7c6df78aff"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/infraestructura/prisma-sesiones.adapter.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "f1bb1c0ddadd88e1f9c7b90cee3ee3bce12658dc86aea84e331359207d8d17eb"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/infraestructura/redactor-correo-texto.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "8c2ba99435b3d660bfede6e1914f8c6f348613aaca767d3977f72447922c412c"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/presentacion/auth.routes.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "752554762762c4b333a225b03b34ae6ce62bb28635c3e87f09fd5108ec514e94"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/presentacion/cookies.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "1533e270b0516a122f1d74917d3d27b2f9604a6451e30ac2dbe72ac943f3e18e"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/presentacion/institucional.routes.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "4c7d44be3397a743b4282c7b25365983241c5515dc79835d03934689579ba5c3"
+    },
+    {
+      "ruta": "apps/api/src/modules/identidad/presentacion/middlewares.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "53013daa801b8d800f69ac90df5289bea11ede8124669ddd53d612a1483d9d4b"
+    },
+    {
+      "ruta": "apps/api/test/integracion/alcance.test.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "fa3d2dd5240aed410ec935a24fa69bd3f3b0ef7e33f807d820b381f5e0bc42b3"
+    },
+    {
+      "ruta": "apps/api/test/integracion/aprovisionamiento.test.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "2e92bd8df1c68c8ecef2426fc5f9d4c74fd40755506b3eaf4985d3597acf8615"
+    },
+    {
+      "ruta": "apps/api/test/integracion/arnes.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "bf330527c6eb5a4e6a7df112b6cd8ab400ca84ad16d3ba7cce759d51d0c87ba4"
+    },
+    {
+      "ruta": "apps/api/test/integracion/cola-correo.test.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "e208f294c0b6d96743368ffe148231a75a85849d0b689a701efa23de7ab23ce3"
+    },
+    {
+      "ruta": "apps/api/test/integracion/contenido-publico.test.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "6afd2866931772c05f3eb2001d9f407353ec57127bd92ea0f86f489c5bcc6f36"
+    },
+    {
+      "ruta": "apps/api/test/integracion/contrato.test.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "2a7e219e146b97fbc67ca1306ee0ba3edaf7146adc4dcbd2293eb58fcbd5925f"
+    },
+    {
+      "ruta": "apps/api/test/integracion/institucional.test.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "8d687c8ea19047fbf37b6178108cdbca32af24f72c1b7e630aaf7fac94339754"
+    },
+    {
+      "ruta": "apps/api/test/integracion/recuperacion-http.test.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "7616ec9fa9d2e0e89c20751732e8e961b7af01a63421f8bd16d6b5f2f5813317"
+    },
+    {
+      "ruta": "apps/api/test/unidad/config-correo.test.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "df15449a0c0dae76ff8ca35767b5fd7b5fa44634503ae9db2fcbdbd1127470a2"
+    },
+    {
+      "ruta": "apps/api/test/unidad/config-web.test.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "7aed255d7fc852f648f3ddb5ac4cb25d0139a1cd9c0e1b21740f36f77f42a979"
+    },
+    {
+      "ruta": "apps/api/test/unidad/contenido-publico.test.ts",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "46e49b70629ee2333de5a0aaeb62a33c05c050f60cab4c78a7703d2772193442"
+    },
+    {
+      "ruta": "apps/api/test/unidad/usuario-institucional.test.ts",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "db4404cace99a279a6168136cf8d3c32c54f4004496c71b1acb8bb131364ae66"
+    },
+    {
+      "ruta": "apps/mobile/test/contenido_v2_test.dart",
+      "estado": "nuevo",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "37192e2e4d93a1c6df8eae5ec990c79697c0174be6ab70bbc8be2f583bc066dc"
+    },
+    {
+      "ruta": "apps/mobile/test/dobles.dart",
+      "estado": "modificado",
+      "grupo": "G2-api-y-compatibilidad-mobile",
+      "sha256": "54163235385aa2a40dd05e5cb2d562ecbcad5d7b891e910c809d73e26a6918de"
+    },
+    {
+      "ruta": "apps/web/.gitignore",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "38e94390171f95a679276a7512616891713d0d2ecc3649fca2b6309a47a35f0f"
+    },
+    {
+      "ruta": "apps/web/e2e/local.mjs",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "35663e3a463b443c602c25c5eb1a4b0d067452e7ebbe49738a657668910f5f85"
+    },
+    {
+      "ruta": "apps/web/eslint.config.js",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "f06fe7281e0230ce9fc930a029326ac3431fbf1b1871a1864ca4b16855724f33"
+    },
+    {
+      "ruta": "apps/web/index.html",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "5a435922265d52d1096bfca810c66c643f3fcb27eccb407134f9f4a6b313c53e"
+    },
+    {
+      "ruta": "apps/web/package-lock.json",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "090250f2931c0326f76d32f1b5aa0d4df24872fa09eb1da519cc6c343f23d462"
+    },
+    {
+      "ruta": "apps/web/package.json",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "1a29e61fc8072067ca313ff27df2e1cd66ba9f5c5d54f288b1579d09f19a56b0"
+    },
+    {
+      "ruta": "apps/web/README.md",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "0342c6dfee499297b19c0201d7dffd5b217b5862b6c6cf1ab04baa4d6d51ce0f"
+    },
+    {
+      "ruta": "apps/web/scripts/verificar-dist.mjs",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "21b147715af2c4168ad3e91f98c33f9c720e151f2ed0d98134cc8b6d99aa14e1"
+    },
+    {
+      "ruta": "apps/web/src/api/cliente.ts",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "090ee1d772d58c8632c94e4800f3f96fa1db9496b41bd5451e2271a731f2bef0"
+    },
+    {
+      "ruta": "apps/web/src/App.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "93c0627d4408bc5401198f6b3d3844a4a5390267e11aa848442ac63ba99376f1"
+    },
+    {
+      "ruta": "apps/web/src/componentes/Boton.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "07c19d73d73c158bc7e94b6be068d1dbb7e5fe6ccb221203f19780da022b82b5"
+    },
+    {
+      "ruta": "apps/web/src/componentes/Campo.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "8dd01bae749572ad3b8ce22f11fe2eb41136e9309200f04959e96c56d5836bab"
+    },
+    {
+      "ruta": "apps/web/src/componentes/Estructura.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "6b1d4b00ec32ce3d32ded989d4b2e41a08cdf796f6df6bbdea9401eb1a98263f"
+    },
+    {
+      "ruta": "apps/web/src/componentes/FalloDeConexion.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "ce884305c609cac8a6ef4567f89a982f82e7adc8298b8418f31bed143196a611"
+    },
+    {
+      "ruta": "apps/web/src/componentes/iconos.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "8c7d215ba8f4e3e6d75db61e47e70c67660a0caac12ff550d2e97a3bd01e40e8"
+    },
+    {
+      "ruta": "apps/web/src/componentes/Mensaje.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "bc9d4be5af755f46b75bbb41cbb4c0d74ca9da5fed45dcf50cd50c000763def4"
+    },
+    {
+      "ruta": "apps/web/src/diseno/colores.ts",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "35ba9d0e0689d9043fd734f39052a354e2331e63148fee8e677a15349091a2f2"
+    },
+    {
+      "ruta": "apps/web/src/estilos.css",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "35ae2a30023f7090df4b1e972f2bdcc32c7346294e10290a4ca6f90416852eef"
+    },
+    {
+      "ruta": "apps/web/src/main.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "645bed767aac8cdb15ccb1640ae1c952b049322992fe1b0b0af37943e52d0792"
+    },
+    {
+      "ruta": "apps/web/src/paginas/Acceso.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "ba1f74b16cc26b70381af4a47e981c653be1c08577767d11b725a2d7b1397254"
+    },
+    {
+      "ruta": "apps/web/src/paginas/Activar.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "1205065137783c40811be2c6c2279d261a37d02b2ec107edec33aad90efad081"
+    },
+    {
+      "ruta": "apps/web/src/paginas/Panel.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "6e81510c60b1b576313d8c97a6be28ea049e218c495dc1bbfe806b18deaf38ca"
+    },
+    {
+      "ruta": "apps/web/src/paginas/Portada.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "9461a46bb6756b40517970554c5b828062ab72ef1d9e83b161f37ccfd6edfdd8"
+    },
+    {
+      "ruta": "apps/web/src/sesion/SesionContexto.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "528b5ee93081642ee880bdebe0b84fa0d61e45a8b8006ad7cbc89c79ac41ddee"
+    },
+    {
+      "ruta": "apps/web/test/a11y.test.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "669f1c236e0365c5d910e2e34dbbdd96d98da845e7f91802463bd2dc149cbd59"
+    },
+    {
+      "ruta": "apps/web/test/acceso.test.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "8ab71143b0d78692c14727eedc62d78b52de2eb1cf063ea1a3cf6634a1a2f857"
+    },
+    {
+      "ruta": "apps/web/test/activar.test.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "dd031486ac37b8a633da70aa834f4ad5cd62dc9800a912af339e76e8cedb8c13"
+    },
+    {
+      "ruta": "apps/web/test/api-falsa.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "10f66b76ca47649029875a23c06c49f72401cfc89423a2ebeb27689faa7360bc"
+    },
+    {
+      "ruta": "apps/web/test/cliente.test.ts",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "96b6f1afcb91d35e9be1446478d3a0baf4fb4a7c239bc740a947e596af1f18f8"
+    },
+    {
+      "ruta": "apps/web/test/componentes.test.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "f118a089c6c0bca19c327dffc7a7c59a11e62de52f147b8bdd7df2b3392247c9"
+    },
+    {
+      "ruta": "apps/web/test/diseno.test.ts",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "0a8ce7c420e6c301a8b215292cd3a7a3d6f3594e17fac8b14e59ec7cc68373e1"
+    },
+    {
+      "ruta": "apps/web/test/estatico.test.ts",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "d614faf3c79ad7c6e90f685f29d4881b91f0299a367c89e4a6a53ea64b0bea45"
+    },
+    {
+      "ruta": "apps/web/test/panel.test.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "6a05fc75da4d1656fff17079fdc0e53ffea53ecbc2a44d4ea21fd5e437e39893"
+    },
+    {
+      "ruta": "apps/web/test/portada.test.tsx",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "6aa1a5fdda439306f86c2c245b3201e21b10b577511b81c2413159eb9337748c"
+    },
+    {
+      "ruta": "apps/web/tsconfig.json",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "02ea759ab3d3037c25b10ceba4b3c3df2b1a17d642b9f00fbdfd2c0644e9efe5"
+    },
+    {
+      "ruta": "apps/web/vercel.json",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "f069a330018b59cee0d67dd114fa6d0724f0007cf82dd491cd27a8522724daa2"
+    },
+    {
+      "ruta": "apps/web/vite.config.ts",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "55592e9c852c06a9468b1a438013045e882f5b5dff2a8d8bed47d771aeb5240e"
+    },
+    {
+      "ruta": "apps/web/vitest.setup.ts",
+      "estado": "nuevo",
+      "grupo": "G3-web",
+      "sha256": "c943ce64e061536c686510a657ddb7a05ed8c434ba0bc4d8c865a10b4ee3afd3"
+    },
+    {
+      "ruta": ".github/workflows/ci.yml",
+      "estado": "nuevo",
+      "grupo": "G4-ci-y-seguridad",
+      "sha256": "1406f965af6db4102f3a63b87d92e1b60768501946d601f3b1fd7920ceabb158"
+    },
+    {
+      "ruta": "apps/api/test/unidad/repositorio.test.ts",
+      "estado": "nuevo",
+      "grupo": "G4-ci-y-seguridad",
+      "sha256": "95e082412a3fba7197c10b8d26526d3e28bbeaa52ca55cc53fd1671c0725f294"
+    },
+    {
+      "ruta": "apps/mobile/README.md",
+      "estado": "modificado",
+      "grupo": "G4-ci-y-seguridad",
+      "sha256": "a54607571b54c47b61f56e07879e61b35c6fa65c73a5a03c35ad594652ae1a74"
+    },
+    {
+      "ruta": "scripts/escanear-secretos.mjs",
+      "estado": "nuevo",
+      "grupo": "G4-ci-y-seguridad",
+      "sha256": "c7bfa8689215a2795104ee501c2d66bbc02fcbb648ce7a7ddcbf97498092f632"
+    },
+    {
+      "ruta": "apps/api/README.md",
+      "estado": "modificado",
+      "grupo": "G5-evidencia-entrega-web",
+      "sha256": "ede705376193452e021e0593fd74bd2d1e8b694eed0f619528fc415945d2dd27"
+    },
+    {
+      "ruta": "docs/revision-consistencia-y-costos.md",
+      "estado": "modificado",
+      "grupo": "G5-evidencia-entrega-web",
+      "sha256": "cbed3ad8e7f7ab8fec3585115c8c6e6905c39fa1523eff2d3cd80cd4ee01fe4a"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/informe.md",
+      "estado": "nuevo",
+      "grupo": "G5-evidencia-entrega-web",
+      "sha256": "18a8ed7a434cb6e880b8564c5a325f6ad6ccfa48b5f50a6d15c9e0d75e50e065"
+    },
+    {
+      "ruta": "openspec/changes/web-publica-acceso-institucional/tasks.md",
+      "estado": "nuevo",
+      "grupo": "G5-evidencia-entrega-web",
+      "sha256": "efef5055d1fa116e42172afe3132916b58d3fafd7f3feffce2d91592c0fa43f2"
+    },
+    {
+      "ruta": "AGENTS.md",
+      "estado": "nuevo",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "0e0d8aa5ecbf41607d704594627cc0475567a26ce8fbe22cd843882ff73aa3bb"
+    },
+    {
+      "ruta": "DESIGN.md",
+      "estado": "nuevo",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "4bc75299ac5c45bbcb1e9fc62d09acca43e5ccff568a1bb337747032805ddda0"
+    },
+    {
+      "ruta": "docs/01-analisis-del-sistema/02-historias-de-usuario.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "ea41952ec73be90f223081509d1b9adc0c5a8137125779773d51b6f68444213d"
+    },
+    {
+      "ruta": "docs/01-analisis-del-sistema/03-requisitos-funcionales.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "762629077be437029804fd5640fe56731cc1813df7fb036454852c2244f03408"
+    },
+    {
+      "ruta": "docs/01-analisis-del-sistema/07-desiciones-aquitectonicas.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "f5b22e4ed008dc886409b9643f3fd61072e97ff7f4764ea02bfaee127c396c83"
+    },
+    {
+      "ruta": "docs/01-analisis-del-sistema/08-escenarios-atributos-calidad.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "3ac17088c8fb7fd99513ab5f053571cff0d4419996af3361bcf730d40c105f08"
+    },
+    {
+      "ruta": "docs/01-analisis-del-sistema/09-alcance-territorial-e-institucional.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "70bf36c4eb0d235aa42317eb20c7e3155b5a5196dece283f50861846a9be2593"
+    },
+    {
+      "ruta": "docs/01-analisis-del-sistema/11-operacion-publicacion-y-conservacion.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "437cf8fdd0258fd174bb21b43d804a2c21ed485c60ca7ff70d0d5bca029acd06"
+    },
+    {
+      "ruta": "docs/02-arquitectura/estilo-arquitectonico.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "48145cb8394cd39d1b07171e224dcca9a165c02f63030f79c2c5da80f05f9209"
+    },
+    {
+      "ruta": "docs/03-diseño-de-software/diseño-interno/diseño-interno-de-modulos.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "440a7802a7f99b16bd179961b9f862a04a04af3df3d32a3946ae2f9dabcee111"
+    },
+    {
+      "ruta": "docs/05-diseno-ui/guia-ui.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "4ddeb6e5224c0c21d086759986c69a2d19b74d3243e1ecc27906b5e254fb5ec8"
+    },
+    {
+      "ruta": "docs/comparacion-proyecto-incidencias.md",
+      "estado": "nuevo",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "e80ddab5e62d52920f035cae238c478463341e771621949f2738f2d180c692ae"
+    },
+    {
+      "ruta": "docs/criterios-entrega-sprint-2.md",
+      "estado": "nuevo",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "9d9d4f3624e285ba470fdf835a46adf47127791caf3978acf6944445ee14de08"
+    },
+    {
+      "ruta": "guia_codex.md",
+      "estado": "nuevo",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "2299dab702b57f17441af194702d21f13feccd082d3c5e2cb39e4e65d0c1c276"
+    },
+    {
+      "ruta": "PRODUCT.md",
+      "estado": "nuevo",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "9825210832a8879b1e6d02e51a873b189aefb5f2c550dfbcb0442de0a715bc7d"
+    },
+    {
+      "ruta": "README.md",
+      "estado": "modificado",
+      "grupo": "G6-acuerdos-y-plan",
+      "sha256": "fd3101a34ea8d206c81e3338a4ae04d2d5011b5aee6fa82113853b439774da75"
+    }
+  ]
+}

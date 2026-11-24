@@ -1,8 +1,8 @@
-# Guía de UI inicial de AyniSafe
+# Guía de flujos y navegación de AyniSafe
 
 Fecha: 20 de noviembre de 2026.
 
-Estado: dirección de diseño aceptada. Esta guía documenta acuerdos de la exploración; no acredita implementación ni validación visual o de accesibilidad.
+Estado: acuerdos funcionales de UI y seguimiento de entregas. La autoridad visual se consolida en [DESIGN.md](../../DESIGN.md), desde el 22 de noviembre de 2026. Esta guía no acredita implementación ni validación visual o de accesibilidad y no define un sistema de estilo alternativo.
 
 ## 1. Alcance y referencias
 
@@ -19,38 +19,42 @@ Esta guía complementa las reglas de producto existentes, sin sustituirlas:
 
 ### 2.1 Dirección visual
 
-Se adopta la alternativa **cívica cercana**, con azul profundo, verde azulado, fondos claros y tarjetas de formas suaves. La intención es transmitir confianza y facilitar la comprensión de las acciones ciudadanas.
+Elección explícita del 23/11/2026: reproducir la apariencia de la web y móvil de `Proyecto_incidencias_400par`, sin mejoras durante esta integración. DESIGN.md fija la referencia y sus componentes. Los acuerdos funcionales de AyniSafe se conservan; las secciones de entregas anteriores describen su estado histórico, no una excepción gráfica al diseño elegido.
 
-Se acuerda utilizar tipografía del sistema, texto base de 16 unidades lógicas, botones con altura mínima de 48 unidades lógicas y espaciado basado en múltiplos de 8. En móvil se adaptarán a las unidades de Flutter y en web a píxeles CSS, respetando el escalado del texto.
-
-Los campos tendrán etiquetas persistentes. Los estados y mensajes combinarán texto e iconos con color, sin depender exclusivamente de este último. El rojo y el ámbar se reservan para mensajes que requieran atención, evitando usarlos como decoración general.
-
-Las etiquetas operativas conservan la semántica ya definida en la política del producto: Sin evaluar (gris/reloj), Normal (azul/información), Alta (ámbar/alerta) y Urgente (rojo/alarma). Esta guía no cambia el orden por llegada de la bandeja.
+Los acuerdos heredados de identidad, tipografía, espaciado, controles y semántica de color se mantienen en [DESIGN.md](../../DESIGN.md). Allí se distingue la base existente de la propuesta de rediseño pendiente de elección. Esta guía conserva los flujos; no fija paletas, tokens ni apariencia de componentes. El orden por llegada de la bandeja sigue siendo una regla de producto.
 
 ### 2.2 Navegación móvil
 
-Se adopta un inicio orientado a acciones, con cuatro destinos en la barra inferior:
+Ubicación/contacto, decisión 23/11/2026 pendiente de implementación: el envío exige punto mediante GPS con permiso o selección manual. Sin punto se conserva el formulario y se explica cómo continuar; no ofrecer envío «Sin punto». El invitado debe indicar teléfono de contacto con explicación de uso restringido. El registro de cuenta y su perfil conservan teléfono opcional; no extender la obligatoriedad a esos formularios.
+
+Acuerdos de integración del 23/11/2026, pendientes de implementación: el invitado tendrá una consulta de estado y resumen ciudadano mediante código secreto; no se incluye vinculación posterior a una cuenta. Las etapas del incidente son Registrado, En revisión, En atención y Cerrado. La prioridad propuesta por categoría debe distinguirse de la revisada por un operador y no cambia el orden de llegada. Estos acuerdos sustituyen los pendientes equivalentes de los párrafos siguientes; las decisiones operativas completas se mantienen en el documento 11.
+
+Se adopta la composición móvil del origen: AppBar con acceso a perfil, Drawer y barra inferior con cuatro destinos. Esta elección sustituye la ubicación anterior de Mis reportes y Alertas en la barra, conservando ambas funciones en el menú:
 
 | Destino | Contenido principal |
 |---|---|
-| Inicio | Acción principal «Reportar un incidente», últimos reportes propios y contactos de emergencia. |
+| Inicio | Inicio con composición de la app de origen y contenido real de AyniSafe. |
+| Reportar | Formulario de incidente como invitado o con cuenta, con requisitos elegidos. |
 | Mapa | Incidentes publicables y filtros autorizados. |
-| Mis reportes | Reportes del ciudadano y seguimiento privado de cada envío. |
-| Alertas | Avisos propios y acceso a sus preferencias. |
+| Contactos | Directorio aprobado, sin números inventados. |
+
+En Drawer: Inicio, Reportar, Mapa, Contactos, Alertas, información, Perfil y Mis reportes según sesión, siguiendo la presentación del origen. La consulta mediante código secreto de invitado usa sus componentes sin acceso al historial privado de cuentas.
 
 El perfil se abre desde la cabecera. Agrupa datos personales, preferencias, privacidad, información sobre AyniSafe y cierre de sesión. La acción «Reportar» es protagonista en Inicio; el mapa no será la pantalla principal de esta alternativa.
 
-La información pública y los contactos no requieren iniciar sesión. Los reportes personales y el envío de un reporte sí requieren autenticación. El diseño deberá mantener esta distinción antes y después del acceso.
+La información pública, los contactos y el envío como invitado no requieren sesión. Con cuenta se permite enviar y consultar historial privado propio; perfil y datos de cuenta requieren autenticación. El invitado consulta solo estado/resumen mediante código secreto, sin vinculación posterior a cuenta. La navegación exacta sin sesión se detallará al implementar, manteniendo esas reglas. Las entregas descritas en 2.8 conservan su estado implementado hasta su adaptación.
 
 ### 2.3 Navegación web
+
+Acuerdos de integración del 23/11/2026: la toma inicial se realiza con «Asumir caso» por un operador; la reasignación administrativa requiere motivo y no habilita atención. El detalle debe distinguir estado de verificación, mostrar vínculos de duplicados solo dentro de los permisos del usuario y diferenciar cierre Atendido de Descartado. No ofrecer «Descartado» como quinto estado ni contar ese cierre como atención realizada. Son comportamientos pendientes de implementación, definidos en el documento 11.
 
 La web mantiene una portada pública y un panel protegido, con navegación según los permisos del usuario.
 
 | Superficie | Organización acordada |
 |---|---|
 | Portada pública | Finalidad, funcionamiento, alcance del piloto, desarrolladores y acceso institucional visible. |
-| Panel del operador | Navegación lateral con Reportes, Mapa e Indicadores; avisos y cuenta en cabecera. Actuaciones y derivaciones dentro del detalle del caso. |
-| Panel del administrador | Instituciones y sedes, Operadores, Coberturas, Categorías, Reglas y Contenido/contactos; acceso a los avisos de su ámbito. |
+| Panel del operador | Inicio/resumen, Incidentes, Mapa, Indicadores e Historial autorizado; campana y cuenta en cabecera. Actuaciones y derivaciones en el detalle; sin ingreso telefónico de incidentes. |
+| Panel del administrador | Inicio/resumen administrativo, Instituciones y sedes, Operadores, Coberturas, Categorías, Reglas, Contenido/contactos e Historial autorizado; campana y cuenta. Sin permisos de atención. |
 
 El autorregistro es ciudadano y se realiza desde la app. La web no ofrecerá autorregistro de operadores o administradores. No se incorpora una versión ciudadana completa para navegador en este alcance.
 
@@ -130,21 +134,41 @@ Reglas del teléfono: es opcional (7 a 15 dígitos); la autorización es revocab
 
 Contenido público: finalidad, funcionamiento, desarrolladores, privacidad y contactos salen de una fuente versionada en la API (`GET /publico/contenido`) que también podrá usar la web. Los **contactos de emergencia están vacíos**: ninguno está aprobado y el 105 sigue por verificar. El texto de privacidad publicado está redactado solo con lo que la app trata hoy y **queda pendiente de revisión por el equipo**. Sin caché en disco: un contacto de emergencia no se vería sin red; la entrega de administración de contenido decidirá la caché persistente antes de publicar contactos reales.
 
+### 2.9 Web pública y acceso institucional (entrega `web-publica-acceso-institucional`)
+
+Implementa la superficie web de la sección 2.3 con lo que existe hoy y declara con honestidad lo que aún no. La web
+es una SPA (React, TypeScript, Vite) servida bajo el **mismo origen** que la API; no hay autorregistro de ninguna
+clase ni versión ciudadana completa para el navegador.
+
+| Vista | Contenido y comportamiento |
+|---|---|
+| Portada (`/`) | Pública, sin sesión. Finalidad, funcionamiento, alcance del piloto y desarrolladores **salen de `GET /publico/contenido`**; la web no escribe texto propio de contenido ni números de emergencia. Una sección pendiente (hoy, el alcance del piloto) se declara «Aún no disponible» con icono. Acceso institucional visible; con sesión vigente ofrece «Ir a mi panel». Errores de red o servicio con «Reintentar». |
+| Acceso (`/acceso`) | Correo y contraseña con Mostrar/Ocultar, pegado y gestores de contraseñas. Credenciales incorrectas, de un ciudadano o de una cuenta no activa reciben el **mismo mensaje general**. Estados de espera (429), solicitud no admitida (403), sin conexión y servicio no disponible, con texto e icono y «Reintentar», sin afirmar que se inició sesión. Un solo envío en curso; la contraseña no se guarda. |
+| Activación (`/activar`) | Cuenta invitada: lee el código del enlace del correo (fragmento `#t=`), lo quita de la dirección y del historial y lo guarda solo en memoria; si falta, permite pegar el código. Nueva contraseña de 15 a 128 caracteres (misma ayuda que la app). Éxito → vuelve al acceso **sin iniciar sesión**; enlace usado, vencido o inválido sin pedir contraseña. |
+| Panel (`/panel/administrador`, `/panel/operador`) | Cabecera con nombre, rol y «Cerrar sesión». Navegación con las secciones de la sección 2.3 (operador: Reportes, Mapa, Indicadores; administrador: Instituciones y sedes, Operadores, Coberturas, Categorías, Reglas, Contenido/contactos), **todas «Aún no disponible»**, sin datos, mapas ni cifras de ejemplo. Lo que se muestra depende solo de la respuesta de la API para ese rol (rol ajeno → 403 → «No tienes permiso»). |
+
+Sesión del navegador: cookie `HttpOnly; Secure; SameSite=Strict` (24 h absolutas, sin renovación) que JavaScript no ve;
+al refrescar se consulta al servidor antes de mostrar nada privado. Los guards de ruta de la web solo orientan: la
+autorización está en la API. Cabeceras de seguridad (CSP sin terceros, sin incrustación, sin referrer) en `vercel.json`.
+
+Las cuentas de administrador se crean por un procedimiento controlado de línea de comandos y las de operador las
+creará la entrega de gestión de cuentas (Spec 06); la web solo permite **activar** una cuenta invitada.
+
 ## 3. Aspectos pendientes
 
 Los siguientes puntos no constituyen decisiones cerradas ni deben presentarse como requisitos ya aprobados:
 
 | Aspecto | Estado y siguiente definición necesaria |
 |---|---|
-| Valores exactos de la paleta | Se propusieron azul `#17324D`, verde azulado `#007F78`, fondo `#F5F7FA` y texto `#172B3A`. En la app móvil se midió el contraste de las combinaciones usadas (WCAG AA): el verde azulado `#007F78` alcanza 4,54:1 sobre el fondo, pero no 4,5:1 sobre los fondos de mensaje, por lo que el texto de enlaces usa `#006B65`. Quedan por definir estados de interacción adicionales y la validación para la web. |
-| Detalle visual de componentes | Definir radios, bordes, sombras, iconos, escala tipográfica completa y colores de interacción. La dirección general ya está aceptada. |
-| Marca | Resolver logotipo y otros recursos propios de identidad. Los motivos geométricos de la alternativa comunitaria no fueron adoptados. |
+| Valores exactos de la paleta | Se gestionan en [DESIGN.md](../../DESIGN.md), sección Colors. Las pruebas de contraste existentes (`apps/web/test/diseno.test.ts` y las de Flutter) verifican combinaciones de la implementación heredada; no aprueban una dirección de rediseño. |
+| Detalle visual de componentes | Se gestiona en [DESIGN.md](../../DESIGN.md). Dirección elegida: réplica del origen; pendiente implementación y comparación renderizada, sin otra elección visual. |
+| Marca | Compromisos en [PRODUCT.md](../../PRODUCT.md); tratamiento visual y pendientes en [DESIGN.md](../../DESIGN.md). |
 | Política de contraseña | **Resuelto** para el acceso ciudadano: ver sección 2.7. |
 | Verificación de correo | **Resuelto** para esta entrega (no se verifica): ver sección 2.7. Una verificación futura se decide por separado de la recuperación. |
 | Correo de recuperación | **Resuelto para el piloto con reservas:** Gmail API por HTTPS con cuenta dedicada (ver sección 2.5), porque el SMTP de Gmail está **bloqueado** desde Render Free (comprobado el 21/11/2026). Probado desde la máquina de desarrollo con envío real a dos buzones (entrega a bandeja de entrada en menos de un minuto, asunto correcto). **Pendiente:** que el nombre «AyniSafe» aparezca como remitente, comprobar el envío desde Render, el enlace verificado en un dispositivo real y la entrega a más proveedores de correo. |
 | Cambio de correo | **Pendiente (entrega futura).** El correo es la clave de identidad y el destino de la recuperación y no se verifica; editarlo sin verificación permitiría que una sesión robada redirija el enlace de recuperación a un buzón ajeno. Mínimo necesario: correo pendiente, token al **nuevo** buzón, aviso al anterior, reautenticación y revocación de sesiones. Hasta entonces el perfil lo muestra de solo lectura. |
 | Texto de privacidad y contenido público | Redactado en la entrega `perfil-navegacion-movil` con los datos que la app trata hoy; falta la revisión del equipo, la aprobación de los contactos (incluido el 105) y la caché persistente de contactos. |
-| Distribución adaptable | Detallar dimensiones, puntos de cambio y comportamiento del panel en pantallas estrechas. |
+| Distribución adaptable | Se gestiona en [DESIGN.md](../../DESIGN.md), sección Layout. Los recorridos y permisos de esta guía se conservan al adaptar la composición. |
 | Pantallas y mensajes finales | Afinar wireframes y textos de privacidad. Los mensajes de validación, conexión y recuperación ya están definidos en la implementación y se revisan con las pruebas de usabilidad. |
 | Validación visual y accesibilidad | Comprobar contraste, escalado, foco, lectores de pantalla y comprensión de los flujos. Los criterios acordados no equivalen a pruebas superadas. |
 

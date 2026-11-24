@@ -3,9 +3,9 @@
 | ID | Historia de usuario | Prioridad |
 |---|---|---|
 | HU01 | Como ciudadano, quiero crear una cuenta e iniciar sesión, para gestionar mis reportes de manera segura. | Alta |
-| HU02 | Como ciudadano, quiero registrar el tipo y la descripción de un incidente, para comunicar oportunamente un hecho observado. | Alta |
-| HU03 | Como ciudadano, quiero adjuntar una ubicación con mi autorización y fotografías permitidas, para aportar contexto al reporte. | Alta |
-| HU04 | Como ciudadano, quiero consultar el estado de mis reportes, para conocer su seguimiento. | Alta |
+| HU02 | Como ciudadano, quiero informar un incidente como invitado o con cuenta, para comunicar un hecho sin que el registro de cuenta sea obligatorio. | Alta |
+| HU03 | Como ciudadano, quiero confirmar un punto del incidente por GPS autorizado o selección manual y adjuntar fotos opcionales, para aportar contexto; si soy invitado, informo un teléfono de contacto. | Alta |
+| HU04 | Como ciudadano con cuenta, quiero consultar mi historial privado; como invitado, quiero consultar estado y resumen mediante código secreto, sin acceder a información ajena. | Alta |
 | HU05 | Como ciudadano, quiero consultar incidentes publicables en un mapa dividido y filtrable por distritos metropolitanos, categoría y período, para tomar precauciones. | Alta |
 | HU06 | Como ciudadano, quiero recibir alertas de incidentes cercanos relevantes, para evitar zonas de riesgo. | Alta |
 | HU07 | Como operador, quiero revisar reportes recibidos y su información, para decidir si corresponde validarlos, consolidarlos o descartarlos. | Alta |

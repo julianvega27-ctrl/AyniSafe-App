@@ -1,6 +1,8 @@
 # Diseño interno de módulos
 
 > **Proyecto:** AyniSafe · **Backend:** Node.js + Express + TypeScript · **Módulo de referencia:** Reportes
+
+> **Adaptación acordada el 23/11/2026, pendiente de diseño técnico e implementación:** envío como invitado o con cuenta e incidente único desde el registro, sin ciclo de Reporte independiente. Las clases y ejemplos de este documento que asumen entidades separadas son diseño anterior pendiente de adecuación a los documentos 03, 09 y 11; no son una excepción a las nuevas reglas. Esto no cambia por sí solo los seis límites modulares ni autoriza fusionar módulos; la responsabilidad y los contratos se cerrarán en el plan tras definir estados y duplicados.
 > **Estilo arquitectónico:** Monolito modular · **Enfoque interno:** Clean Architecture dentro de cada módulo del monolito modular
 > **Nivel C4:** 4 - código · **Versión:** 1.1 · Actualización: 19/11/2026
 
