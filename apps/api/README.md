@@ -140,6 +140,9 @@ esquema `public` vacio de esa base y aplica las migraciones (solo actua si el no
 
 La API usa **Jest** con versiones fijadas en package-lock.json; la web conserva Vitest y Flutter sus propias
 herramientas. Los comandos llaman a un lanzador Node multiplataforma que activa VM modules para el escáner ESM.
+Las pruebas de contrato cargan Swagger Parser en un proceso Node nativo mediante `test/leer-contrato.mjs`:
+su dependencia ESM transitiva no se puede cargar con `require()` dentro de Jest sobre Node 22. El proceso devuelve
+el contrato desreferenciado real a las mismas aserciones HTTP; no se sustituye el parser ni se omite la suite.
 La transformación de tests es CommonJS con programa TypeScript completo (incluye const enums de Argon2), mientras
 `test:tipos` valida Node16/strict por separado. Un entorno Jest conserva la identidad de Error de Node para las
 excepciones de fetch/AbortSignal; no se reemplaza el adaptador de correo por un doble para hacer pasar su timeout.

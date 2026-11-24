@@ -1,0 +1,54 @@
+{
+  "fecha": "2026-11-24",
+  "revisionBase": "d85d507a0a994048410fc3c2ed63a14ba7040b2a",
+  "revisionCorreccion": "diff local sin commit",
+  "ejecucionRemotaFallida": "https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45464892595",
+  "entornoLocal": "Windows con Node 22.23.5",
+  "comando": "node scripts/ejecutar-pruebas.cjs cobertura",
+  "salida": 0,
+  "archivos": 30,
+  "casos": 461,
+  "fallos": 0,
+  "omitidos": 0,
+  "anterioresConservados": 429,
+  "pruebasNuevasDesdeP1": 1,
+  "cobertura": {
+    "lines": {
+      "total": 5278,
+      "covered": 4524,
+      "skipped": 0,
+      "pct": 85.71
+    },
+    "statements": {
+      "total": 5278,
+      "covered": 4524,
+      "skipped": 0,
+      "pct": 85.71
+    },
+    "functions": {
+      "total": 300,
+      "covered": 278,
+      "skipped": 0,
+      "pct": 92.66
+    },
+    "branches": {
+      "total": 1329,
+      "covered": 1192,
+      "skipped": 0,
+      "pct": 89.69
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "flutter": {
+    "copia": "archivos versionables de mobile y vectores compartidos",
+    "analisis": "sin problemas",
+    "aprobadas": 237,
+    "salida": 0
+  },
+  "remotoTrasCorreccion": "pendiente de commit y push del responsable"
+}

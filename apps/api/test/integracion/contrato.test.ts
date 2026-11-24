@@ -1,5 +1,5 @@
 import { expectConContexto } from '../expect-contexto';
-import SwaggerParser from '@apidevtools/swagger-parser';
+import { execFileSync } from 'node:child_process';
 import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { resolve } from 'node:path';
@@ -65,7 +65,11 @@ const reventada = () => Promise.reject(new Error('interno'));
 const noDisponible = () => Promise.reject(new ServicioNoDisponibleError(new Error('bd')));
 
 beforeAll(async () => {
-  api = (await SwaggerParser.dereference(resolve(__dirname, '../../openapi.yaml'))) as unknown as typeof api;
+  // Node carga el grafo CJS/ESM del parser fuera del runtime VM de Jest (también en Node 22).
+  api = JSON.parse(execFileSync(process.execPath, [resolve(__dirname, '../leer-contrato.mjs')], {
+    encoding: 'utf8',
+    maxBuffer: 4 * 1024 * 1024,
+  })) as typeof api;
   await limpiarBd(prisma);
 });
 beforeEach(async () => {

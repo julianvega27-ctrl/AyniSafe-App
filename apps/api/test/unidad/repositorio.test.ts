@@ -77,6 +77,23 @@ describe('escaner de secretos', () => {
     expect(escanearRepositorio()).toEqual([]);
   });
 
+  it('incluye la configuración Android reproducible y mantiene propiedades locales y firmas ignoradas', () => {
+    const fuentes = [
+      'apps/mobile/android/app/src/main/AndroidManifest.xml',
+      'apps/mobile/android/app/build.gradle.kts',
+    ];
+    const privados = [
+      'apps/mobile/android/local.properties',
+      'apps/mobile/android/key.properties',
+      'apps/mobile/android/firma.jks',
+    ];
+    const ignorados = execFileSync('git', ['check-ignore', '--no-index', '--stdin'], {
+      cwd: RAIZ, encoding: 'utf8', input: [...fuentes, ...privados].join('\n') + '\n',
+    }).trim().split(/\r?\n/);
+    expect(ignorados).toEqual(privados);
+    for (const fuente of fuentes) expect(readFileSync(join(RAIZ, fuente), 'utf8').length).toBeGreaterThan(0);
+  });
+
   describe('CLI sobre un repositorio temporal', () => {
     const carpetas: string[] = [];
     afterAll(() => {

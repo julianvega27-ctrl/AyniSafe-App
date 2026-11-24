@@ -22,6 +22,8 @@ Preservar import dinámico nativo del escáner ESM mediante `test/cargar-escaner
 
 Alternativas descartadas: conservar Vitest como supuesto equivalente a Jest (no cumple rúbrica); convertir todo el producto a ESM (amplía alcance); ocultar problemas con transformaciones que eliminen aserciones o con imports simulados. La instalación y el ensayo de compatibilidad deben preceder a la migración completa.
 
+Corrección tras CI del 24/11/2026: Swagger Parser carga una dependencia ESM mediante require, que el runtime de Jest solo admite desde Node 24.9. Para conservar Node 22, `test/leer-contrato.mjs` desreferencia el contrato en un proceso Node nativo y devuelve JSON a las mismas pruebas HTTP. No se altera el contrato, el parser ni el módulo productivo. El ensayo local original con Node 24 no demostraba esta compatibilidad; el seguimiento registra las ejecuciones nuevas por separado.
+
 Referencias técnicas primarias: [módulos híbridos de ts-jest](https://kulshekhar.github.io/ts-jest/docs/guides/hybrid-node-module), [compatibilidad ESM](https://kulshekhar.github.io/ts-jest/docs/guides/esm-support) y [runtime ESM de Jest](https://jestjs.io/docs/ecmascript-modules). La compatibilidad efectiva se verifica con las versiones fijadas durante apply, no se declara probada en este diseño.
 
 ### 2. Comandos y preparación segura

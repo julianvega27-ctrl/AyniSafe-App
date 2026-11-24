@@ -1,6 +1,6 @@
 # Informe P1 — Jest, cobertura y arquitectura
 
-Inicio: 23/11/2026. Cierre local: 24/11/2026. Estado: implementación y validación local completas; ejecución remota de GitHub Actions pendiente.
+Inicio: 23/11/2026. Cierre local inicial: 24/11/2026. Estado: implementación local validada; la primera ejecución remota falló y tiene correcciones en seguimiento al final de este informe.
 
 ## Especificación previa y línea base
 
@@ -66,8 +66,28 @@ Se verificaron archivos no vacíos en [HTML](../../../apps/api/coverage/index.ht
 
 El workflow ejecuta tipos de producto/pruebas, build, OpenAPI, verificación arquitectónica y Jest con cobertura sobre PostgreSQL efímero. YAML válido y pruebas de configuración aprobadas; se preservan jobs web, Flutter y escaneo de secretos. La acción de artefactos está fijada a SHA y selecciona únicamente `apps/api/coverage/`, con retención de 14 días. Usa `always()` junto con existencia de reportes para conservar evidencia disponible aunque falle la suite; sin reportes informa su ausencia y no convierte el fallo previo en éxito. Una vez ejecutado GitHub Actions, el artefacto se obtiene desde la ejecución del workflow, sección Artifacts, nombre `api-cobertura-<sha>`.
 
-**No se ejecutó ni publicó GitHub Actions en P1**: configuración y comprobación local no acreditan subida o descarga remota. Los comandos, preparación segura, reglas y limitaciones se documentan en el [README API](../../../apps/api/README.md).
+En el cierre local original todavía no se había ejecutado GitHub Actions: configuración y comprobación local no acreditaban subida o descarga remota. El seguimiento posterior registra la primera ejecución y sus fallos. Los comandos, preparación segura, reglas y limitaciones se documentan en el [README API](../../../apps/api/README.md).
 
 La instalación informó 21 vulnerabilidades de dependencias (18 moderadas y 3 altas). La revisión de producción identificó tres altas en la cadena Prisma/@prisma/config/effect; sus versiones ya existían en el lockfile del commit de especificación. No se aplicó la propuesta automática de downgrade mayor de Prisma, que requiere un cambio y validación propios. Este resultado permanece como deuda y no se declara resuelto por P1.
 
-P1 aporta evidencia local para la rúbrica de Jest/cobertura y límites arquitectónicos actuales. No implementa módulos del donante, no modifica UI, no acredita carga de 2000 usuarios ni completa los demás atributos de calidad del Sprint 2. P0 y specs archivadas permanecen intactos. No se han creado commits, publicado una rama ni archivado este cambio.
+P1 aporta evidencia local para la rúbrica de Jest/cobertura y límites arquitectónicos actuales. No implementa módulos del donante, no modifica UI, no acredita carga de 2000 usuarios ni completa los demás atributos de calidad del Sprint 2. P0 y specs archivadas permanecen intactos. El agente no creó commits, publicó ramas ni archivó este cambio.
+
+## Seguimiento de la primera ejecución remota (24/11/2026)
+
+El responsable registró la implementación en `b729fd4` y su evidencia en `d85d507`. La [ejecución 45464892595](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45464892595), sobre `d85d507a0a994048410fc3c2ed63a14ba7040b2a`, terminó con API y Flutter fallidos; web y secretos aprobados. Se leyeron los logs completos mediante GitHub CLI. Este resultado no se considera aceptación de P1 en CI.
+
+| Fallo observado | Corrección aplicada |
+|---|---|
+| API: `Must use import to load ES Module` en Swagger Parser; Jest sobre Node 22 no carga su dependencia ESM mediante require | Desreferenciación con el mismo parser en `test/leer-contrato.mjs`, ejecutado con Node nativo. Las siete pruebas de contrato conservan sus aserciones HTTP. No se cambia CI a Node 24 para ocultar la incompatibilidad. |
+| API: el caso del límite de recuperación por IP esperaba que el conteo de tokens no cambiara, pero había correo anterior todavía en curso (1 → 2) | Sincronizar cada solicitud permitida con el reposo de su cola antes de la fotografía de referencia; esperar también tras el rechazo. Conservar 429, Retry-After y la comprobación de que no hay nuevos envíos/tokens. No se amplía el umbral ni se elimina la aserción. |
+| Flutter: falta `android/app/src/main/AndroidManifest.xml`, también usado al cargar enlaces_cuenta_test.dart | El patrón global `android/` provenía de Expo y excluía toda la plataforma Flutter. Limitarlo a `/android/` permite versionar las fuentes Android existentes, con sus permisos/App Links/Gradle. Propiedades locales, firmas y compilaciones permanecen ignoradas. Se agrega un control de regresión para esa distinción. |
+
+La API remota informó 452 pruebas aprobadas y una fallida; una suite completa no pudo cargar. Flutter informó 225 aprobadas y dos fallos (uno de carga, que impidió descubrir sus demás casos). Los avisos de paquetes Flutter con versiones nuevas no fueron la causa del fallo.
+
+Se comprobó mediante la API de GitHub que el artefacto `api-cobertura-d85d507a0a994048410fc3c2ed63a14ba7040b2a` se publicó aun con la suite fallida: 285662 bytes, no vencido al consultar. Esto acredita publicación de evidencia de una ejecución fallida, no cobertura de todas las pruebas ni aceptación. No se descargó ni se auditó su contenido.
+
+Verificaciones de la corrección: tipos de tests y 23 controles de repositorio aprobados con Node 22.23.5; Flutter analyze sin problemas y 237 pruebas aprobadas en copia limpia de los archivos versionables (incluyendo Android y `apps/shared/vectores-validacion.json`). Una primera copia omitía ese fixture compartido; se completó y repitió la suite, sin alterar la prueba ni contar ese intento fallido como éxito.
+
+Suite completa de API ejecutada mediante `node scripts/ejecutar-pruebas.cjs cobertura` con Node 22.23.5 y PostgreSQL aislado: **30 archivos, 461 aprobadas, cero fallidas/omitidas, salida 0**, en 153,941 s. Conserva por archivo y nombre los 429 casos de la línea base; añade un control de archivos Android respecto de las 460 de P1. Resultado y métricas separados de la validación original en [resultado de corrección](resultado-correccion-ci.json): líneas/sentencias 4524/5278 (85,71 %), ramas 1192/1329 (89,69 %), funciones 278/300 (92,66 %). Estos valores corresponden a Node 22; no sustituyen retroactivamente las mediciones anteriores con Node 24.
+
+El verificador sigue informando 68 fuentes y cero infracciones estáticas/destinos calculados. Escaneo final de 374 archivos candidatos sin hallazgos, diff sin errores de espacios y validación estricta OpenSpec aprobada. No se modificó código productivo en esta corrección. El clúster local estaba detenido, se inició para estas pruebas y se detuvo al terminar. La corrección permanece sin commit/push del agente: **falta una nueva ejecución remota sobre el commit corregido** antes de dar CI por aprobado.

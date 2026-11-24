@@ -52,7 +52,8 @@ El proyecto se desarrollará utilizando **Scrum**, mediante iteraciones que perm
 cambios verifica la API (tipos de producto/pruebas, compilación, contrato, arquitectura y Jest con cobertura sobre PostgreSQL efímero), la app (`flutter analyze` y
 `flutter test`, sin `integration_test`, que necesita un dispositivo), la web (lint, tipos, compilación, artefacto y
 pruebas) y busca credenciales versionadas (`scripts/escanear-secretos.mjs`). No usa ningún secreto del repositorio,
-solo permisos de lectura y acciones fijadas por SHA. Su ejecución real en GitHub aún no se ha comprobado.
+solo permisos de lectura y acciones fijadas por SHA. La primera ejecución remota detectó fallos de API y Flutter;
+el seguimiento y sus correcciones se registran en el informe P1.
 
 La API conserva reportes de cobertura disponibles como artefacto durante 14 días. La evidencia local de P1 y sus límites están en el [informe de validación](openspec/changes/api-jest-cobertura-arquitectura/informe.md).
 

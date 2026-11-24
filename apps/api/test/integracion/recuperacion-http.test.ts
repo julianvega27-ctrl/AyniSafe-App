@@ -368,13 +368,17 @@ describe('6.1 limites de abuso', () => {
   it('por IP: al superar el umbral responde 429 con Retry-After, sin token ni envio', async () => {
     const { app: a, modulo: m } = nueva({ recuperacionPorIp: 2 });
     await ciudadano('a@ejemplo.com', a);
-    for (let i = 0; i < 2; i++) await recuperar('a@ejemplo.com', a).expect(202);
-    await m.gestorEnvios.esperarReposo();
+    for (let i = 0; i < 2; i++) {
+      await recuperar('a@ejemplo.com', a).expect(202);
+      // Este caso mide el límite por IP; tomar cada fotografía tras acabar su correo.
+      await m.gestorEnvios.esperarReposo();
+    }
     const antes = [await contarEnvios(), await contarTokens()];
     const r = await recuperar('a@ejemplo.com', a);
     expect(r.status).toBe(429);
     expect(r.headers['retry-after']).toBe('900');
     expect(r.body.error.code).toBe('RATE_LIMITED');
+    await m.gestorEnvios.esperarReposo();
     expect([await contarEnvios(), await contarTokens()]).toEqual(antes);
     await m.gestorEnvios.detener();
   });

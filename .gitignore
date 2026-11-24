@@ -16,7 +16,9 @@ coverage/
 # Expo / React Native
 .expo/
 web-build/
-android/
+# En Flutter la configuración nativa contiene permisos y App Links: se versiona.
+# Este patrón corresponde solo al antiguo proyecto Expo en la raíz.
+/android/
 ios/
 
 # Archivos locales y temporales

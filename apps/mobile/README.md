@@ -11,6 +11,10 @@ restauración de la sesión y cierre de sesión. No hay Inicio, Reportes, Mapa n
 - Flutter estable (probado con 3.47.7 / Dart 3.13) y Android SDK.
 - La API de `apps/api` en ejecución. Ver su [README](../api/README.md).
 
+La configuración fuente de `android/` se incluye en Git: manifiestos, App Links, Gradle, actividad y recursos.
+`android/local.properties`, firmas, cachés y compilaciones siguen ignorados. Las pruebas leen el manifiesto real;
+no se genera uno ficticio para CI. Los vectores de validación compartidos están en `apps/shared/`.
+
 ## Ejecutar la app
 
 Desde `apps/mobile/`:
