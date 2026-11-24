@@ -139,9 +139,82 @@ esquema `public` vacio de esa base y aplica las migraciones (solo actua si el no
 
 No existe alta publica de operadores ni administradores: el registro fija siempre rol `ciudadano` y estado
 `activo`, y rechaza cualquier campo de rol o institucion. Estas instrucciones no siembran cuentas
-privilegiadas ni contrasenas compartidas; su alta corresponde a un flujo administrativo posterior.
-La capacidad de invitacion y activacion (ver mas abajo) prepara ese flujo pero no crea operadores: las cuentas
-invitadas nacen sin contrasena y la definen con un enlace de un solo uso.
+privilegiadas ni contrasenas compartidas. La capacidad de invitacion y activacion (ver mas abajo) prepara el alta de
+operadores (Spec 06) pero no los crea: las cuentas invitadas nacen sin contrasena y la definen con un enlace de un
+solo uso. El unico alta privilegiada de esta entrega es el procedimiento del administrador inicial, descrito a
+continuacion; no es una ruta HTTP.
+
+## Administrador inicial
+
+Procedimiento controlado (linea de comandos) para crear al primer administrador y para recuperar su acceso.
+**Quien lo ejecuta es quien ya tiene la `DATABASE_URL` del entorno**: ese acceso es la autoridad. No recibe, genera ni
+guarda contrasenas; no hay contrasena compartida en Git, en variables ni en archivos.
+
+```bash
+# Alta (idempotente por correo). Valores de ejemplo: sustituyelos por los reales, sin guardarlos en el repositorio.
+npm run admin:bootstrap -- --correo administrador@ejemplo.invalid --nombre "Nombre Apellido"
+
+# Reserva: sin correo. Imprime el enlace de activacion UNA vez en TU terminal; no se guarda ni se registra.
+npm run admin:bootstrap -- --correo administrador@ejemplo.invalid --nombre "Nombre Apellido" --emitir-enlace
+
+# Recuperacion de emergencia (contrasena perdida, cuenta suspendida o buzon comprometido).
+npm run admin:reiniciar -- --correo administrador@ejemplo.invalid
+```
+
+Tambien se aceptan `ADMIN_CORREO` y `ADMIN_NOMBRE` como variables de entorno (nunca una contrasena).
+
+- **Alta**: crea la cuenta `administrador` en `pendiente_activacion` (sin contrasena) y encola la invitacion en la
+  misma transaccion; si algo falla no queda ni cuenta ni envio. El correo se entrega desde ese mismo proceso (usa el
+  `EMAIL_ADAPTER` del entorno) y contiene un enlace `WEB_PUBLIC_URL/activar#t=<token>` (72 h, un solo uso). El titular
+  elige su contrasena en la web, que consume `POST /auth/activaciones` (204, sin iniciar sesion).
+- **Idempotencia**: repetirlo para una cuenta pendiente reencola la invitacion (el token anterior se invalida);
+  para un administrador **activo** o **suspendido** informa y no cambia nada; si el correo es de un ciudadano u
+  operador, rechaza.
+- **Reinicio** (`admin:reiniciar`): solo administradores. Deja la cuenta `pendiente_activacion` sin contrasena, revoca
+  todas sus sesiones, invalida sus tokens y reenvia la invitacion. Es la unica via de recuperacion del administrador:
+  `/auth/recuperaciones` sigue limitada a ciudadanos y **no** se abre a cuentas privilegiadas.
+- **`--emitir-enlace`**: se niega si `CI=true` (o `1`) o si la salida no es una terminal, y lo hace antes de abrir la
+  base. Usalo solo desde tu maquina y si el correo no puede enviarse (por ejemplo, mientras el envio desde Render no
+  este verificado); no copies el enlace a chats ni a registros.
+- **Salida**: solo eventos genericos (`creada`, `reencolada`, `ya_activa`, `suspendida`, `reiniciada`, `rechazada=CODIGO`,
+  `envio=...`). Nunca imprime el correo, el nombre, la contrasena, el token ni la cadena de conexion (salvo el enlace
+  pedido con `--emitir-enlace`). Si el correo no se entrega en 30 s informa «envio=pendiente»; la API lo retoma al
+  iniciar.
+- **Limites**: no hay auditoria persistente de estas acciones (llega con la gestion de cuentas, Spec 06); el
+  procedimiento deja constancia solo por su salida. Un unico administrador es un punto unico de fallo: puedes dar de
+  alta mas de uno (una vez por correo) y conviene registrar quien conserva el acceso a la base.
+- El envio por correo en produccion sigue **sin verificarse desde Render** (ver mas abajo): hasta entonces el alta por
+  correo no debe declararse completa en produccion.
+
+## API de acceso institucional
+
+Administradores y operadores acceden **solo desde la web**. La sesion es el mismo token opaco de 24 h absolutas, sin
+renovacion, pero viaja en una cookie `HttpOnly; Secure; SameSite=Strict; Path=/` (sin `Domain`; con prefijo
+`__Host-` bajo https) y nunca en el cuerpo. Detalle en `openapi.yaml`.
+
+| Ruta | Quien | Resultado |
+|---|---|---|
+| `POST /auth/institucional/sesiones` | publica, exige `Origin` | 200 con identidad y rol + cookie; 401 uniforme (ciudadano, suspendido, pendiente, inexistente, contrasena incorrecta); 403 `FORBIDDEN_ORIGIN`; 429 |
+| `GET /auth/institucional/sesion` | cookie | 200 (restaurar al refrescar) o 401 |
+| `DELETE /auth/institucional/sesion` | cookie opcional, exige `Origin` | 204 idempotente y borra la cookie |
+| `GET /administrador/panel` | cookie, administrador | 200; otro rol 403; sin sesion 401 |
+| `GET /operador/panel` | cookie, operador | 200; otro rol 403; sin sesion 401 |
+
+- **Mismo origen y sin CORS.** Vercel reescribe `/api/*` hacia esta API, de modo que el navegador solo habla con el
+  origen de la web y la cookie no es de terceros. La API **no emite** cabeceras `Access-Control-*` (una prueba lo
+  comprueba). En desarrollo, el proxy de Vite cumple esa funcion.
+- **CSRF.** Las rutas con cookie que cambian estado exigen `Origin` identico a `WEB_ORIGIN` y rechazan
+  `Sec-Fetch-Site: cross-site` (403), antes de limitar intentos o verificar contrasenas; ademas, solo JSON y
+  `SameSite=Strict`.
+- **Dos canales aislados.** Los paneles aceptan solo la cookie (ignoran `Authorization`) y las rutas ciudadanas solo
+  `Authorization: Bearer`; los roles son disjuntos, asi que un token de un canal no sirve en el otro. No hay
+  migracion de `sesiones`.
+- **Limites propios**: `RL_LOGIN_INST_IP_MAX` (30) y `RL_LOGIN_INST_CORREO_IP_MAX` (5) por 15 min.
+- **Configuracion**: `WEB_ORIGIN` y `WEB_PUBLIC_URL` (mismo origen; en produccion obligatorias, https y coincidentes).
+  El enlace de activacion de un administrador u operador apunta a la web (`/activar`); el de un ciudadano sigue siendo
+  el de la API.
+- `TRUST_PROXY_HOPS` con Vercel delante de Render **no esta fijado**: depende de un spike pendiente (ver tareas 1.1 y
+  1.2 del cambio). Hasta entonces, el limitador por IP puede agrupar a los clientes tras el proxy.
 
 ## API de acceso ciudadano
 
