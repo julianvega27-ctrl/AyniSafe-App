@@ -1,0 +1,286 @@
+{
+  "fechaCierre": "2026-11-24",
+  "commitEspecificacion": "d4d800ff65fd8a27abf8e9055337ff84ee4c8908",
+  "revision": "diff local sin commit de implementacion",
+  "runner": "Jest 30.5.2",
+  "salidaSuite": 0,
+  "archivos": 30,
+  "casos": 460,
+  "omitidos": 0,
+  "anterioresConservados": 429,
+  "nuevos": 31,
+  "correspondencia": [
+    {
+      "archivo": "apps/api/test/integracion/alcance.test.ts",
+      "previos": 5,
+      "conservados": 5,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/aprovisionamiento.test.ts",
+      "previos": 32,
+      "conservados": 32,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/cola-correo.test.ts",
+      "previos": 24,
+      "conservados": 24,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/contenido-publico.test.ts",
+      "previos": 6,
+      "conservados": 6,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/contrato.test.ts",
+      "previos": 7,
+      "conservados": 7,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/cuentas.test.ts",
+      "previos": 7,
+      "conservados": 7,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/esquema.test.ts",
+      "previos": 26,
+      "conservados": 26,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/http.test.ts",
+      "previos": 9,
+      "conservados": 9,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/institucional.test.ts",
+      "previos": 30,
+      "conservados": 30,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/limitador.test.ts",
+      "previos": 12,
+      "conservados": 12,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/login.test.ts",
+      "previos": 12,
+      "conservados": 12,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/mantenimiento.test.ts",
+      "previos": 7,
+      "conservados": 7,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/perfil.test.ts",
+      "previos": 17,
+      "conservados": 17,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/recuperacion-http.test.ts",
+      "previos": 32,
+      "conservados": 32,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/registro.test.ts",
+      "previos": 9,
+      "conservados": 9,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/revocacion-sesiones.test.ts",
+      "previos": 3,
+      "conservados": 3,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/sesion.test.ts",
+      "previos": 11,
+      "conservados": 11,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/integracion/tokens-cuenta.test.ts",
+      "previos": 23,
+      "conservados": 23,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/unidad/argon2id.test.ts",
+      "previos": 9,
+      "conservados": 9,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/unidad/config-correo.test.ts",
+      "previos": 11,
+      "conservados": 11,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/unidad/config-web.test.ts",
+      "previos": 12,
+      "conservados": 12,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/unidad/contenido-publico.test.ts",
+      "previos": 9,
+      "conservados": 9,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/unidad/gmail-api-correo.test.ts",
+      "previos": 28,
+      "conservados": 28,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/unidad/perfil-validacion.test.ts",
+      "previos": 9,
+      "conservados": 9,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/unidad/repositorio.test.ts",
+      "previos": 21,
+      "conservados": 21,
+      "faltantes": [],
+      "nuevos": [
+        "flujo de integracion continua (ci.yml) conserva solo cobertura con SHA fijado, retencion y condiciones de fallo"
+      ]
+    },
+    {
+      "archivo": "apps/api/test/unidad/smtp-correo.test.ts",
+      "previos": 5,
+      "conservados": 5,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/unidad/usuario-institucional.test.ts",
+      "previos": 7,
+      "conservados": 7,
+      "faltantes": [],
+      "nuevos": []
+    },
+    {
+      "archivo": "apps/api/test/unidad/validacion.test.ts",
+      "previos": 46,
+      "conservados": 46,
+      "faltantes": [],
+      "nuevos": []
+    }
+  ],
+  "archivosNuevos": [
+    {
+      "archivo": "apps/api/test/unidad/modo-pruebas.test.ts",
+      "casos": [
+        "modos de pruebas e integracion aislada unidad no lee la URL insegura de .env ni configura preparacion de BD",
+        "modos de pruebas e integracion aislada rechaza URL ausente/insegura undefined sin imprimirla",
+        "modos de pruebas e integracion aislada rechaza URL ausente/insegura  sin imprimirla",
+        "modos de pruebas e integracion aislada rechaza URL ausente/insegura invalida sin imprimirla",
+        "modos de pruebas e integracion aislada rechaza URL ausente/insegura postgresql://u:p@localhost/desarrollo sin imprimirla",
+        "modos de pruebas e integracion aislada rechaza URL ausente/insegura https://localhost/datos_test sin imprimirla",
+        "modos de pruebas e integracion aislada no usa DATABASE_URL como respaldo y respeta una URL de pruebas explicita",
+        "modos de pruebas e integracion aislada una variable vacia explicita no se sustituye por la del archivo",
+        "modos de pruebas e integracion aislada el lanzador devuelve fallo si no encuentra pruebas",
+        "modos de pruebas e integracion aislada una seleccion que omite todos los casos tampoco acredita exito",
+        "modos de pruebas e integracion aislada un fallo de asercion llega a la salida del lanzador",
+        "modos de pruebas e integracion aislada cobertura mantiene en cero un fuente propio que no se importa"
+      ]
+    },
+    {
+      "archivo": "apps/api/test/unidad/arquitectura.test.ts",
+      "casos": [
+        "limites arquitectonicos permite aplicacion, dominio y puertos sin requerir capas vacias",
+        "limites arquitectonicos rechaza dependencias externas incluso import type { Repo } from '../infraestructura/repo'; (import de tipos)",
+        "limites arquitectonicos rechaza dependencias externas incluso export { Repo } from '../infraestructura/repo'; (reexport)",
+        "limites arquitectonicos rechaza dependencias externas incluso const x = require('../infraestructura/repo'); (require)",
+        "limites arquitectonicos rechaza dependencias externas incluso const x = import('../infraestructura/repo'); (import dinamico)",
+        "limites arquitectonicos rechaza dependencias externas incluso type X = import('../infraestructura/repo').Repo; (import type node)",
+        "limites arquitectonicos rechaza dominio hacia aplicacion",
+        "limites arquitectonicos rechaza tecnologia express en aplicacion",
+        "limites arquitectonicos rechaza tecnologia @prisma/client en aplicacion",
+        "limites arquitectonicos rechaza tecnologia pg en aplicacion",
+        "limites arquitectonicos rechaza tecnologia firebase-admin en aplicacion",
+        "limites arquitectonicos rechaza tecnologia node:fs en aplicacion",
+        "limites arquitectonicos no permite ocultar infraestructura tras un alias y utilidades compartidas",
+        "limites arquitectonicos rechaza cliente generado aunque el destino no se recorra",
+        "limites arquitectonicos rechaza internos ajenos y admite fachada publica pura",
+        "limites arquitectonicos permite composicion declarada sin eximir a las capas internas",
+        "limites arquitectonicos identifica destinos computados como limite de revision manual",
+        "limites arquitectonicos la CLI falla ante infraccion y pasa ante un ejemplo valido"
+      ]
+    }
+  ],
+  "cobertura": {
+    "lines": {
+      "total": 5278,
+      "covered": 4529,
+      "skipped": 0,
+      "pct": 85.8
+    },
+    "statements": {
+      "total": 5278,
+      "covered": 4529,
+      "skipped": 0,
+      "pct": 85.8
+    },
+    "functions": {
+      "total": 296,
+      "covered": 274,
+      "skipped": 0,
+      "pct": 92.56
+    },
+    "branches": {
+      "total": 1331,
+      "covered": 1195,
+      "skipped": 0,
+      "pct": 89.78
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  }
+}

@@ -1,0 +1,73 @@
+# Informe P1 — Jest, cobertura y arquitectura
+
+Inicio: 23/11/2026. Cierre local: 24/11/2026. Estado: implementación y validación local completas; ejecución remota de GitHub Actions pendiente.
+
+## Especificación previa y línea base
+
+Commit de especificación: `d4d800f` (registrado antes de editar código de P1). Punto de aplicación limpio. Se releyeron propuesta, tres specs, diseño y tareas con OpenSpec en estado ready y 0/16 tareas completas.
+
+La captura nueva de Vitest sobre PostgreSQL local aislado confirmó **28 archivos, 429 casos, cero fallos** antes de migrar imports/aserciones. [Inventario](inventario-pruebas.json): rutas, hashes originales, nombres expandidos y aserciones extraídas con parser TypeScript para contrastar la migración. P0 no fue sobrescrito. El reporte bruto local se ignora en Git.
+
+Dependencias consultadas en npm: Jest/@jest/globals 30.5.2, ts-jest 29.4.15 y @types/jest 30.0.0; los peers de ts-jest admiten Jest 30 y TypeScript 5.9.3. Se fijaron versiones y lockfile. La salida de instalación no equivale a compatibilidad ejecutada ni aceptación de las tareas posteriores.
+
+## Incidencias del entorno
+
+El clúster local ya estaba activo en 127.0.0.1:5433; `pg_ctl status` dentro del sandbox no lo identificaba correctamente. Se comprobó conexión solo a la URL local `_test` sin imprimirla. No se borró postmaster.pid ni se alteraron permisos/logs existentes. No detener el clúster al finalizar, porque no fue iniciado por P1.
+
+La primera captura ejecutó la suite pero el reporter no pudo guardar su salida por una ruta relativa incorrecta. Se corrigió dentro del repositorio y se repitió correctamente para obtener el inventario. No se atribuye éxito al intento que terminó con error de reporte.
+
+## Implementación y compatibilidad
+
+### Compatibilidad ya comprobada durante la migración
+
+`test:tipos`, tipos productivos, build y OpenAPI pasan. Los casos seleccionados de contenido/configuración/repositorio/Argon2 pasan (51); integración seleccionada con Prisma y BD real pasa (56). La compatibilidad ESM se resuelve con puente nativo cjs y VM modules; un entorno Jest conserva la identidad Error de Node para errores de fetch/AbortSignal. El timeout real del adaptador Gmail conserva su aserción TIEMPO_AGOTADO sin modificar el adaptador.
+
+La configuración aislada inicial reveló const enums de @node-rs/argon2: se usa compilación CommonJS con programa completo y typecheck Node16 estricto separado, documentado en design.md. Ocho llamadas expect de dos argumentos conservan sus mensajes mediante expectConContexto, no eliminando las comprobaciones. La revisión AST conserva 1129/1130 expresiones anteriores tras normalizar wrappers y aserciones de tipos. La restante conserva la misma comprobación de no filtrar secreto en config-web, ahora sobre una variable mensaje; se añadió una aserción explícita de que hubo error para evitar que el propio fallo de expect.unreachable fuera capturado como supuesto error de configuración. También se completó un doble CuentasPort y se añadió una aserción no nula para passwordHash, sin debilitar escenarios.
+
+Una primera ejecución completa de cobertura tuvo 460 casos aprobados, pero código de salida 1 por un consumidor de correo que seguía consultando tras el teardown de institucional.test.ts. No se registra ese intento como validación aprobada. El arnés de integración ahora detiene y espera todos los gestores creados antes de desconectar sus clientes, conservando los escenarios y sin forceExit. La repetición final terminó con salida 0, sin ese error posterior ni aviso de recursos pendientes.
+
+Jest detectó además el timeout perdedor de Promise.race en el CLI de aprovisionamiento: el envío terminaba pero el temporizador mantenía el proceso vivo. Se cancela ese recurso en finally manteniendo el mismo límite, salida y operaciones de cuenta; no cambia una regla de negocio ni se añade forceExit. La suite original de CLI se usa para verificarlo. Esta es la única adaptación de código de ejecución prevista para limpieza de recursos, no para elevar cobertura.
+
+## Resultados finales observados
+
+Revisión implementada: diff local respecto del commit de especificación `d4d800ff65fd8a27abf8e9055337ff84ee4c8908`. No hay commit de implementación creado por el agente. Entorno local: Windows, Node 24.21, npm 11.19, PostgreSQL local de pruebas; Flutter 3.47.7 y Dart 3.13.5. CI mantiene Node 22: la compatibilidad declarada de dependencias lo admite, pero esta ejecución local no demuestra una ejecución sobre Node 22.
+
+| Verificación | Resultado observado |
+|---|---|
+| `npm ci` en API | Instalación reproducible y generación Prisma 7.10.1 correctas |
+| `npm run test:tipos` y `npm run typecheck` | Salida 0, tipos de pruebas y producto |
+| `npm run build` y `npm run contrato:validar` | Salida 0; 16 operaciones OpenAPI válidas |
+| `npm run arquitectura:verificar` | 68 fuentes, cero infracciones estáticas y cero destinos computados |
+| `npm run test:unidad` | 12 archivos, 188 pruebas aprobadas |
+| Integración focalizada tras corregir limpieza (`institucional` y `aprovisionamiento`, `--detectOpenHandles`) | 62 pruebas aprobadas, salida 0 |
+| `npm run test:cobertura -- --json --outputFile=../../openspec/changes/api-jest-cobertura-arquitectura/.jest-final.local.json` | 30 archivos, **460 aprobadas**, cero omitidas/fallidas; salida 0; 134,083 s |
+| Regresión web | 104 pruebas aprobadas; Vitest web conservado |
+| Regresión Flutter | Análisis sin problemas y 237 pruebas aprobadas |
+| OpenSpec `validate api-jest-cobertura-arquitectura --strict` | Cambio válido |
+| Escáner de secretos sobre versionados y nuevos no ignorados | 354 archivos, cero hallazgos; sin imprimir valores |
+| `git diff --check` | Salida 0 |
+
+La ejecución completa de cobertura incluye todas las pruebas unitarias y de integración sobre la base aislada. [Correspondencia final](correspondencia-regresion.json): se conservan por archivo y nombre expandido los **429 casos originales**, y se agregan 31: 18 de arquitectura, 12 de modos/aislamiento y uno de artefactos CI. No se añadieron skip/todo/only ni forceExit. Vitest y su configuración fueron retirados únicamente de API.
+
+Los controles negativos verifican salida no cero ante aserción fallida, selección vacía, selección completamente omitida e infracción arquitectónica. También comprueban rechazo de URL ausente/insegura antes de conectar y ausencia de fallback a DATABASE_URL. Los fixtures de arquitectura cubren imports de tipos, reexports, utilidades compartidas, proveedores, alias y composición válida. Los destinos calculados se declaran como límite del análisis; cero infracciones estáticas no demuestra todos los atributos EQ-06 ni el comportamiento de dependencias creadas en ejecución.
+
+## Cobertura medida
+
+| Métrica | Cubiertos / total | Porcentaje |
+|---|---|---|
+| Líneas | 4529 / 5278 | 85,80 % |
+| Sentencias | 4529 / 5278 | 85,80 % |
+| Funciones | 274 / 296 | 92,56 % |
+| Ramas | 1195 / 1331 | 89,78 % |
+
+Se verificaron archivos no vacíos en [HTML](../../../apps/api/coverage/index.html), [LCOV](../../../apps/api/coverage/lcov.info) y [JSON-summary](../../../apps/api/coverage/coverage-summary.json). Se generan localmente y están ignorados por Git; estos enlaces requieren ejecutar cobertura en el checkout. El resumen numérico reproducible se conserva en correspondencia-regresion.json. Se incluyen fuentes no ejercitadas, por ejemplo `src/main.ts` y varios comandos de `scripts/`. Alcance: `src/**/*.ts` y scripts API TS/CJS/MJS; exclusiones explícitas: generados, declaraciones, pruebas y spike desechable `scripts/spike-render/`. No se fijó umbral global arbitrario ni se modificaron reglas de negocio para elevar el resultado.
+
+## CI, documentación y límites
+
+El workflow ejecuta tipos de producto/pruebas, build, OpenAPI, verificación arquitectónica y Jest con cobertura sobre PostgreSQL efímero. YAML válido y pruebas de configuración aprobadas; se preservan jobs web, Flutter y escaneo de secretos. La acción de artefactos está fijada a SHA y selecciona únicamente `apps/api/coverage/`, con retención de 14 días. Usa `always()` junto con existencia de reportes para conservar evidencia disponible aunque falle la suite; sin reportes informa su ausencia y no convierte el fallo previo en éxito. Una vez ejecutado GitHub Actions, el artefacto se obtiene desde la ejecución del workflow, sección Artifacts, nombre `api-cobertura-<sha>`.
+
+**No se ejecutó ni publicó GitHub Actions en P1**: configuración y comprobación local no acreditan subida o descarga remota. Los comandos, preparación segura, reglas y limitaciones se documentan en el [README API](../../../apps/api/README.md).
+
+La instalación informó 21 vulnerabilidades de dependencias (18 moderadas y 3 altas). La revisión de producción identificó tres altas en la cadena Prisma/@prisma/config/effect; sus versiones ya existían en el lockfile del commit de especificación. No se aplicó la propuesta automática de downgrade mayor de Prisma, que requiere un cambio y validación propios. Este resultado permanece como deuda y no se declara resuelto por P1.
+
+P1 aporta evidencia local para la rúbrica de Jest/cobertura y límites arquitectónicos actuales. No implementa módulos del donante, no modifica UI, no acredita carga de 2000 usuarios ni completa los demás atributos de calidad del Sprint 2. P0 y specs archivadas permanecen intactos. No se han creado commits, publicado una rama ni archivado este cambio.
