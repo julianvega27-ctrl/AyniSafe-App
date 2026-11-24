@@ -12,6 +12,8 @@ export interface RedactorCorreo {
   redactar(datos: {
     readonly tipo: PropositoToken;
     readonly nombre: string;
+    /** Rol del destinatario: decide si el enlace abre la web (institucional) o la app/API (ciudadano). */
+    readonly rol: string;
     readonly token: string;
     readonly expiresAt: Date;
   }): { readonly asunto: string; readonly texto: string };
@@ -77,7 +79,7 @@ export class ProcesarEnviosCorreoUseCase {
     // Un fallo que no sea del proveedor (por ejemplo, la base de datos) se propaga: el envio queda
     // "enviando" y se retoma cuando vence su arrendamiento.
     const { token, expiresAt } = await this.emitirToken.ejecutar(envio.usuarioId, envio.tipo);
-    const { asunto, texto } = this.redactor.redactar({ tipo: envio.tipo, nombre: cuenta.nombre, token, expiresAt });
+    const { asunto, texto } = this.redactor.redactar({ tipo: envio.tipo, nombre: cuenta.nombre, rol: cuenta.rol, token, expiresAt });
     try {
       await this.correo.enviar({ para: cuenta.correo, asunto, texto });
     } catch (error) {

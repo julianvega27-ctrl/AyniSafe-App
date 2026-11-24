@@ -1,10 +1,13 @@
 {
-  "version": 1,
+  "version": 2,
   "actualizadoAt": "2026-11-21",
   "app": {
     "estado": "aprobado",
     "finalidad": "AyniSafe es una plataforma móvil para facilitar el reporte, la gestión y la prevención colaborativa de incidentes de seguridad ciudadana en Ayacucho, con información georreferenciada, alertas oportunas y clasificación revisada por operadores.",
     "funcionamiento": "AyniSafe está en desarrollo. En esta versión puedes crear tu cuenta, iniciar sesión, editar tu perfil y consultar esta información. El reporte de incidentes, el mapa, el seguimiento de tus reportes y las alertas se incorporarán en próximas entregas. AyniSafe no despacha emergencias: en una situación urgente comunícate con los servicios de emergencia de tu localidad."
+  },
+  "piloto": {
+    "estado": "pendiente"
   },
   "desarrolladores": {
     "estado": "aprobado",

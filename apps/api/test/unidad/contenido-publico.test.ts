@@ -15,6 +15,7 @@ const copia = (): Record<string, any> => structuredClone(fuente);
  */
 const HUELLAS_POR_VERSION: Record<number, string> = {
   1: '550c4caffe4ee3f77b7c0f56f811c849',
+  2: '032d1987ca9fa2224557c66cded418b2',
 };
 
 function huella(): string {
@@ -38,6 +39,28 @@ describe('fuente de contenido publico', () => {
     // Primera ejecucion: imprime la huella para registrarla. Despues debe coincidir.
     expect(esperada, `Registra la huella de la version ${fuente.version}: ${huella()}`).toBeDefined();
     expect(huella()).toBe(esperada);
+  });
+
+  it('alcance del piloto: pendiente y sin texto; la version es posterior a la 1', () => {
+    expect(fuente.piloto).toEqual({ estado: 'pendiente' });
+    expect(fuente.version).toBeGreaterThanOrEqual(2);
+  });
+
+  it('piloto: pendiente sin texto es valido; aprobado sin texto y pendiente con texto no lo son', () => {
+    const ok = copia();
+    expect(validarContenido(ok)).toMatchObject({ ok: true });
+    const aprobadaSinTexto = copia();
+    aprobadaSinTexto.piloto = { estado: 'aprobado' };
+    expect(validarContenido(aprobadaSinTexto)).toMatchObject({ ok: false });
+    const pendienteConTexto = copia();
+    pendienteConTexto.piloto = { estado: 'pendiente', texto: 'texto no aprobado' };
+    expect(validarContenido(pendienteConTexto)).toMatchObject({ ok: false });
+    const sinSeccion = copia();
+    delete sinSeccion.piloto;
+    expect(validarContenido(sinSeccion)).toMatchObject({ ok: false });
+    const aprobadaConTexto = copia();
+    aprobadaConTexto.piloto = { estado: 'aprobado', texto: 'Alcance aprobado por el equipo.' };
+    expect(validarContenido(aprobadaConTexto)).toMatchObject({ ok: true });
   });
 
   it('el arranque falla con una fuente invalida y el mensaje no incluye el contenido', () => {

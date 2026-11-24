@@ -22,7 +22,7 @@ export class ConsultarSesionUseCase {
   /** Devuelve solo la identidad del propietario del token. La identidad no viene del cliente. */
   async ejecutar(token: string | undefined): Promise<SesionActual> {
     if (!token || token.length > TOKEN_LONGITUD_MAX) throw new NoAutenticadoError();
-    const encontrada = await this.sesiones.buscarVigente(this.tokens.huella(token), this.reloj.ahora());
+    const encontrada = await this.sesiones.buscarVigente(this.tokens.huella(token), this.reloj.ahora(), ['ciudadano']);
     // Cada peticion comprueba tambien el estado actual de la cuenta.
     if (!encontrada || !esCiudadanoActivo(encontrada.usuario)) throw new NoAutenticadoError();
     return { usuario: aUsuarioPublico(encontrada.usuario), expiresAt: encontrada.sesion.expiresAt };

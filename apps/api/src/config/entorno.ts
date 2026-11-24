@@ -39,6 +39,10 @@ export interface Entorno {
   readonly correo: ConfigCorreo;
   /** Origen publico de la API, sin barra final: base de los enlaces de los correos y de los App Links. */
   readonly urlPublicaApi: string;
+  /** Origen publico de la web (sin barra final): Origin permitido, base de los enlaces institucionales y cookie. */
+  readonly origenWeb: string;
+  /** Origen publico de la web para los enlaces de los correos. Coincide con `origenWeb` en produccion. */
+  readonly urlPublicaWeb: string;
   /** Identificador de la app Android para los App Links. */
   readonly androidPaquete: string;
   /** Huellas SHA-256 del certificado de firma (AA:BB:...). Vacio = assetlinks.json no se publica. */
@@ -84,6 +88,52 @@ export function cargarUrlPublica(env: NodeJS.ProcessEnv, nodeEnv: 'development' 
     throw new Error('Configuracion invalida: API_PUBLIC_URL debe ser solo el origen, sin ruta, credenciales ni parametros');
   }
   return url.origin;
+}
+
+/**
+ * Origen de la web. En produccion exige https; en local admite http. Solo el origen: sin ruta,
+ * credenciales ni parametros. Los mensajes nunca incluyen el valor.
+ */
+export function cargarOrigenWeb(nombre: string, valorCrudo: string | undefined, nodeEnv: Entorno['nodeEnv']): string {
+  const valor = valorCrudo?.trim();
+  if (!valor) {
+    if (nodeEnv === 'production') throw new Error(`Configuracion incompleta: falta ${nombre} (ver .env.example)`);
+    return 'http://localhost:5173';
+  }
+  let url: URL;
+  try {
+    url = new URL(valor);
+  } catch {
+    throw new Error(`Configuracion invalida: ${nombre} no es una URL valida`);
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error(`Configuracion invalida: ${nombre} debe usar http o https`);
+  }
+  if (nodeEnv === 'production' && url.protocol !== 'https:') {
+    throw new Error(`Configuracion invalida: en produccion ${nombre} debe usar https`);
+  }
+  if (url.username || url.password || url.search || url.hash || (url.pathname !== '/' && url.pathname !== '')) {
+    throw new Error(`Configuracion invalida: ${nombre} debe ser solo el origen, sin ruta, credenciales ni parametros`);
+  }
+  return url.origin;
+}
+
+/** `WEB_ORIGIN` y `WEB_PUBLIC_URL` designan el mismo origen; en produccion no pueden diferir. */
+export function cargarOrigenesWeb(
+  env: NodeJS.ProcessEnv,
+  nodeEnv: Entorno['nodeEnv'],
+): { origenWeb: string; urlPublicaWeb: string } {
+  const origenWeb = cargarOrigenWeb('WEB_ORIGIN', env.WEB_ORIGIN, nodeEnv);
+  // En desarrollo, si no se declara, toma el valor de WEB_ORIGIN.
+  const urlPublicaWeb = env.WEB_PUBLIC_URL?.trim()
+    ? cargarOrigenWeb('WEB_PUBLIC_URL', env.WEB_PUBLIC_URL, nodeEnv)
+    : nodeEnv === 'production'
+      ? cargarOrigenWeb('WEB_PUBLIC_URL', undefined, nodeEnv)
+      : origenWeb;
+  if (nodeEnv === 'production' && origenWeb !== urlPublicaWeb) {
+    throw new Error('Configuracion invalida: WEB_ORIGIN y WEB_PUBLIC_URL deben ser el mismo origen');
+  }
+  return { origenWeb, urlPublicaWeb };
 }
 
 const SECRETO_MIN = 32;
@@ -188,6 +238,8 @@ export function cargarEntorno(env: NodeJS.ProcessEnv = process.env): Entorno {
       registroPorIp: entero('RL_REGISTRO_IP_MAX', env.RL_REGISTRO_IP_MAX, POLITICA_LIMITES_POR_DEFECTO.registroPorIp, 1, 100000),
       loginPorIp: entero('RL_LOGIN_IP_MAX', env.RL_LOGIN_IP_MAX, POLITICA_LIMITES_POR_DEFECTO.loginPorIp, 1, 100000),
       loginPorCorreoIp: entero('RL_LOGIN_CORREO_IP_MAX', env.RL_LOGIN_CORREO_IP_MAX, POLITICA_LIMITES_POR_DEFECTO.loginPorCorreoIp, 1, 100000),
+      loginInstPorIp: entero('RL_LOGIN_INST_IP_MAX', env.RL_LOGIN_INST_IP_MAX, POLITICA_LIMITES_POR_DEFECTO.loginInstPorIp, 1, 100000),
+      loginInstPorCorreoIp: entero('RL_LOGIN_INST_CORREO_IP_MAX', env.RL_LOGIN_INST_CORREO_IP_MAX, POLITICA_LIMITES_POR_DEFECTO.loginInstPorCorreoIp, 1, 100000),
       recuperacionPorIp: entero('RL_RECUP_IP_MAX', env.RL_RECUP_IP_MAX, POLITICA_LIMITES_POR_DEFECTO.recuperacionPorIp, 1, 100000),
       recuperacionPorCorreoIp: entero('RL_RECUP_CORREO_IP_MAX', env.RL_RECUP_CORREO_IP_MAX, POLITICA_LIMITES_POR_DEFECTO.recuperacionPorCorreoIp, 1, 100000),
       recuperacionPorCorreo: entero('RL_RECUP_CORREO_MAX', env.RL_RECUP_CORREO_MAX, POLITICA_LIMITES_POR_DEFECTO.recuperacionPorCorreo, 1, 100000),
@@ -198,6 +250,7 @@ export function cargarEntorno(env: NodeJS.ProcessEnv = process.env): Entorno {
     hashMaxCola: entero('HASH_MAX_COLA', env.HASH_MAX_COLA, 16, 0, 1000),
     correo: cargarConfigCorreo(env, nodeEnv),
     urlPublicaApi: cargarUrlPublica(env, nodeEnv, entero('PORT', env.PORT, 3000, 1, 65535)),
+    ...cargarOrigenesWeb(env, nodeEnv),
     androidPaquete: cargarAndroid(env).paquete,
     androidHuellasSha256: cargarAndroid(env).huellas,
   };

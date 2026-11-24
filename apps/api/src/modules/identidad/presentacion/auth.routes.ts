@@ -17,6 +17,7 @@ import {
   sinCache,
   tokenBearer,
 } from './middlewares';
+import { registrarRutasInstitucionales, type CasosDeUsoInstitucionales, type ConfigInstitucional } from './institucional.routes';
 import { registrarRutasPerfil, type CasosDeUsoPerfil } from './perfil.routes';
 
 export interface CasosDeUsoAuth {
@@ -28,13 +29,19 @@ export interface CasosDeUsoAuth {
   readonly consultarToken: ConsultarTokenUseCase;
   readonly consumirToken: ConsumirTokenCuentaUseCase;
   readonly perfil: CasosDeUsoPerfil;
+  readonly institucional: CasosDeUsoInstitucionales;
 }
 
 function ipDelCliente(req: Request): string {
   return req.ip ?? 'desconocida';
 }
 
-export function crearRutasAuth(casos: CasosDeUsoAuth, logger: Logger): Router {
+export function crearRutasAuth(
+  casos: CasosDeUsoAuth,
+  logger: Logger,
+  config: ConfigInstitucional,
+  ahora: () => Date = () => new Date(),
+): Router {
   const router = Router();
   router.use(asignarRequestId, sinCache, registrarSolicitudes(logger));
 
@@ -85,6 +92,8 @@ export function crearRutasAuth(casos: CasosDeUsoAuth, logger: Logger): Router {
   });
 
   registrarRutasPerfil(router, casos.perfil, autenticarCiudadano(casos.consultarSesion));
+
+  registrarRutasInstitucionales(router, casos.institucional, config, ahora);
 
   router.use(manejadorDeErrores(logger));
   return router;

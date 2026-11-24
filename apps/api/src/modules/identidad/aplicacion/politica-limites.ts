@@ -3,6 +3,9 @@ export interface PoliticaLimites {
   readonly registroPorIp: number;
   readonly loginPorIp: number;
   readonly loginPorCorreoIp: number;
+  /** Acceso institucional (administrador/operador): contadores propios, independientes del ciudadano. */
+  readonly loginInstPorIp: number;
+  readonly loginInstPorCorreoIp: number;
   /** Solicitudes de recuperacion por IP en 15 minutos. */
   readonly recuperacionPorIp: number;
   /** Por correo normalizado combinado con IP en 15 minutos. */
@@ -19,6 +22,8 @@ export const POLITICA_LIMITES_POR_DEFECTO: PoliticaLimites = {
   registroPorIp: 5,
   loginPorIp: 30,
   loginPorCorreoIp: 5,
+  loginInstPorIp: 30,
+  loginInstPorCorreoIp: 5,
   recuperacionPorIp: 10,
   recuperacionPorCorreoIp: 3,
   recuperacionPorCorreo: 3,

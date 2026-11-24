@@ -255,7 +255,7 @@ describe('5.3 invitacion reutilizable (sin crear operadores aqui)', () => {
     modulo.gestorEnvios.despertar();
     await modulo.gestorEnvios.esperarReposo();
     expect(correo.enviados).toHaveLength(1);
-    expect(correo.enviados[0]).toMatchObject({ para: 'inv@ejemplo.com', asunto: 'Activa tu cuenta de AyniSafe' });
+    expect(correo.enviados[0]).toMatchObject({ para: 'inv@ejemplo.com', asunto: 'Activa tu cuenta institucional de AyniSafe' });
     const token = /#t=([A-Za-z0-9_-]{43})/.exec(correo.enviados[0]!.texto)![1]!;
     await request(app).post(RUTA_ACTIVACION).send({ token, contrasena: NUEVA }).expect(204);
     expect((await prisma.usuario.findUniqueOrThrow({ where: { id } })).estado).toBe('activo');

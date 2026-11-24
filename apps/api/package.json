@@ -19,6 +19,8 @@
     "db:local:start": "bash scripts/bd-local.sh start",
     "db:local:stop": "bash scripts/bd-local.sh stop",
     "contrato:validar": "node scripts/validar-contrato.mjs",
+    "admin:bootstrap": "tsx scripts/admin-bootstrap.ts",
+    "admin:reiniciar": "tsx scripts/admin-reiniciar.ts",
     "test:unidad": "vitest run test/unidad",
     "test:integracion": "vitest run test/integracion",
     "db:migrar": "prisma migrate deploy",

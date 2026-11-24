@@ -13,16 +13,22 @@ beforeEach(async () => {
 });
 
 describe('GET /publico/contenido', () => {
-  it('200 sin sesion con version, fecha y las cuatro secciones', async () => {
+  it('200 sin sesion con version, fecha y todas las secciones, incluido el alcance del piloto', async () => {
     const r = await request(app).get(RUTA);
     expect(r.status).toBe(200);
     expect(r.body.version).toBeGreaterThanOrEqual(1);
     expect(r.body.actualizadoAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    for (const seccion of ['app', 'desarrolladores', 'privacidad', 'contactos']) {
+    for (const seccion of ['app', 'piloto', 'desarrolladores', 'privacidad', 'contactos']) {
       expect(r.body[seccion]).toBeDefined();
       expect(['aprobado', 'pendiente']).toContain(r.body[seccion].estado);
     }
     expect(r.body.desarrolladores.personas[0].nombre).toBe('Julián Anthony Vega Salvatierra');
+  });
+
+  it('el alcance del piloto esta pendiente y sin texto, y la version es posterior a la primera', async () => {
+    const r = await request(app).get(RUTA);
+    expect(r.body.piloto).toEqual({ estado: 'pendiente' });
+    expect(r.body.version).toBeGreaterThanOrEqual(2);
   });
 
   it('contactos sin aprobar: lista vacia y ningun numero inventado', async () => {

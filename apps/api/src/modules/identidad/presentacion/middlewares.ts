@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import express, { type ErrorRequestHandler, type Request, type RequestHandler } from 'express';
 import type { ConsultarSesionUseCase } from '../aplicacion/consultar-sesion.use-case';
+import type { ConsultarSesionInstitucionalUseCase } from '../aplicacion/consultar-sesion-institucional.use-case';
+import type { RolInstitucional } from '../dominio/usuario';
+import { leerCookie, type ConfigCookie } from './cookies';
 import type { Logger } from '../../../compartido/logger';
 import {
   CorreoEnUsoError,
@@ -8,6 +11,8 @@ import {
   CredencialesInvalidasError,
   LimiteExcedidoError,
   NoAutenticadoError,
+  OrigenNoPermitidoError,
+  RolNoPermitidoError,
   ServicioNoDisponibleError,
   TokenInvalidoError,
   TokenUsadoError,
@@ -23,6 +28,8 @@ export type CodigoError =
   | 'EMAIL_IN_USE'
   | 'INVALID_CREDENTIALS'
   | 'UNAUTHENTICATED'
+  | 'FORBIDDEN_ORIGIN'
+  | 'FORBIDDEN'
   | 'TOKEN_INVALID'
   | 'TOKEN_USED'
   | 'TOKEN_EXPIRED'
@@ -58,6 +65,65 @@ export function autenticarCiudadano(consultar: ConsultarSesionUseCase): RequestH
     );
   };
 }
+
+/**
+ * Exige una sesion institucional (administrador u operador activo) leida SOLO de la cookie: la
+ * cabecera Authorization se ignora. Deja el resultado en `res.locals.sesionInstitucional`.
+ */
+export function autenticarInstitucional(
+  consultar: ConsultarSesionInstitucionalUseCase,
+  cookie: ConfigCookie,
+): RequestHandler {
+  return (req, res, next) => {
+    consultar.ejecutar(leerCookie(req.get('cookie'), cookie.nombre)).then(
+      (sesion) => {
+        res.locals.sesionInstitucional = sesion;
+        next();
+      },
+      (error: unknown) => next(error),
+    );
+  };
+}
+
+/** Exige un rol institucional concreto sobre la sesion ya autenticada; otro rol recibe 403. */
+export function exigirRol(rol: RolInstitucional): RequestHandler {
+  return (_req, res, next) => {
+    const sesion = res.locals.sesionInstitucional as { usuario: { rol: RolInstitucional } } | undefined;
+    if (!sesion) {
+      next(new NoAutenticadoError());
+      return;
+    }
+    next(sesion.usuario.rol === rol ? undefined : new RolNoPermitidoError());
+  };
+}
+
+/**
+ * Proteccion CSRF de las rutas que cambian estado o inician sesion con cookie: `Origin` presente
+ * e identico al origen web configurado, y `Sec-Fetch-Site` distinto de `cross-site`. Se evalua
+ * antes de limitar intentos o verificar contrasenas y no toca las cookies.
+ */
+export function exigirOrigenWeb(origenWeb: string): RequestHandler {
+  return (req, _res, next) => {
+    const origen = req.get('origin');
+    const sitio = req.get('sec-fetch-site');
+    if (origen !== origenWeb || sitio === 'cross-site') {
+      next(new OrigenNoPermitidoError());
+      return;
+    }
+    next();
+  };
+}
+
+/** Si la solicitud declara un contenido, debe ser JSON en UTF-8 (rutas sin cuerpo obligatorio). */
+export const exigirJsonSiHayContenido: RequestHandler = (req, res, next) => {
+  // Sin tipo declarado y sin cuerpo (ausente o de longitud 0, como lo envian algunos intermediarios) no hay nada que validar.
+  const longitud = req.get('content-length');
+  if (req.get('content-type') === undefined && (longitud === undefined || longitud === '0')) {
+    next();
+    return;
+  }
+  exigirJson(req, res, next);
+};
 
 /** Identificador aleatorio de la solicitud: no contiene datos de cuenta. */
 export const asignarRequestId: RequestHandler = (_req, res, next) => {
@@ -147,6 +213,14 @@ export function manejadorDeErrores(logger: Logger): ErrorRequestHandler {
     }
     if (error instanceof NoAutenticadoError) {
       responderError(res, 401, 'UNAUTHENTICATED', 'Tu sesión no es válida. Inicia sesión de nuevo.');
+      return;
+    }
+    if (error instanceof OrigenNoPermitidoError) {
+      responderError(res, 403, 'FORBIDDEN_ORIGIN', 'La solicitud no proviene de un origen permitido.');
+      return;
+    }
+    if (error instanceof RolNoPermitidoError) {
+      responderError(res, 403, 'FORBIDDEN', 'Tu cuenta no tiene permiso para este recurso.');
       return;
     }
     if (error instanceof TokenInvalidoError) {

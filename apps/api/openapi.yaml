@@ -1,12 +1,14 @@
 openapi: 3.1.0
 info:
-  title: AyniSafe API - Acceso ciudadano, perfil y contenido publico
-  version: 0.3.0
+  title: AyniSafe API - Acceso ciudadano, acceso institucional, perfil y contenido publico
+  version: 0.4.0
   description: |
     Contrato del modulo Identidad: registro, inicio de sesion, consulta y cierre de sesion del
     ciudadano (entrega `registro-login-ciudadano`), mas recuperacion de contrasena y activacion de
     cuentas invitadas por correo (entrega `correo-recuperacion-activacion`), mas el perfil del propio
-    ciudadano y el contenido publico (entrega `perfil-navegacion-movil`).
+    ciudadano y el contenido publico (entrega `perfil-navegacion-movil`), mas el acceso institucional
+    de administradores y operadores desde la web y sus paneles minimos (entrega
+    `web-publica-acceso-institucional`).
 
     Reglas transversales:
     - Solo HTTPS en entornos compartidos. Credenciales unicamente en el cuerpo JSON.
@@ -30,6 +32,14 @@ info:
       `Allow`), cache publica breve (no `no-store`). Cada seccion declara `aprobado` o `pendiente` y solo
       publica texto cuando esta aprobada; los contactos de emergencia estan vacios mientras no haya
       ninguno aprobado.
+    - Acceso institucional (`/auth/institucional/*`): la sesion es el mismo token opaco de 24 h absolutas,
+      sin renovacion, pero viaja SOLO en una cookie `HttpOnly; Secure; SameSite=Strict; Path=/` (sin `Domain`;
+      con el prefijo `__Host-` bajo https) y nunca en el cuerpo. La web y la API comparten origen (reescritura
+      de `/api/*`), por lo que la API no emite cabeceras CORS. Las rutas con cookie que cambian estado o inician
+      sesion exigen `Origin` identico al origen web configurado y rechazan `Sec-Fetch-Site: cross-site`
+      (403 `FORBIDDEN_ORIGIN`). Los paneles aceptan solo la cookie (ignoran `Authorization`) y las rutas
+      ciudadanas solo Bearer: ninguna sesion vale en el otro canal. Un rol distinto del requerido recibe 403
+      `FORBIDDEN`. Limites propios: 30 por IP y 5 por correo+IP en 15 min (`login_inst_*`).
     - No hay endpoints para crear operadores, administradores ni sedes en este contrato. La capacidad
       de invitacion es interna (se invoca dentro de la transaccion de quien crea la cuenta).
     - Las paginas de respaldo del enlace del correo (`GET /cuenta/restablecer`, `GET /cuenta/activar`) y
@@ -41,6 +51,8 @@ tags:
   - name: Recuperacion y activacion
   - name: Perfil
   - name: Contenido publico
+  - name: Acceso institucional
+  - name: Paneles
 paths:
   /auth/ciudadanos/registro:
     post:
@@ -303,6 +315,127 @@ paths:
         '415': { $ref: '#/components/responses/TipoNoSoportado' }
         '500': { $ref: '#/components/responses/ErrorInterno' }
         '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /auth/institucional/sesiones:
+    post:
+      tags: [Acceso institucional]
+      operationId: iniciarSesionInstitucional
+      summary: Iniciar sesion de administrador u operador
+      description: |
+        Solo cuentas activas de rol administrador u operador. Ciudadano, cuenta suspendida, pendiente de
+        activacion, correo desconocido y contrasena incorrecta producen el mismo 401. La sesion se
+        entrega en una cookie HttpOnly; el cuerpo no incluye el token. Exige `Origin` igual al origen web.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginSolicitud' }
+      responses:
+        '200':
+          description: Sesion iniciada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+            Set-Cookie: { $ref: '#/components/headers/SetCookieSesion' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SesionInstitucionalRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/CredencialesInvalidas' }
+        '403': { $ref: '#/components/responses/OrigenNoPermitido' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /auth/institucional/sesion:
+    get:
+      tags: [Acceso institucional]
+      operationId: consultarSesionInstitucional
+      summary: Consultar la sesion institucional (restaurar al refrescar)
+      description: |
+        Identidad y vencimiento de la sesion de la cookie. Cada peticion revalida el estado y el rol de la
+        cuenta: una cuenta suspendida o que ya no es institucional recibe 401 aunque la sesion no haya vencido.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Sesion vigente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SesionInstitucionalRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+    delete:
+      tags: [Acceso institucional]
+      operationId: cerrarSesionInstitucional
+      summary: Cerrar la sesion institucional
+      description: |
+        Revoca la sesion de la cookie y la borra. Idempotente: sin cookie, desconocida o ya revocada tambien
+        responde 204. Exige `Origin` igual al origen web; si la solicitud declara contenido, debe ser JSON.
+      security:
+        - cookieAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+      responses:
+        '204':
+          description: Sesion revocada o inexistente; la cookie queda borrada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+            Set-Cookie: { $ref: '#/components/headers/SetCookieBorrada' }
+        '403': { $ref: '#/components/responses/OrigenNoPermitido' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/panel:
+    get:
+      tags: [Paneles]
+      operationId: obtenerPanelAdministrador
+      summary: Panel minimo del administrador
+      description: |
+        Solo administradores activos. Devuelve la identidad y las secciones del panel segun la guia de UI,
+        todas `disponible: false` mientras no existan. Sin datos operativos.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Panel del administrador.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PanelRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/RolNoPermitido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/panel:
+    get:
+      tags: [Paneles]
+      operationId: obtenerPanelOperador
+      summary: Panel minimo del operador
+      description: |
+        Solo operadores activos. Devuelve la identidad y las secciones del panel (Reportes, Mapa, Indicadores),
+        todas `disponible: false` mientras no existan. Sin datos operativos.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Panel del operador.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PanelRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/RolNoPermitido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
   /publico/contenido:
     get:
       tags: [Contenido publico]
@@ -329,10 +462,30 @@ components:
       type: http
       scheme: bearer
       description: Token opaco de sesion (32 bytes aleatorios en base64url).
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: __Host-ayni_inst
+      description: |
+        Sesion institucional (el mismo token opaco). Cookie HttpOnly, Secure, SameSite=Strict, Path=/. Bajo http
+        local el nombre es `ayni_inst`, sin prefijo ni Secure. Solo para administradores y operadores.
+  parameters:
+    OrigenWeb:
+      name: Origin
+      in: header
+      required: true
+      description: Debe ser identico al origen web configurado. Un origen ajeno o ausente recibe 403.
+      schema: { type: string }
   headers:
     NoStore:
       description: Las respuestas de autenticacion no se almacenan en cache.
       schema: { type: string, const: no-store }
+    SetCookieSesion:
+      description: Cookie de sesion institucional (HttpOnly, Secure, SameSite=Strict, Path=/, Max-Age hasta el vencimiento absoluto).
+      schema: { type: string }
+    SetCookieBorrada:
+      description: La misma cookie con Max-Age=0 para borrarla.
+      schema: { type: string }
     RetryAfter:
       description: Segundos de espera antes de reintentar (el mayor plazo restante aplicable).
       schema: { type: integer, minimum: 1 }
@@ -416,6 +569,43 @@ components:
       properties:
         usuario: { $ref: '#/components/schemas/UsuarioPublico' }
         expiresAt: { type: string, format: date-time }
+    UsuarioInstitucional:
+      type: object
+      additionalProperties: false
+      required: [id, nombre, correo, rol]
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string }
+        correo: { type: string }
+        rol: { type: string, enum: [administrador, operador] }
+    SesionInstitucionalRespuesta:
+      type: object
+      additionalProperties: false
+      required: [usuario, expiresAt]
+      description: "Sin token, la sesion viaja solo en la cookie."
+      example: { usuario: { id: "5482bbd9-ef53-4049-a095-19a9d0144eeb", nombre: "Ana Torres", correo: "ana@ejemplo.com", rol: administrador }, expiresAt: "2026-11-22T13:48:50.555Z" }
+      properties:
+        usuario: { $ref: '#/components/schemas/UsuarioInstitucional' }
+        expiresAt: { type: string, format: date-time }
+    SeccionPanel:
+      type: object
+      additionalProperties: false
+      required: [id, titulo, disponible]
+      properties:
+        id: { type: string }
+        titulo: { type: string }
+        disponible:
+          type: boolean
+          description: Falso mientras la capacidad no exista; el cliente la declara aun no disponible.
+    PanelRespuesta:
+      type: object
+      additionalProperties: false
+      required: [usuario, secciones]
+      properties:
+        usuario: { $ref: '#/components/schemas/UsuarioInstitucional' }
+        secciones:
+          type: array
+          items: { $ref: '#/components/schemas/SeccionPanel' }
     RecuperacionSolicitud:
       type: object
       additionalProperties: false
@@ -502,7 +692,7 @@ components:
     ContenidoPublico:
       type: object
       additionalProperties: false
-      required: [version, actualizadoAt, app, desarrolladores, privacidad, contactos]
+      required: [version, actualizadoAt, app, piloto, desarrolladores, privacidad, contactos]
       properties:
         version: { type: integer, minimum: 1 }
         actualizadoAt: { type: string, format: date }
@@ -514,6 +704,14 @@ components:
             estado: { $ref: '#/components/schemas/EstadoAprobacion' }
             finalidad: { type: string }
             funcionamiento: { type: string }
+        piloto:
+          type: object
+          description: Alcance del piloto. Pendiente y sin texto hasta que el equipo lo apruebe.
+          additionalProperties: false
+          required: [estado]
+          properties:
+            estado: { $ref: '#/components/schemas/EstadoAprobacion' }
+            texto: { type: string }
         desarrolladores:
           type: object
           additionalProperties: false
@@ -580,6 +778,8 @@ components:
                 - EMAIL_IN_USE
                 - INVALID_CREDENTIALS
                 - UNAUTHENTICATED
+                - FORBIDDEN_ORIGIN
+                - FORBIDDEN
                 - TOKEN_INVALID
                 - TOKEN_USED
                 - TOKEN_EXPIRED
@@ -597,6 +797,24 @@ components:
               type: string
               description: Identificador aleatorio de la solicitud; no contiene datos de cuenta.
   responses:
+    OrigenNoPermitido:
+      description: |
+        La solicitud no viene del origen web configurado (falta `Origin`, es otro, o `Sec-Fetch-Site` es
+        `cross-site`). No toca cookies ni sesiones y se evalua antes de limitar intentos.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: FORBIDDEN_ORIGIN, message: "La solicitud no proviene de un origen permitido.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    RolNoPermitido:
+      description: Sesion institucional valida de otro rol. No devuelve datos del panel.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: FORBIDDEN, message: "Tu cuenta no tiene permiso para este recurso.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
     ValidacionInvalida:
       description: Campos ausentes, tipos incorrectos, valores fuera de regla o campos no admitidos.
       headers:

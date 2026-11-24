@@ -70,7 +70,7 @@ export class IniciarSesionUseCase {
       tokenHash,
       createdAt: ahora,
       expiresAt: new Date(ahora.getTime() + DURACION_SESION_MS),
-    });
+    }, ['ciudadano']);
     // La cuenta fue suspendida entre la verificacion y la emision: mismo error uniforme.
     if (!sesion) throw new CredencialesInvalidasError();
 

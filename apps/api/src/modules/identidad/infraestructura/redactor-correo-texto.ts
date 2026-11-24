@@ -18,15 +18,25 @@ function vigenciaEnTexto(proposito: PropositoToken): string {
  * codigo para pegarlo a mano si el enlace no abre la app.
  */
 export class RedactorCorreoTextoPlano implements RedactorCorreo {
-  /** `urlBase` es el origen publico de la API, sin barra final (por ejemplo https://api.ejemplo.pe). */
-  constructor(private readonly urlBase: string) {}
+  /**
+   * `urlBase` es el origen publico de la API, sin barra final (por ejemplo https://api.ejemplo.pe);
+   * `urlBaseWeb`, el de la web. Un administrador u operador recibe un enlace de la web.
+   */
+  constructor(
+    private readonly urlBase: string,
+    private readonly urlBaseWeb: string,
+  ) {}
 
   redactar(d: {
     tipo: PropositoToken;
     nombre: string;
+    rol: string;
     token: string;
     expiresAt: Date;
   }): { asunto: string; texto: string } {
+    if (d.tipo === 'activacion' && (d.rol === 'administrador' || d.rol === 'operador')) {
+      return this.activacionInstitucional(d);
+    }
     const enlace = `${this.urlBase}${RUTA_ENLACE[d.tipo]}#t=${d.token}`;
     const vigencia = vigenciaEnTexto(d.tipo);
     if (d.tipo === 'recuperacion') {
@@ -59,6 +69,29 @@ export class RedactorCorreoTextoPlano implements RedactorCorreo {
         enlace,
         '',
         'Si el enlace no se abre, copia este código y úsalo en la pantalla de activación:',
+        d.token,
+        '',
+        'Solo el enlace más reciente es válido. Si no esperabas esta invitación, ignora este mensaje: nadie podrá entrar con tu correo sin activar la cuenta.',
+        '',
+        'AyniSafe',
+      ].join('\n'),
+    };
+  }
+
+  /** Activacion de administradores y operadores: enlace de la web, sin menciones a la app movil. */
+  private activacionInstitucional(d: { nombre: string; token: string }): { asunto: string; texto: string } {
+    const enlace = `${this.urlBaseWeb}/activar#t=${d.token}`;
+    const vigencia = vigenciaEnTexto('activacion');
+    return {
+      asunto: 'Activa tu cuenta institucional de AyniSafe',
+      texto: [
+        `Hola, ${d.nombre}:`,
+        '',
+        'Se creó una cuenta institucional para ti en AyniSafe. Para activarla, elige tu contraseña desde este enlace, ' +
+          `que abre la página web de AyniSafe. Vale ${vigencia} y solo se puede usar una vez:`,
+        enlace,
+        '',
+        'Si el enlace no se abre, copia este código y pégalo en la página de activación:',
         d.token,
         '',
         'Solo el enlace más reciente es válido. Si no esperabas esta invitación, ignora este mensaje: nadie podrá entrar con tu correo sin activar la cuenta.',

@@ -5,6 +5,7 @@ import type {
 } from '../aplicacion/puertos/sesiones.port';
 import { ServicioNoDisponibleError } from '../dominio/errores';
 import type { Sesion } from '../dominio/sesion';
+import type { Rol } from '../dominio/usuario';
 import type { PrismaClient } from './prisma-cliente';
 
 interface FilaSesion {
@@ -28,14 +29,15 @@ function aSesion(fila: FilaSesion): Sesion {
 export class PrismaSesionesAdapter implements SesionesPort {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async crearSiUsuarioHabilitado(nueva: NuevaSesion): Promise<Sesion | null> {
+  async crearSiUsuarioHabilitado(nueva: NuevaSesion, roles: readonly Rol[]): Promise<Sesion | null> {
+    if (roles.length === 0) return null;
     try {
       return await this.prisma.$transaction(async (tx) => {
         // Bloquea la fila del usuario: una suspension concurrente espera a este commit o ya
         // fue confirmada, y en ese caso la consulta no devuelve filas.
         const habilitado = await tx.$queryRaw<{ id: string }[]>`
           SELECT id FROM usuarios
-          WHERE id = ${nueva.usuarioId}::uuid AND rol = 'ciudadano' AND estado = 'activo'
+          WHERE id = ${nueva.usuarioId}::uuid AND rol::text = ANY(${[...roles]}::text[]) AND estado = 'activo'
           FOR UPDATE`;
         if (habilitado.length === 0) return null;
         const fila = await tx.sesion.create({
@@ -53,14 +55,15 @@ export class PrismaSesionesAdapter implements SesionesPort {
     }
   }
 
-  async buscarVigente(tokenHash: string, ahora: Date): Promise<SesionConUsuario | null> {
+  async buscarVigente(tokenHash: string, ahora: Date, roles: readonly Rol[]): Promise<SesionConUsuario | null> {
+    if (roles.length === 0) return null;
     try {
       const fila = await this.prisma.sesion.findFirst({
         where: {
           tokenHash,
           revokedAt: null,
           expiresAt: { gt: ahora },
-          usuario: { rol: 'ciudadano', estado: 'activo' },
+          usuario: { rol: { in: [...roles] }, estado: 'activo' },
         },
         include: { usuario: true },
       });

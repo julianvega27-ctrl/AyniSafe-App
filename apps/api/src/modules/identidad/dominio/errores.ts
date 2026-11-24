@@ -104,3 +104,19 @@ export class FalloEnvioCorreoError extends Error {
     this.name = 'FalloEnvioCorreoError';
   }
 }
+
+/** La peticion con cookie no viene del origen web configurado (proteccion CSRF). */
+export class OrigenNoPermitidoError extends Error {
+  constructor() {
+    super('Origen no permitido');
+    this.name = 'OrigenNoPermitidoError';
+  }
+}
+
+/** Sesion valida de un rol que no puede usar este recurso. */
+export class RolNoPermitidoError extends Error {
+  constructor() {
+    super('Rol no permitido');
+    this.name = 'RolNoPermitidoError';
+  }
+}

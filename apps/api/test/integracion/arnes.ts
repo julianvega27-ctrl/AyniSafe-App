@@ -30,11 +30,14 @@ import { TokenOpacoAdapter } from '../../src/modules/identidad/infraestructura/t
 export const SECRETO_PRUEBA = 'secreto-de-prueba-para-hmac-de-al-menos-32-caracteres';
 export const HUELLA_PRUEBA = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0').toUpperCase()).join(':');
 export const URL_PUBLICA_PRUEBA = 'https://api.ayinisafe.test';
+export const ORIGEN_WEB_PRUEBA = 'https://web.ayinisafe.test';
 export const CLAVE = 'contraseña-identificable-9f3a';
 export const POLITICA_HOLGADA: PoliticaLimites = {
   registroPorIp: 100000,
   loginPorIp: 100000,
   loginPorCorreoIp: 100000,
+  loginInstPorIp: 100000,
+  loginInstPorCorreoIp: 100000,
   recuperacionPorIp: 100000,
   recuperacionPorCorreoIp: 100000,
   recuperacionPorCorreo: 100000,
@@ -105,7 +108,7 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     tokensCuenta: new PrismaTokensCuentaAdapter(prisma),
     envios: new PrismaEnviosCorreoAdapter(prisma),
     correo,
-    redactor: new RedactorCorreoTextoPlano(URL_PUBLICA_PRUEBA),
+    redactor: new RedactorCorreoTextoPlano(URL_PUBLICA_PRUEBA, ORIGEN_WEB_PRUEBA),
     hash:
       opciones.hash ??
       new HashConLimiteDeConcurrencia(
@@ -119,6 +122,7 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     purga: new PrismaPurgaAdapter(prisma),
     politicaLimites: { ...POLITICA_HOLGADA, ...opciones.politica },
     android: { paquete: 'pe.edu.unsch.ayni_safe', huellasSha256: [HUELLA_PRUEBA] },
+    web: { origen: ORIGEN_WEB_PRUEBA },
     logger,
     ...opciones.sobrescribir,
   };
@@ -134,3 +138,45 @@ export async function limpiarBd(prisma: PrismaClient): Promise<void> {
 export const RUTA_REGISTRO = '/api/v1/auth/ciudadanos/registro';
 export const RUTA_LOGIN = '/api/v1/auth/ciudadanos/sesiones';
 export const RUTA_SESION = '/api/v1/auth/sesion';
+
+export const RUTA_INST_SESIONES = '/api/v1/auth/institucional/sesiones';
+export const RUTA_INST_SESION = '/api/v1/auth/institucional/sesion';
+export const RUTA_PANEL_ADMIN = '/api/v1/administrador/panel';
+export const RUTA_PANEL_OPERADOR = '/api/v1/operador/panel';
+
+export interface CuentaDePrueba {
+  readonly id: string;
+  readonly correo: string;
+}
+
+/**
+ * Inserta directamente una cuenta con el rol y estado indicados (fixture de pruebas): no existe
+ * ninguna ruta de alta de administradores u operadores. Con `estado: 'pendiente_activacion'` no
+ * lleva contrasena.
+ */
+export async function crearCuentaDePrueba(
+  prisma: PrismaClient,
+  datos: {
+    readonly rol: 'ciudadano' | 'operador' | 'administrador';
+    readonly estado?: 'activo' | 'suspendido' | 'pendiente_activacion';
+    readonly correo?: string;
+    readonly contrasena?: string;
+  },
+): Promise<CuentaDePrueba> {
+  const correo = datos.correo ?? `${datos.rol}-${Math.random().toString(36).slice(2, 8)}@ejemplo.com`;
+  const estado = datos.estado ?? 'activo';
+  const passwordHash =
+    estado === 'pendiente_activacion' ? null : await new Argon2idHashAdapter().hash(datos.contrasena ?? CLAVE);
+  const u = await prisma.usuario.create({
+    data: { nombre: 'Cuenta de prueba', correoNormalizado: correo, passwordHash, rol: datos.rol, estado },
+  });
+  return { id: u.id, correo };
+}
+
+/** Extrae el valor de la cookie de sesion de las cabeceras `Set-Cookie` de una respuesta. */
+export function cookieDe(res: { headers: Record<string, unknown> }, nombre = '__Host-ayni_inst'): string | undefined {
+  const crudo = res.headers['set-cookie'];
+  const lista = Array.isArray(crudo) ? (crudo as string[]) : typeof crudo === 'string' ? [crudo] : [];
+  const linea = lista.find((c) => c.startsWith(`${nombre}=`));
+  return linea?.split(';')[0]?.slice(nombre.length + 1);
+}

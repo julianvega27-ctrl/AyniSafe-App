@@ -9,6 +9,8 @@ import { ConsumirTokenCuentaUseCase } from './aplicacion/consumir-token.use-case
 import { EmitirTokenCuentaUseCase } from './aplicacion/emitir-token-cuenta.use-case';
 import { InvitarCuentaUseCase } from './aplicacion/invitar-cuenta.use-case';
 import { ProcesarEnviosCorreoUseCase, type RedactorCorreo } from './aplicacion/procesar-envios-correo.use-case';
+import { ConsultarSesionInstitucionalUseCase } from './aplicacion/consultar-sesion-institucional.use-case';
+import { IniciarSesionInstitucionalUseCase } from './aplicacion/iniciar-sesion-institucional.use-case';
 import { IniciarSesionUseCase } from './aplicacion/iniciar-sesion.use-case';
 import type { PoliticaLimites } from './aplicacion/politica-limites';
 import { PurgarCaducadosUseCase } from './aplicacion/purgar-caducados.use-case';
@@ -39,6 +41,7 @@ import { RedactorCorreoTextoPlano } from './infraestructura/redactor-correo-text
 import { RelojSistemaAdapter } from './infraestructura/reloj-sistema.adapter';
 import { TokenOpacoAdapter } from './infraestructura/token-opaco.adapter';
 import { crearRutasAuth } from './presentacion/auth.routes';
+import { configurarCookie } from './presentacion/cookies';
 import { crearRutasCuenta, type ConfigAndroid } from './presentacion/cuenta.routes';
 
 /** Puertos que el modulo necesita. Los adaptadores concretos se inyectan desde fuera. */
@@ -56,6 +59,8 @@ export interface DependenciasIdentidad {
   readonly purga: PurgaPort;
   readonly politicaLimites: PoliticaLimites;
   readonly logger: Logger;
+  /** Origen publico de la web: Origin permitido y modo de la cookie de sesion institucional. */
+  readonly web: { readonly origen: string };
   /** Datos para verificar los App Links de Android (assetlinks.json). */
   readonly android: ConfigAndroid;
 }
@@ -132,8 +137,23 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
         consultar: new ConsultarPerfilUseCase(deps.cuentas),
         actualizar: new ActualizarPerfilUseCase(deps.cuentas, deps.reloj),
       },
+      institucional: {
+        iniciarSesion: new IniciarSesionInstitucionalUseCase(
+          deps.cuentas,
+          deps.sesiones,
+          deps.hash,
+          deps.tokens,
+          deps.limitador,
+          deps.reloj,
+          deps.politicaLimites,
+        ),
+        consultarSesion: new ConsultarSesionInstitucionalUseCase(deps.sesiones, deps.tokens, deps.reloj),
+        cerrarSesion: new CerrarSesionUseCase(deps.sesiones, deps.tokens, deps.reloj),
+      },
     },
     deps.logger,
+    { origenWeb: deps.web.origen, cookie: configurarCookie(deps.web.origen) },
+    () => deps.reloj.ahora(),
   );
   return {
     router,
@@ -159,7 +179,7 @@ export function crearModuloIdentidadConPrisma(
     tokensCuenta: new PrismaTokensCuentaAdapter(prisma),
     envios: new PrismaEnviosCorreoAdapter(prisma),
     correo: crearCorreo(entorno.correo),
-    redactor: new RedactorCorreoTextoPlano(entorno.urlPublicaApi),
+    redactor: new RedactorCorreoTextoPlano(entorno.urlPublicaApi, entorno.urlPublicaWeb),
     hash: new HashConLimiteDeConcurrencia(
       new Argon2idHashAdapter(),
       entorno.hashMaxConcurrencia,
@@ -171,6 +191,7 @@ export function crearModuloIdentidadConPrisma(
     purga: new PrismaPurgaAdapter(prisma),
     politicaLimites: entorno.politicaLimites,
     logger,
+    web: { origen: entorno.origenWeb },
     android: { paquete: entorno.androidPaquete, huellasSha256: entorno.androidHuellasSha256 },
   });
 }

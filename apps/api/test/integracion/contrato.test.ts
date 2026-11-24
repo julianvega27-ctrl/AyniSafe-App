@@ -8,7 +8,19 @@ import type { CuentasPort } from '../../src/modules/identidad/aplicacion/puertos
 import type { SesionesPort } from '../../src/modules/identidad/aplicacion/puertos/sesiones.port';
 import { ServicioNoDisponibleError } from '../../src/modules/identidad/dominio/errores';
 import { crearPrismaClient } from '../../src/modules/identidad/infraestructura/prisma-cliente';
-import { CLAVE, crearArnes, limpiarBd, RelojControlable, RUTA_LOGIN, RUTA_REGISTRO, RUTA_SESION, urlPruebas } from './arnes';
+import {
+  CLAVE,
+  cookieDe,
+  crearArnes,
+  crearCuentaDePrueba,
+  limpiarBd,
+  ORIGEN_WEB_PRUEBA,
+  RelojControlable,
+  RUTA_LOGIN,
+  RUTA_REGISTRO,
+  RUTA_SESION,
+  urlPruebas,
+} from './arnes';
 
 /**
  * Valida las respuestas reales de la API contra openapi.yaml y comprueba que cada estado
@@ -252,6 +264,65 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     const a500 = crearArnes({ prisma, sobrescribir: { cuentas: cuentas500 } }).app;
     verificar(PER, 'get', await request(a500).get(URL_PER).set(auth)); // 500
     verificar(PER, 'patch', await request(a500).patch(URL_PER).set(auth).send({ nombre: 'X' })); // 500
+  });
+
+  it('acceso institucional y paneles: cada estado documentado coincide con la respuesta real', async () => {
+    const INST = '/auth/institucional/sesiones';
+    const ISES = '/auth/institucional/sesion';
+    const PA = '/administrador/panel';
+    const PO = '/operador/panel';
+    const U = (r: string) => `/api/v1${r}`;
+    const origen = { Origin: ORIGEN_WEB_PRUEBA };
+    const { app } = crearArnes({ prisma });
+    const admin = await crearCuentaDePrueba(prisma, { rol: 'administrador' });
+    const operador = await crearCuentaDePrueba(prisma, { rol: 'operador' });
+    const cred = (c: { correo: string }) => ({ correo: c.correo, contrasena: CLAVE });
+
+    const ok = await request(app).post(U(INST)).set(origen).send(cred(admin));
+    verificar(INST, 'post', ok); // 200
+    const cookieAdmin = `__Host-ayni_inst=${cookieDe(ok) as string}`;
+    const okOp = await request(app).post(U(INST)).set(origen).send(cred(operador));
+    const cookieOp = `__Host-ayni_inst=${cookieDe(okOp) as string}`;
+    verificar(INST, 'post', await request(app).post(U(INST)).set(origen).send({ correo: 'x', contrasena: '' })); // 400
+    verificar(INST, 'post', await request(app).post(U(INST)).set(origen).send({ correo: admin.correo, contrasena: 'otra-contraseña-larga-123' })); // 401
+    verificar(INST, 'post', await request(app).post(U(INST)).send(cred(admin))); // 403 sin Origin
+    verificar(INST, 'post', await request(app).post(U(INST)).set(origen).send({ correo: admin.correo, contrasena: 'a'.repeat(9000) })); // 413
+    verificar(INST, 'post', await request(app).post(U(INST)).set({ ...origen, 'Content-Type': 'text/plain' }).send('x')); // 415
+
+    verificar(ISES, 'get', await request(app).get(U(ISES)).set('Cookie', cookieAdmin)); // 200
+    verificar(ISES, 'get', await request(app).get(U(ISES))); // 401
+    verificar(PA, 'get', await request(app).get(U(PA)).set('Cookie', cookieAdmin)); // 200
+    verificar(PA, 'get', await request(app).get(U(PA))); // 401
+    verificar(PA, 'get', await request(app).get(U(PA)).set('Cookie', cookieOp)); // 403
+    verificar(PO, 'get', await request(app).get(U(PO)).set('Cookie', cookieOp)); // 200
+    verificar(PO, 'get', await request(app).get(U(PO))); // 401
+    verificar(PO, 'get', await request(app).get(U(PO)).set('Cookie', cookieAdmin)); // 403
+
+    verificar(ISES, 'delete', await request(app).delete(U(ISES)).set({ ...origen, Cookie: cookieOp })); // 204
+    verificar(ISES, 'delete', await request(app).delete(U(ISES)).set('Origin', 'https://malo.test')); // 403
+    verificar(ISES, 'delete', await request(app).delete(U(ISES)).set({ ...origen, 'Content-Type': 'text/plain' }).send('x')); // 415
+
+    // 429: contador institucional de 1 intento por correo+IP.
+    const limitado = crearArnes({ prisma, politica: { loginInstPorCorreoIp: 1 } }).app;
+    await request(limitado).post(U(INST)).set(origen).send({ correo: admin.correo, contrasena: 'otra-contraseña-larga-123' });
+    verificar(INST, 'post', await request(limitado).post(U(INST)).set(origen).send(cred(admin))); // 429
+
+    // 503 y 500: las cuentas y sesiones reales existen; solo falla el almacenamiento de sesiones.
+    for (const [falla, estado] of [[noDisponible, 503], [reventada, 500]] as const) {
+      const sesiones: SesionesPort = { crearSiUsuarioHabilitado: falla, buscarVigente: falla, revocar: falla, revocarTodasDe: falla };
+      const rota = crearArnes({ prisma, sobrescribir: { sesiones } }).app;
+      const r1 = await request(rota).post(U(INST)).set(origen).send(cred(admin));
+      expect(r1.status).toBe(estado);
+      verificar(INST, 'post', r1);
+      for (const [ruta, metodo] of [[ISES, 'get'], [PA, 'get'], [PO, 'get']] as const) {
+        const r = await request(rota).get(U(ruta)).set('Cookie', cookieAdmin);
+        expect(r.status).toBe(estado);
+        verificar(ruta, metodo, r);
+      }
+      const rd = await request(rota).delete(U(ISES)).set({ ...origen, Cookie: cookieAdmin });
+      expect(rd.status).toBe(estado);
+      verificar(ISES, 'delete', rd);
+    }
   });
 
   it('todos los estados documentados fueron ejercitados y ninguna respuesta real quedo sin documentar', () => {

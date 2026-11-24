@@ -45,10 +45,21 @@ describe('11.4 alcance de la entrega', () => {
         'POST /auth/activaciones',
         'GET /perfil',
         'PATCH /perfil',
+        'POST /auth/institucional/sesiones',
+        'GET /auth/institucional/sesion',
+        'DELETE /auth/institucional/sesion',
+        'GET /administrador/panel',
+        'GET /operador/panel',
       ].sort(),
     );
+    // Ninguna ruta crea, invita ni modifica cuentas privilegiadas: los paneles son solo lectura.
     for (const ruta of rutasDe(modulo.router)) {
-      expect(ruta).not.toMatch(/operador|administrador|sede|invit|verific|correo/i);
+      expect(ruta).not.toMatch(/sede|invit|verific|correo|alta|crear/i);
+      if (/operador|administrador/i.test(ruta)) expect(ruta).toMatch(/^GET \/(operador|administrador)\/panel$/);
+    }
+    // Y no hay ninguna ruta de escritura sobre operadores, administradores, cuentas o roles.
+    for (const ruta of rutasDe(modulo.router)) {
+      if (!ruta.startsWith('GET ')) expect(ruta).not.toMatch(/operador|administrador|cuentas|roles|usuarios/i);
     }
   });
 

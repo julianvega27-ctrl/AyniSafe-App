@@ -10,6 +10,8 @@ const BASE = {
   DATABASE_URL: 'postgresql://u:p@127.0.0.1:5433/x',
   RATE_LIMIT_HMAC_SECRET: 'x'.repeat(40),
   API_PUBLIC_URL: 'https://api.ayinisafe.test',
+  WEB_ORIGIN: 'https://web.ayinisafe.test',
+  WEB_PUBLIC_URL: 'https://web.ayinisafe.test',
 };
 const CLAVE_SMTP = 'clave-smtp-identificable-9f3a';
 const SMTP = { SMTP_USUARIO: 'cuenta@gmail.com', SMTP_CLAVE: CLAVE_SMTP };

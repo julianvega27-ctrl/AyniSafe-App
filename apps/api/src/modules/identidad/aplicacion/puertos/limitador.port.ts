@@ -2,6 +2,8 @@ export type TipoLimite =
   | 'registro_ip'
   | 'login_ip'
   | 'login_correo_ip'
+  | 'login_inst_ip'
+  | 'login_inst_correo_ip'
   | 'recuperacion_ip'
   | 'recuperacion_correo_ip'
   | 'recuperacion_correo'

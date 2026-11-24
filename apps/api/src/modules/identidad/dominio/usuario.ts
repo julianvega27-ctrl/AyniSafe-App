@@ -46,3 +46,31 @@ export interface PerfilCiudadano {
 export function esCiudadanoActivo(usuario: Usuario): boolean {
   return usuario.rol === 'ciudadano' && usuario.estado === 'activo';
 }
+
+export type RolInstitucional = 'administrador' | 'operador';
+
+/** Roles que pueden usar el acceso institucional (web). El ciudadano usa solo la app. */
+export const ROLES_INSTITUCIONALES: readonly Rol[] = ['administrador', 'operador'];
+
+/** Identidad basica de una cuenta institucional. Sin hash ni datos internos. */
+export interface UsuarioInstitucional {
+  readonly id: string;
+  readonly nombre: string;
+  readonly correo: string;
+  readonly rol: RolInstitucional;
+}
+
+/** Cuenta que puede usar el acceso institucional: administrador u operador en estado activo. */
+export function esInstitucionalActivo(usuario: Usuario): boolean {
+  return (usuario.rol === 'administrador' || usuario.rol === 'operador') && usuario.estado === 'activo';
+}
+
+/** Proyeccion segura de una cuenta institucional. Solo debe usarse si `esInstitucionalActivo`. */
+export function aUsuarioInstitucional(usuario: Usuario): UsuarioInstitucional {
+  return {
+    id: usuario.id,
+    nombre: usuario.nombre,
+    correo: usuario.correoNormalizado,
+    rol: usuario.rol === 'administrador' ? 'administrador' : 'operador',
+  };
+}

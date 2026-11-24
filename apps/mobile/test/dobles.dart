@@ -199,13 +199,15 @@ Map<String, Object?> contenidoJson({
   List<Map<String, Object?>> contactos = const [],
   bool privacidadAprobada = true,
 }) => {
-  'version': 1,
+  'version': 2,
   'actualizadoAt': '2026-11-21',
   'app': {
     'estado': 'aprobado',
     'finalidad': 'Finalidad de prueba de AyniSafe.',
     'funcionamiento': 'Funcionamiento de prueba de AyniSafe.',
   },
+  // Alcance del piloto (v2): la app no lo usa y debe tolerarlo.
+  'piloto': {'estado': 'pendiente'},
   'desarrolladores': {
     'estado': 'aprobado',
     'personas': [

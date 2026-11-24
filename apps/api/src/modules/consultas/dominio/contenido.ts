@@ -28,6 +28,8 @@ export interface ContenidoPublico {
   readonly version: number;
   readonly actualizadoAt: string;
   readonly app: { readonly estado: EstadoAprobacion; readonly finalidad?: string; readonly funcionamiento?: string };
+  /** Alcance del piloto: pendiente y sin texto hasta que el equipo lo apruebe. */
+  readonly piloto: { readonly estado: EstadoAprobacion; readonly texto?: string };
   readonly desarrolladores: { readonly estado: EstadoAprobacion; readonly personas?: readonly Persona[] };
   readonly privacidad: { readonly estado: EstadoAprobacion; readonly secciones?: readonly SeccionTexto[] };
   readonly contactos: { readonly estado: EstadoAprobacion; readonly items: readonly ContactoEmergencia[] };
@@ -78,7 +80,7 @@ function lista(o: Obj, campo: string, donde: string, errores: string[]): unknown
 export function validarContenido(entrada: unknown): ResultadoContenido {
   const errores: string[] = [];
   if (!esObjeto(entrada)) return { ok: false, errores: ['el contenido debe ser un objeto'] };
-  claves(entrada, ['version', 'actualizadoAt', 'app', 'desarrolladores', 'privacidad', 'contactos'], 'contenido', errores);
+  claves(entrada, ['version', 'actualizadoAt', 'app', 'piloto', 'desarrolladores', 'privacidad', 'contactos'], 'contenido', errores);
 
   if (!Number.isInteger(entrada.version) || (entrada.version as number) < 1) errores.push('version: entero >= 1 obligatorio');
   if (!fechaValida(entrada.actualizadoAt)) errores.push('actualizadoAt: fecha AAAA-MM-DD obligatoria');
@@ -94,6 +96,16 @@ export function validarContenido(entrada: unknown): ResultadoContenido {
       errores.push('app: aprobada exige finalidad y funcionamiento');
     }
     if (estado === 'pendiente' && hayTexto) errores.push('app: pendiente no lleva texto');
+  }
+
+  // piloto
+  const piloto = entrada.piloto;
+  if (!esObjeto(piloto)) errores.push('piloto: obligatoria');
+  else {
+    claves(piloto, ['estado', 'texto'], 'piloto', errores);
+    const estado = estadoDe(piloto, 'piloto', errores);
+    if (estado === 'aprobado' && !textoNoVacio(piloto.texto)) errores.push('piloto: aprobada exige texto');
+    if (estado === 'pendiente' && piloto.texto !== undefined) errores.push('piloto: pendiente no lleva texto');
   }
 
   // desarrolladores

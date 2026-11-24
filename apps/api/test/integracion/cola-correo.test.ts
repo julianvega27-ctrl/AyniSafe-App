@@ -8,6 +8,7 @@ import type { PropositoToken } from '../../src/modules/identidad/dominio/token-c
 import {
   CLAVE,
   RUTA_REGISTRO,
+  ORIGEN_WEB_PRUEBA,
   URL_PUBLICA_PRUEBA,
   crearArnes,
   limpiarBd,
@@ -37,9 +38,9 @@ async function ciudadano(email = CORREO_DESTINO) {
   return r.body.usuario.id as string;
 }
 
-async function pendiente(email = 'invitada@ejemplo.com') {
+async function pendiente(email = 'invitada@ejemplo.com', rol: 'ciudadano' | 'operador' | 'administrador' = 'ciudadano') {
   const u = await prisma.usuario.create({
-    data: { nombre: 'Invitada', correoNormalizado: email, passwordHash: null, rol: 'operador', estado: 'pendiente_activacion' },
+    data: { nombre: 'Invitada', correoNormalizado: email, passwordHash: null, rol, estado: 'pendiente_activacion' },
   });
   return u.id;
 }
@@ -321,6 +322,43 @@ describe('4.4 contenido del correo', () => {
     expect(new URL(enlaceDe(texto)).pathname).toBe('/cuenta/activar');
     expect(texto).toContain('72 horas');
     expect(texto).toContain('Solo el enlace más reciente es válido');
+  });
+
+  it.each(['administrador', 'operador'] as const)(
+    'activacion de %s: enlace de la web (/activar) con el token solo en el fragmento y sin mencion a la app',
+    async (rol) => {
+      const id = await pendiente(`${rol}@ejemplo.com`, rol);
+      await encolar(id, 'activacion');
+      await procesador().ejecutar();
+      const { asunto, texto } = correo.enviados[0]!;
+      const url = new URL(enlaceDe(texto));
+      expect(url.origin).toBe(ORIGEN_WEB_PRUEBA);
+      expect(url.pathname).toBe('/activar');
+      expect(url.search).toBe('');
+      expect(url.hash).toMatch(/^#t=[A-Za-z0-9_-]{43}$/);
+      const token = url.hash.slice(3);
+      expect(texto.split(token).length - 1).toBe(2); // enlace + codigo para pegar
+      expect(asunto).toBe('Activa tu cuenta institucional de AyniSafe');
+      expect(texto).toContain('72 horas');
+      expect(texto).not.toContain(URL_PUBLICA_PRUEBA);
+      expect(texto).not.toMatch(/app|aplicaci[oó]n|Android/i);
+      // El token del correo es de activacion y consume la cuenta institucional.
+      expect(await deps.tokensCuenta.consultar(deps.tokens.huella(token), reloj.ahora())).toMatchObject({
+        estado: 'vigente',
+        proposito: 'activacion',
+      });
+    },
+  );
+
+  it('los registros del envio institucional no contienen el enlace, el token ni el origen web', async () => {
+    const id = await pendiente('admin-log@ejemplo.com', 'administrador');
+    await encolar(id, 'activacion');
+    await procesador().ejecutar();
+    const token = /#t=([A-Za-z0-9_-]{43})/.exec(correo.enviados[0]!.texto)![1]!;
+    const registro = logger.texto();
+    for (const secreto of ['admin-log@ejemplo.com', token, '#t=', ORIGEN_WEB_PRUEBA, '/activar']) {
+      expect(registro).not.toContain(secreto);
+    }
   });
 
   it('el correo no contiene HTML, el enlace en el asunto ni datos ajenos a la cuenta', async () => {
