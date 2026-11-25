@@ -38,7 +38,7 @@ Estado inicial: planificación de P2, **0 tareas implementadas**. Referencia: pr
 
 - [x] 6.1 Ejecutar validación integrada API (tipos de producto/tests, build, OpenAPI, arquitectura, Jest/cobertura), web (lint/tipos/build/verificar:dist/Vitest/E2E) y Flutter (analyze/tests) sobre la revisión final. Verificar que las adaptaciones intencionales de UI no suprimen aserciones de seguridad ni fallos y registrar conteos/alcance sin reutilizar P1 como ejecución nueva.
 - [x] 6.2 Completar la matriz visual para todas las superficies P2 y revisar enlaces/manifiesto/recursos/capturas; comprobar que diferencias funcionales autorizadas y desviaciones visuales están separadas y que no quedan conflictos de aceptación encubiertos. Verificar OpenSpec estricto para este cambio y diff sin errores; mantener cualquier superficie no verificada como pendiente, sin afirmar réplica completa.
-- [ ] 6.3 Cuando el responsable publique la revisión, comprobar CI, artefacto de cobertura y relación spec → tareas → commits de incrementos → pruebas/capturas; registrar SHA/enlace/resultados remotos reales en el informe. Verificar que la revisión aprobada contiene el alcance final; no marcar ejecución remota aprobada por inspección local ni publicar una rama por cuenta propia.
+- [x] 6.3 Cuando el responsable publique la revisión, comprobar CI, artefacto de cobertura y relación spec → tareas → commits de incrementos → pruebas/capturas; registrar SHA/enlace/resultados remotos reales en el informe. Verificar que la revisión aprobada contiene el alcance final; no marcar ejecución remota aprobada por inspección local ni publicar una rama por cuenta propia.
 
 ## Commits previstos
 

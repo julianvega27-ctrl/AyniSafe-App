@@ -131,6 +131,10 @@ Datos creados: cuentas ciudadanas de prueba `capturas.*@ejemplo.com`, `integraci
 
 Ninguna adaptación de UI eliminó aserciones de seguridad: las pruebas cambiadas reubican pasos (abrir la cuenta desde la navegación pública) o sustituyen la barra anterior por la de la spec. La aprobación remota (CI) no se acredita con estas ejecuciones locales.
 
+## CI remoto (tarea 6.3)
+
+Rama `feat/p2-replica-visual`, PR [#1](https://github.com/julianvega27-ctrl/AyniSafe-App/pull/1), revisión `727586383b96a9033d436b0f4300690e1ae83508`. Ejecución [45692915913](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45692915913): escaneo de secretos, Flutter (análisis y pruebas), web (lint, tipos, compilación y pruebas) y API (tipos, arquitectura, contrato y Jest con cobertura) **aprobados**. Relación: spec `d678217` → commits `0cdcf85` (web y API), `4eed6c6` (móvil), `7275863` (evidencia) → pruebas y capturas de este informe. El commit que agrega esta sección solo cambia documentación y vuelve a ejecutar el CI en el PR. TalkBack sigue pendiente de revisión manual.
+
 ## Límites y siguiente incremento
 
 P2.1 no altera API ni Flutter; no se repiten sus suites completas como si fueran cambios nuevos. El E2E sí usa la API real. TalkBack/iOS no se validan por capturas web. No se desplegó ni ejecutó GitHub Actions para este diff local. La aceptación completa de P2 y su CI corresponde al incremento final. Los resultados locales y capturas no se presentan como aprobación remota o validación operativa del sistema de incidentes.
