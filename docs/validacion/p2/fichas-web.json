@@ -1,0 +1,579 @@
+{
+  "referencia": "efc1bce8c29b3c88487e36e10a324c71ae9c2029",
+  "revisionBaseDestino": "d678217",
+  "comando": "node e2e/publica-visual.mjs",
+  "fichas": [
+    {
+      "archivo": "origen-portada-1440.png",
+      "variante": "portada",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Más cerca.Mejor coordinados.Juntos por tu comunidad.",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "sin backend, referencia visual"
+    },
+    {
+      "archivo": "origen-acceso-1440.png",
+      "variante": "acceso",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Centro de operaciones",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "sin backend, referencia visual"
+    },
+    {
+      "archivo": "destino-portada-1440.png",
+      "variante": "portada",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-pendiente-1440.png",
+      "variante": "pendiente",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-carga-1440.png",
+      "variante": "carga",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-red-1440.png",
+      "variante": "red",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-servicio-1440.png",
+      "variante": "servicio",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-acceso-1440.png",
+      "variante": "acceso",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Acceso institucional",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-activar-1440.png",
+      "variante": "activar",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Activa tu cuenta",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-portada-1440-texto200.png",
+      "variante": "portada",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-acceso-1440-texto200.png",
+      "variante": "acceso",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Acceso institucional",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-activar-1440-texto200.png",
+      "variante": "activar",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Activa tu cuenta",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "origen-portada-390.png",
+      "variante": "portada",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Más cerca.Mejor coordinados.Juntos por tu comunidad.",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "sin backend, referencia visual"
+    },
+    {
+      "archivo": "origen-acceso-390.png",
+      "variante": "acceso",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Centro de operaciones",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "sin backend, referencia visual"
+    },
+    {
+      "archivo": "destino-portada-390.png",
+      "variante": "portada",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-pendiente-390.png",
+      "variante": "pendiente",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-carga-390.png",
+      "variante": "carga",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-red-390.png",
+      "variante": "red",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-servicio-390.png",
+      "variante": "servicio",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-acceso-390.png",
+      "variante": "acceso",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Acceso institucional",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-activar-390.png",
+      "variante": "activar",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Activa tu cuenta",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-portada-390-texto200.png",
+      "variante": "portada",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "AyniSafeCuidarnos es tarea de todos",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-acceso-390-texto200.png",
+      "variante": "acceso",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Acceso institucional",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    },
+    {
+      "archivo": "destino-activar-390-texto200.png",
+      "variante": "activar",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "titulo": "Activa tu cuenta",
+        "h1": "Manrope, sans-serif",
+        "cuerpo": "\"DM Sans\", sans-serif"
+      },
+      "api": "interceptada, contenido versionado real; sesión/token de prueba",
+      "axe": []
+    }
+  ]
+}

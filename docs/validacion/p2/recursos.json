@@ -1,0 +1,67 @@
+{
+  "fecha": "2026-11-24",
+  "alcance": "P2.1 web pública; panel/Flutter pendientes",
+  "referencia": "efc1bce8c29b3c88487e36e10a324c71ae9c2029",
+  "specPrevia": "d678217",
+  "fuentesReferencia": [
+    {
+      "ruta": "apps/admin/src/style.css",
+      "sha256": "57a1f2f623ab88e7759eac20ab64d0708dc38810c178263f8f655ce8a04fd39e",
+      "bytes": 37679
+    },
+    {
+      "ruta": "apps/admin/src/pages/Welcome.jsx",
+      "sha256": "64c81f858ecde74f56e90c9acec3113a5a6c64ab0ba28822c939148d1b902293",
+      "bytes": 4114
+    },
+    {
+      "ruta": "apps/admin/src/pages/Login.jsx",
+      "sha256": "53244efe88a36066506edd0fe03ecca127e8727dfdfdff14ecb62ef9fffe0f00",
+      "bytes": 1843
+    }
+  ],
+  "recursos": [
+    {
+      "origen": "D:/UNSCH/2026-II/Arquitectura de Software/Proyectos/Proyecto_incidencias_400par/apps/admin/public/community-hero.png",
+      "destino": "apps/web/public/community-hero.png",
+      "uso": "Ilustración de portada; copia sin editar",
+      "sha256": "157e1eda37f934b1108cdadc8a8aa7d37be91aa89d1ada6704264b45198c288e",
+      "bytes": 2787758
+    },
+    {
+      "origen": "D:/UNSCH/2026-II/Arquitectura de Software/Proyectos/Proyecto_incidencias_400par/apps/admin/public/logo.png",
+      "destino": null,
+      "uso": "Símbolo Flutter inspeccionado y no adoptado como marca oficial; se conserva nombre tipográfico AyniSafe",
+      "sha256": "3c34e1f298d0c9ea3455d46db6b7759c8211a49e9ec6e44b635fc5c87dfb4180",
+      "bytes": 1443
+    },
+    {
+      "origen": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmsans/DMSans%5Bopsz%2Cwght%5D.ttf",
+      "destino": "apps/web/public/fuentes/DM-Sans.ttf",
+      "licencia": "apps/web/public/fuentes/DM-Sans-OFL.txt",
+      "pesosDeclarados": "400–700",
+      "sha256": "8cd08d97e89c24d0aa92edd2f0f4c8ee6195eee9b7c9f154865a58b02f0c1c0d",
+      "bytes": 240164
+    },
+    {
+      "origen": "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/Manrope%5Bwght%5D.ttf",
+      "destino": "apps/web/public/fuentes/Manrope.ttf",
+      "licencia": "apps/web/public/fuentes/Manrope-OFL.txt",
+      "pesosDeclarados": "400–800",
+      "sha256": "3ae11c49db0455a3cc33e37d380f20fdb8c7f8b41dc07625c177e3d87a9d6ae6",
+      "bytes": 164700
+    },
+    {
+      "origen": "Repositorio oficial google/fonts; ofl/dmsans/OFL.txt",
+      "destino": "apps/web/public/fuentes/DM-Sans-OFL.txt",
+      "sha256": "9af36190332437f5ecd09974de43c1f7c77a310a996cdd8ceb25628b458840e1",
+      "bytes": 4482
+    },
+    {
+      "origen": "Repositorio oficial google/fonts; ofl/manrope/OFL.txt",
+      "destino": "apps/web/public/fuentes/Manrope-OFL.txt",
+      "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b",
+      "bytes": 4387
+    }
+  ]
+}

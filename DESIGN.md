@@ -5,9 +5,9 @@ description: Réplica visual del proyecto de incidencias de referencia, adaptada
 
 # Design System: AyniSafe
 
-Actualizado: 23 de noviembre de 2026.
+Actualizado: 24 de noviembre de 2026.
 
-Estado: **dirección visual elegida explícitamente; reproducción todavía no implementada ni verificada**. La petición «Todo debe ser igual a UI del otro proyecto, luego veremos mejoras» sustituye la exploración visual anterior. No abrir otra ronda de estilos ni mezclarla con las maquetas de `.impeccable/mocks/`.
+Estado: **dirección elegida; P2.1 (portada, acceso, activación) y P2.2 (panel institucional) implementados y comparados en web; tema, formularios y navegación Flutter implementados y comparados en Android real (Samsung, Android 16); TalkBack y CI pendientes**. La petición «Todo debe ser igual a UI del otro proyecto, luego veremos mejoras» sustituye la exploración visual anterior. No abrir otra ronda de estilos ni mezclarla con las maquetas de `.impeccable/mocks/`. La [evidencia P2](docs/validacion/p2-replica-visual.md) distingue pruebas funcionales, comparación renderizada y límites; no se declara igualdad de todo el sistema.
 
 ## Overview
 
@@ -36,11 +36,15 @@ Preservar los colores por componente y superficie del origen. Valores observados
 
 Insignias web de prioridad: Normal texto/fondo/borde `#1E40AF / #EFF6FF / #BFDBFE`; Alta `#92400E / #FFFBEB / #FCD34D`; roja del origen `#991B1B / #FEF2F2 / #F87171`; gris `#475569 / #F1F5F9 / #CBD5E1`. Conservar el estilo azul/ámbar/rojo/gris. En AyniSafe, la roja se llama Urgente y la gris Sin evaluar; Baja y Sin evaluar no son equivalentes de negocio. Alta y Urgente conservan símbolo de alerta. El origen de la propuesta/revisión se informa con el mismo estilo de metadatos existente.
 
+La tabla anterior recoge valores base. En las superficies públicas prevalecen las sobrescrituras finales de `style.css`, ya portadas en P2.1: fondo radial verde/crema, cabecera `#143F40` con divisor `#E3B562`, marca clara `#F2F8ED`, acción de cabecera dorada `#E8BC72` y texto `#203D35`; CTA inferior degradado `#174C47 → #226858` con botón `#F0C583`; pie `#153F3B`. Mantener esa cascada: no volver a los valores iniciales al modificar una pantalla pública. Se reutilizan roles centrales de texto para contrastes AA; las diferencias medidas quedan en la evidencia, no son otra paleta propuesta.
+
 La tabla de prioridades por categoría es política del documento 11, no una decisión visual. Conservar FIFO; el color no ordena la bandeja.
 
 ## Typography
 
 Web: DM Sans para cuerpo y controles, Manrope para títulos, con los pesos y métricas del origen. La hoja de origen las importa desde Google Fonts; para reproducirlas en destino, preparar recursos locales equivalentes y ajustar la carga conforme a la política de recursos, sin sustituir las familias por otra elección estética.
+
+P2.1 sirve ambas familias desde `apps/web/public/fuentes/` con sus licencias OFL: DM Sans 400–700 y Manrope 400–800, sin síntesis artificial. Sus archivos variables conservan las familias y pesos declarados por la referencia. Las métricas textuales portadas se expresan en rem con equivalencia inicial a 16 px para permitir ampliación; controles de al menos 48 y bordes/estados accesibles conservan el contrato destino.
 
 Móvil: conservar la tipografía Material/plataforma usada por ThemeData del origen, sin inyectar las familias web.
 
@@ -75,6 +79,12 @@ Reutilizar o adaptar los componentes del origen manteniendo apariencia e interac
 - Recursos: inventariar logo.png, community-hero.png e iconos; adaptar el nombre a AyniSafe y revisar los recursos antes de distribuir. No afirmar que un logotipo de origen ya es una marca oficial de AyniSafe.
 
 El estilo de mensajes, carga, error, vacío, hover, foco, pulsación y deshabilitado también forma parte de la réplica. Si el origen no tiene un flujo necesario, extender sus componentes; no iniciar una dirección gráfica nueva.
+
+Implementación web P2.1: `src/estilos.css` y `src/diseno/colores.ts` mantienen los roles centrales; `src/diseno/referencia-publica.css` conserva la cascada pública extraída, y `adaptacion-publica.css` conecta los componentes destino y sus requisitos accesibles. No introducir variantes de pantalla fuera de esos puntos centrales. Portada usa contenido versionado; acceso y activación conservan sus controles y estados. La ilustración es una copia del origen; su `logo.png` es el símbolo Flutter y no se adoptó como logotipo de AyniSafe. Se conserva el nombre tipográfico, sin inventar otro símbolo oficial.
+
+Implementación web P2.2: `src/diseno/referencia-institucional.css` contiene la cascada efectiva de `.app-shell`, `.sidebar`, `.topbar`, cuenta, avisos y `.panel` del origen, con sus sobrescrituras finales a 900/700/600 px; `componentes/MarcoInstitucional.tsx` reproduce Shell, AccountMenu y Notifications. Adaptaciones registradas: contenedor de marca blanco con la inicial tipográfica (no el símbolo Flutter), «Aún no disponible» en cada destino del lateral, campana sin contador ni consultas, menú de cuenta con identidad y cierre (sin perfil web), pie lateral con nombre y lema (sin «Datos DEMO»), objetivos de 48 y texto de cabecera/antetítulo en roles centrales por contraste AA.
+
+Implementación móvil P2.3–P2.4: `presentacion/tema.dart` porta el ThemeData del origen (semilla `#087C72`, principal `#086C63`, secundario `#365CC9`, fondo/AppBar `#EFF6F7`/`#123B46`, tarjetas radio 22 y borde `#DCE9ED`, campos y botones radio 16, FilledButton 52, NavigationBar con indicador `#C5EFE4`, ListTile seleccionado `#D8F3EB`). `componentes/tarjeta_mensaje.dart` porta MessageCard/ScreenPadding; `navegacion/shell_ciudadano.dart` porta CitizenShell (AppBar con control de cuenta, Drawer con cabecera degradada y barra Inicio/Reportar/Mapa/Contactos). Adaptaciones medidas: borde de campo `#6B8A92` (el `#C8DCE1` del origen da 1,42:1), degradado del bloque «Reportar» sin el tercer tono `#209B86` bajo texto blanco, cuerpo de 16, etiqueta de campo persistente, control de cuenta de 48 de alto con el aspecto del chip y roles de mensaje con color semántico en el icono. Perfil con la composición de `profile.dart` («Mi perfil», tarjetas con icono, salida con OutlinedButton). El lema de Inicio usa el aspecto del Chip del origen pero ajusta el texto en varias líneas (el Chip recorta con texto ampliado); el botón Mostrar/Ocultar ocupa la posición `suffixIcon`.
 
 ## Do's and Don'ts
 

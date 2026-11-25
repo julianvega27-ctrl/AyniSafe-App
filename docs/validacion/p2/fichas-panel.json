@@ -1,0 +1,1142 @@
+{
+  "referencia": "efc1bce8c29b3c88487e36e10a324c71ae9c2029",
+  "revisionBaseDestino": "d678217",
+  "comando": "node e2e/panel-visual.mjs",
+  "arnesOrigen": ".cache/p2-referencia/src/MarcoReferencia.jsx",
+  "fichas": [
+    {
+      "archivo": "panel-origen-administrador-marco-1440.png",
+      "lado": "origen",
+      "rol": "administrador",
+      "estado": "marco",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      }
+    },
+    {
+      "archivo": "panel-origen-administrador-cuenta-1440.png",
+      "lado": "origen",
+      "rol": "administrador",
+      "estado": "cuenta",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      }
+    },
+    {
+      "archivo": "panel-origen-administrador-avisos-1440.png",
+      "lado": "origen",
+      "rol": "administrador",
+      "estado": "avisos",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      }
+    },
+    {
+      "archivo": "panel-destino-administrador-inicio-1440.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-cuenta-1440.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "cuenta",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-avisos-1440.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "avisos",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-historial-1440.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "historial",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-servicio-1440.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "servicio",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-carga-1440.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "carga",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-inicio-1440-texto200.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-origen-administrador-marco-900.png",
+      "lado": "origen",
+      "rol": "administrador",
+      "estado": "marco",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 900,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 900,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 220
+      }
+    },
+    {
+      "archivo": "panel-destino-administrador-inicio-900.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 900,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 900,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 220
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-origen-administrador-marco-600.png",
+      "lado": "origen",
+      "rol": "administrador",
+      "estado": "marco",
+      "viewport": {
+        "width": 600,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 600,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 600,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      }
+    },
+    {
+      "archivo": "panel-destino-administrador-inicio-600.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 600,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 600,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 600,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-origen-administrador-marco-390.png",
+      "lado": "origen",
+      "rol": "administrador",
+      "estado": "marco",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      }
+    },
+    {
+      "archivo": "panel-origen-administrador-cuenta-390.png",
+      "lado": "origen",
+      "rol": "administrador",
+      "estado": "cuenta",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      }
+    },
+    {
+      "archivo": "panel-origen-administrador-avisos-390.png",
+      "lado": "origen",
+      "rol": "administrador",
+      "estado": "avisos",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      }
+    },
+    {
+      "archivo": "panel-destino-administrador-inicio-390.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-cuenta-390.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "cuenta",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-avisos-390.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "avisos",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-historial-390.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "historial",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-servicio-390.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "servicio",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-carga-390.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "carga",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-administrador-inicio-390-texto200.png",
+      "lado": "destino",
+      "rol": "administrador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-origen-operador-marco-1440.png",
+      "lado": "origen",
+      "rol": "operador",
+      "estado": "marco",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      }
+    },
+    {
+      "archivo": "panel-origen-operador-cuenta-1440.png",
+      "lado": "origen",
+      "rol": "operador",
+      "estado": "cuenta",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      }
+    },
+    {
+      "archivo": "panel-origen-operador-avisos-1440.png",
+      "lado": "origen",
+      "rol": "operador",
+      "estado": "avisos",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      }
+    },
+    {
+      "archivo": "panel-destino-operador-inicio-1440.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-cuenta-1440.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "cuenta",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-avisos-1440.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "avisos",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-historial-1440.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "historial",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-servicio-1440.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "servicio",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-carga-1440.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "carga",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-inicio-1440-texto200.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-origen-operador-marco-900.png",
+      "lado": "origen",
+      "rol": "operador",
+      "estado": "marco",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 900,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 900,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 220
+      }
+    },
+    {
+      "archivo": "panel-destino-operador-inicio-900.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 900,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 900,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 220
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-origen-operador-marco-600.png",
+      "lado": "origen",
+      "rol": "operador",
+      "estado": "marco",
+      "viewport": {
+        "width": 600,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 600,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 600,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      }
+    },
+    {
+      "archivo": "panel-destino-operador-inicio-600.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 600,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 600,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 600,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-origen-operador-marco-390.png",
+      "lado": "origen",
+      "rol": "operador",
+      "estado": "marco",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      }
+    },
+    {
+      "archivo": "panel-origen-operador-cuenta-390.png",
+      "lado": "origen",
+      "rol": "operador",
+      "estado": "cuenta",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      }
+    },
+    {
+      "archivo": "panel-origen-operador-avisos-390.png",
+      "lado": "origen",
+      "rol": "operador",
+      "estado": "avisos",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      }
+    },
+    {
+      "archivo": "panel-destino-operador-inicio-390.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-cuenta-390.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "cuenta",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-avisos-390.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "avisos",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-historial-390.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "historial",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-servicio-390.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "servicio",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-carga-390.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "carga",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-inicio-390-texto200.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "inicio",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "escalaTexto": 2,
+      "medidas": {
+        "ancho": 390,
+        "alto": 844,
+        "escala": 1,
+        "anchoDocumento": 390,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 64
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-rol-ajeno-1440.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "rol-ajeno",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": 248
+      },
+      "axe": []
+    },
+    {
+      "archivo": "panel-destino-operador-sesion-vencida-1440.png",
+      "lado": "destino",
+      "rol": "operador",
+      "estado": "sesion-vencida",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "escalaTexto": 1,
+      "medidas": {
+        "ancho": 1440,
+        "alto": 900,
+        "escala": 1,
+        "anchoDocumento": 1440,
+        "fuentes": [
+          "DM Sans",
+          "Manrope"
+        ],
+        "lateral": null
+      },
+      "axe": []
+    }
+  ]
+}
