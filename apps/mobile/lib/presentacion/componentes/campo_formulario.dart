@@ -55,7 +55,10 @@ class CampoFormulario extends StatelessWidget {
       decoration: InputDecoration(
         labelText: etiqueta,
         helperText: ayuda,
-        suffix: sufijo,
+        // Posición del botón de visibilidad del origen (suffixIcon): no aumenta el alto del campo.
+        suffixIcon: sufijo == null
+            ? null
+            : Padding(padding: const EdgeInsets.only(right: 8), child: sufijo),
         // El error combina icono y texto: no depende solo del color.
         error: error == null ? null : _ErrorDeCampo(error!),
       ),

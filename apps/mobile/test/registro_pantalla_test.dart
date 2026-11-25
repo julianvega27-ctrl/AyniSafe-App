@@ -16,6 +16,7 @@ Future<ApiFalsa> abrirRegistro(
   final sesion = crearSesion(api, almacen ?? AlmacenamientoEnMemoria());
   await sesion.restaurar();
   await tester.pumpWidget(appDePrueba(api, sesion));
+  await irAlAcceso(tester);
   final enlace = find.widgetWithText(TextButton, 'Crear cuenta');
   await tester.ensureVisible(enlace);
   await tester.pumpAndSettle();
@@ -341,6 +342,8 @@ void main() {
             errorJson('INTERNAL_ERROR', requestId: 'req-abc-1'),
           ),
         );
+        // El mensaje anterior desplaza el botón: se lleva a la vista como haría la persona.
+        await tester.ensureVisible(botonCrear);
         await tester.tap(botonCrear);
         await tester.pumpAndSettle();
         expect(find.textContaining('req-abc-1'), findsOneWidget);

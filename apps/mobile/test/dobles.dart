@@ -9,6 +9,7 @@ import 'package:ayni_safe/datos/enlaces_cuenta.dart';
 import 'package:ayni_safe/datos/cliente_http.dart';
 import 'package:ayni_safe/datos/contenido_repositorio.dart';
 import 'package:ayni_safe/datos/perfil_repositorio.dart';
+import 'package:ayni_safe/presentacion/pantallas/acceso_pantalla.dart';
 import 'package:ayni_safe/presentacion/servicios.dart';
 import 'package:ayni_safe/presentacion/tema.dart';
 import 'package:flutter/material.dart';
@@ -261,9 +262,9 @@ const String claveValida = 'una contraseña de ejemplo';
 
 /// Abre el perfil desde la cabecera y cierra sesión (el cierre de sesión vive en el perfil).
 Future<void> cerrarSesionDesdePerfil(WidgetTester tester) async {
-  await tester.tap(find.byTooltip('Perfil'));
+  await tester.tap(find.byTooltip('Abrir perfil'));
   await tester.pumpAndSettle();
-  final cerrar = find.widgetWithText(FilledButton, 'Cerrar sesión');
+  final cerrar = find.text('Cerrar sesión');
   await tester.ensureVisible(cerrar);
   await tester.tap(cerrar);
   await tester.pumpAndSettle();
@@ -310,3 +311,11 @@ class ServidorPerfil {
   }
 }
 
+
+/// Navegación pública (sin sesión): abre «Mi cuenta», que muestra el acceso vigente.
+Future<void> irAlAcceso(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+  if (find.byType(AccesoPantalla).evaluate().isNotEmpty) return;
+  await tester.tap(find.byTooltip('Iniciar sesión o crear cuenta'));
+  await tester.pumpAndSettle();
+}

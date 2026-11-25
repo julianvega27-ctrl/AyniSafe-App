@@ -4,7 +4,6 @@ import '../../aplicacion/aviso.dart';
 import '../../aplicacion/perfil_controlador.dart';
 import '../../aplicacion/sesion_controlador.dart';
 import '../../datos/perfil_repositorio.dart';
-import '../componentes/boton_principal.dart';
 import '../componentes/estructura_pantalla.dart';
 import '../componentes/mensaje_accesible.dart';
 import '../tema.dart';
@@ -74,6 +73,12 @@ class _PerfilPantallaState extends State<PerfilPantalla> {
           titulo: 'Perfil',
           conBarra: true,
           hijos: [
+            // Composición de screens/profile.dart del origen: «Mi perfil», tarjetas con icono y salida.
+            Semantics(
+              header: true,
+              child: Text('Mi perfil', style: tema.headlineMedium),
+            ),
+            const SizedBox(height: Espaciado.s3),
             Semantics(
               header: true,
               child: Text('Datos personales', style: tema.titleMedium),
@@ -120,28 +125,38 @@ class _PerfilPantallaState extends State<PerfilPantalla> {
               header: true,
               child: Text('Información', style: tema.titleMedium),
             ),
+            const SizedBox(height: Espaciado.s1),
             _Enlace(
               texto: 'Privacidad',
+              icono: Icons.lock_outline,
               alPulsar: () => _abrir(SeccionPublica.privacidad),
             ),
             _Enlace(
               texto: 'Acerca de AyniSafe',
+              icono: Icons.info_outline,
               alPulsar: () => _abrir(SeccionPublica.app),
             ),
             _Enlace(
               texto: 'Desarrolladores',
+              icono: Icons.groups_outlined,
               alPulsar: () => _abrir(SeccionPublica.desarrolladores),
             ),
             _Enlace(
               texto: 'Contactos de emergencia',
+              icono: Icons.call_outlined,
               alPulsar: () => _abrir(SeccionPublica.contactos),
             ),
-            const SizedBox(height: Espaciado.s3),
-            BotonPrincipal(
-              texto: 'Cerrar sesión',
-              textoCargando: 'Cerrando sesión…',
-              cargando: _cerrando,
-              alPulsar: _cerrar,
+            const SizedBox(height: Espaciado.s4),
+            // Salida del origen (OutlinedButton.icon), con estado de carga y una sola solicitud.
+            OutlinedButton.icon(
+              onPressed: _cerrando ? null : _cerrar,
+              icon: _cerrando
+                  ? SizedBox.square(
+                      dimension: MediaQuery.textScalerOf(context).scale(18),
+                      child: const CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.logout),
+              label: Text(_cerrando ? 'Cerrando sesión…' : 'Cerrar sesión'),
             ),
             const SizedBox(height: Espaciado.s2),
           ],
@@ -217,20 +232,28 @@ class _Datos extends StatelessWidget {
   }
 }
 
+/// Tarjeta con ListTile del perfil del origen (icono, título y chevron).
 class _Enlace extends StatelessWidget {
-  const _Enlace({required this.texto, required this.alPulsar});
+  const _Enlace({
+    required this.texto,
+    required this.icono,
+    required this.alPulsar,
+  });
 
   final String texto;
+  final IconData icono;
   final VoidCallback alPulsar;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      minTileHeight: alturaMinimaControl,
-      title: Text(texto),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: alPulsar,
+    return Card(
+      child: ListTile(
+        minTileHeight: alturaMinimaControl,
+        leading: Icon(icono),
+        title: Text(texto),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: alPulsar,
+      ),
     );
   }
 }

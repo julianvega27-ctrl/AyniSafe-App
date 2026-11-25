@@ -22,7 +22,7 @@ void main() {
     final sesion = crearSesion(api, AlmacenamientoEnMemoria());
     await sesion.restaurar();
     await tester.pumpWidget(appDePrueba(api, sesion));
-    await tester.pumpAndSettle();
+    await irAlAcceso(tester);
 
     await escribirEn(tester, 'Correo', 'rosa@ejemplo.com');
     await tester.tap(find.widgetWithText(TextButton, 'Olvidé mi contraseña'));
@@ -66,7 +66,7 @@ void main() {
     final sesion = crearSesion(api, AlmacenamientoEnMemoria());
     await sesion.restaurar();
     await tester.pumpWidget(appDePrueba(api, sesion));
-    await tester.pumpAndSettle();
+    await irAlAcceso(tester);
 
     await tester.tap(find.widgetWithText(TextButton, 'Olvidé mi contraseña'));
     await tester.pumpAndSettle();
