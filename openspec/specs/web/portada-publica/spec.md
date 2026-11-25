@@ -37,7 +37,7 @@ La portada MUST obtener su texto de `GET /publico/contenido` y MUST NOT incluir 
 - **THEN** se muestra el problema y «Reintentar» sin presentar un éxito no confirmado
 
 ### Requirement: Accesibilidad y diseño de la portada
-La portada MUST seguir la guía de UI: tipografía del sistema, texto base de 16 px, botones y enlaces de acción de al menos 48 px de alto, foco visible, estados con texto e icono además del color, jerarquía de encabezados y texto ampliable al 200 % sin pérdida de contenido. Los contrastes de las combinaciones usadas MUST medirse y cumplir WCAG AA.
+La portada MUST seguir la referencia y tipografía web elegidas en DESIGN.md, con fuentes locales, foco visible, estados con texto e icono, jerarquía de encabezados y texto ampliable al 200 % sin pérdida de contenido. MUST conservar texto base de 16 px y acciones de al menos 48 px de alto. Las combinaciones usadas MUST cumplir WCAG AA; una diferencia necesaria respecto del origen MUST registrarse antes de aceptar fidelidad.
 
 #### Scenario: Texto ampliado
 - **WHEN** se amplía el texto al 200 % en un ancho de móvil
@@ -50,3 +50,7 @@ La portada MUST seguir la guía de UI: tipografía del sistema, texto base de 16
 #### Scenario: Lector de pantalla
 - **WHEN** se navega con un lector de pantalla
 - **THEN** los encabezados, regiones y estados de carga o error se anuncian con nombres comprensibles
+
+#### Scenario: Apariencia y fuentes de referencia
+- **WHEN** se carga la portada con sus recursos y contenido publicado
+- **THEN** se reproduce la composición de la portada origen con las familias elegidas cargadas localmente y las secciones reales de AyniSafe, sin copiar afirmaciones operativas del donante
