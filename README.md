@@ -55,7 +55,7 @@ pruebas) y busca credenciales versionadas (`scripts/escanear-secretos.mjs`). No 
 solo permisos de lectura y acciones fijadas por SHA. La primera ejecución remota detectó fallos de API y Flutter;
 el seguimiento y sus correcciones se registran en el informe P1.
 
-La API conserva reportes de cobertura disponibles como artefacto durante 14 días. La evidencia local de P1 y sus límites están en el [informe de validación](openspec/changes/api-jest-cobertura-arquitectura/informe.md).
+La API conserva reportes de cobertura disponibles como artefacto durante 14 días. La evidencia local de P1 y sus límites están en el [informe de validación](openspec/changes/archive/2026-11-24-api-jest-cobertura-arquitectura/informe.md).
 
 Las cuentas de administrador se crean con el procedimiento controlado anterior (sin contraseñas en Git); las de
 operador llegarán con la gestión de cuentas. Ninguna ruta pública crea cuentas privilegiadas.

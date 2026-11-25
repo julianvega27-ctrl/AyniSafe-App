@@ -170,7 +170,7 @@ CI ejecuta tipos, build, contrato, arquitectura y Jest/cobertura con PostgreSQL 
 como artefacto `api-cobertura-<sha>` durante 14 días, incluso si una prueba falla y hay reportes disponibles. Si no se
 generaron, declara la ausencia sin inventar éxito. La publicación real solo queda verificada al ejecutar GitHub Actions;
 la configuración y sus pruebas locales no la sustituyen. Evidencia de este incremento en
-`openspec/changes/api-jest-cobertura-arquitectura/informe.md` desde la raíz del repositorio.
+`openspec/changes/archive/2026-11-24-api-jest-cobertura-arquitectura/informe.md` desde la raíz del repositorio.
 
 ## Cuentas privilegiadas
 
