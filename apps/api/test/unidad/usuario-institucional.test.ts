@@ -38,8 +38,17 @@ describe('dominio institucional', () => {
   });
 
   it('las secciones de cada panel siguen la guia y ninguna esta disponible', () => {
-    expect(seccionesDelPanel('operador').map((s) => s.titulo)).toEqual(['Reportes', 'Mapa', 'Indicadores']);
-    expect(seccionesDelPanel('administrador')).toHaveLength(6);
+    expect(seccionesDelPanel('operador').map((s) => s.titulo)).toEqual(['Inicio', 'Incidentes', 'Mapa', 'Indicadores', 'Historial']);
+    expect(seccionesDelPanel('administrador').map((s) => s.titulo)).toEqual([
+      'Inicio',
+      'Instituciones y sedes',
+      'Operadores',
+      'Coberturas',
+      'Categorías',
+      'Reglas',
+      'Contenido y contactos',
+      'Historial',
+    ]);
     for (const rol of ['operador', 'administrador'] as const) {
       expect(seccionesDelPanel(rol).every((s) => !s.disponible)).toBe(true);
     }

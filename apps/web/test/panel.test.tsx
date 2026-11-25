@@ -69,29 +69,88 @@ describe('shell por rol', () => {
     await screen.findByRole('heading', { name: 'Panel del administrador' });
     const nav = await screen.findByRole('navigation', { name: /secciones del panel del administrador/i });
     const items = within(nav).getAllByRole('listitem');
-    expect(items.map((i) => i.textContent?.replace('Aún no disponible', '').trim())).toEqual([
+    expect(items.map((i) => i.querySelector('.nav-text')?.firstChild?.textContent)).toEqual([
+      'Inicio',
       'Instituciones y sedes',
       'Operadores',
       'Coberturas',
       'Categorías',
       'Reglas',
       'Contenido y contactos',
+      'Historial',
     ]);
     for (const i of items) expect(i).toHaveTextContent('Aún no disponible');
-    expect(screen.getByText('Administrador')).toBeInTheDocument();
+    // Inicio es el destino activo: explica que esta pendiente, sin cifras ni tablero de ejemplo.
+    expect(within(nav).getByRole('link', { name: /^Inicio/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('heading', { name: 'Inicio', level: 2 })).toBeInTheDocument();
+    expect(screen.getByText(/no se muestran cifras ni indicadores de ejemplo/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Cuenta de Ana Torres/ })).toHaveTextContent('Administrador');
     expect(document.body.textContent).not.toMatch(/\d{2,}\s*(reportes|incidentes)/i);
+    expect(document.body.textContent).not.toMatch(/DEMO/);
   });
 
-  it('operador: Reportes, Mapa e Indicadores, no disponibles', async () => {
+  it('operador: Inicio, Incidentes, Mapa, Indicadores e Historial, no disponibles', async () => {
     instalarApi(servidorFalso({ sesion: operador }).manejador);
     renderizarApp('/panel');
     await screen.findByRole('heading', { name: 'Panel del operador' });
     const nav = await screen.findByRole('navigation', { name: /secciones del panel del operador/i });
-    expect(within(nav).getAllByRole('listitem').map((i) => i.textContent?.replace('Aún no disponible', '').trim())).toEqual([
-      'Reportes',
+    expect(within(nav).getAllByRole('listitem').map((i) => i.querySelector('.nav-text')?.firstChild?.textContent)).toEqual([
+      'Inicio',
+      'Incidentes',
       'Mapa',
       'Indicadores',
+      'Historial',
     ]);
+  });
+
+  it('seleccionar Historial abre su explicacion pendiente sin consultar servicios futuros', async () => {
+    const { llamadas } = instalarApi(servidorFalso({ sesion: operador }).manejador);
+    renderizarApp('/panel');
+    const nav = await screen.findByRole('navigation', { name: /secciones del panel del operador/i });
+    await userEvent.click(within(nav).getByRole('link', { name: /^Historial/ }));
+    expect(await screen.findByRole('heading', { name: 'Historial', level: 2 })).toBeInTheDocument();
+    expect(within(nav).getByRole('link', { name: /^Historial/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByText('Aún no disponible', { selector: '.mensaje__titulo' })).toBeInTheDocument();
+    expect(document.title).toBe('Historial · Panel del operador · AyniSafe');
+    expect(llamadas.map((l) => l.ruta)).toEqual(['/api/v1/auth/institucional/sesion', '/api/v1/operador/panel']);
+  });
+
+  it('una seccion inexistente vuelve a Inicio del rol', async () => {
+    instalarApi(servidorFalso({ sesion: admin }).manejador);
+    renderizarApp('/panel/administrador/no-existe');
+    expect(await screen.findByRole('heading', { name: 'Inicio', level: 2 })).toBeInTheDocument();
+  });
+
+  it('campana: anuncia «Aún no disponible», sin contador ni solicitudes de avisos', async () => {
+    const { llamadas } = instalarApi(servidorFalso({ sesion: admin }).manejador);
+    renderizarApp('/panel');
+    await screen.findByRole('heading', { name: 'Inicio', level: 2 });
+    const campana = screen.getByRole('button', { name: 'Avisos: aún no disponible' });
+    expect(campana).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(campana);
+    const region = screen.getByRole('region', { name: 'Avisos' });
+    expect(region).toHaveTextContent('Aún no disponible');
+    expect(region.textContent).not.toMatch(/\b0\b|no tienes avisos/i);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('region', { name: 'Avisos' })).not.toBeInTheDocument();
+    expect(campana).toHaveFocus();
+    expect(llamadas.some((l) => /notific|avisos|alert/i.test(l.ruta))).toBe(false);
+  });
+
+  it('menu de cuenta operable con teclado: identidad autorizada, Escape devuelve el foco', async () => {
+    instalarApi(servidorFalso({ sesion: admin }).manejador);
+    renderizarApp('/panel');
+    await screen.findByRole('heading', { name: 'Inicio', level: 2 });
+    const cuenta = screen.getByRole('button', { name: /^Cuenta de Ana Torres/ });
+    cuenta.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(cuenta).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('ana@ejemplo.com')).toBeInTheDocument();
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument();
+    expect(cuenta).toHaveFocus();
   });
 
   it('un operador que abre la ruta del administrador no ve sus secciones: la API responde 403', async () => {
@@ -139,7 +198,8 @@ describe('cierre de sesion', () => {
     const s = servidorFalso({ sesion: admin });
     const { llamadas } = instalarApi(s.manejador);
     renderizarApp('/panel');
-    await screen.findByRole('heading', { name: 'Panel del administrador' });
+    await screen.findByRole('heading', { name: 'Inicio', level: 2 });
+    await userEvent.click(screen.getByRole('button', { name: /^Cuenta de Ana Torres/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     expect(await screen.findByRole('heading', { name: 'Finalidad' })).toBeInTheDocument();
     expect(llamadas.some((l) => l.metodo === 'DELETE' && l.ruta === '/api/v1/auth/institucional/sesion')).toBe(true);
@@ -156,7 +216,8 @@ describe('cierre de sesion', () => {
     let sinRed = true;
     instalarApi((l) => (l.metodo === 'DELETE' && sinRed ? 'red' : s.manejador(l)));
     renderizarApp('/panel');
-    await screen.findByRole('heading', { name: 'Panel del administrador' });
+    await screen.findByRole('heading', { name: 'Inicio', level: 2 });
+    await userEvent.click(screen.getByRole('button', { name: /^Cuenta de Ana Torres/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     const alerta = await screen.findByRole('alert');
     expect(alerta).toHaveTextContent('No pudimos cerrar tu sesión');

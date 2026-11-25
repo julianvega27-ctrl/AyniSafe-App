@@ -76,8 +76,10 @@ export function Acceso() {
   );
 
   return (
-    <Estructura acciones={<BotonEnlace to="/" variante="secundario">Volver a la portada</BotonEnlace>}>
-      <section className="tarjeta tarjeta--formulario" aria-labelledby="titulo-acceso">
+    <Estructura>
+      <section className="tarjeta tarjeta--formulario login-card" aria-labelledby="titulo-acceso">
+        <BotonEnlace to="/" variante="enlace"><span aria-hidden="true">←</span> Volver a la portada</BotonEnlace>
+        <p className="login-identity">AyniSafe</p>
         <h1 id="titulo-acceso">Acceso institucional</h1>
         <p>Para administradores y operadores. Las cuentas se crean por invitación.</p>
 

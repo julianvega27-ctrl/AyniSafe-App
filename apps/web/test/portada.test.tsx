@@ -24,7 +24,7 @@ describe('portada publica', () => {
   it('el alcance del piloto pendiente se declara «aún no disponible» con icono, sin texto de reemplazo', async () => {
     instalarApi(servidorFalso().manejador);
     renderizarApp('/');
-    const seccion = (await screen.findByRole('heading', { name: 'Alcance del piloto' })).closest('section')!;
+    const seccion = (await screen.findByRole('heading', { name: 'Alcance del piloto' })).closest('article')!;
     expect(seccion).toHaveTextContent('Aún no disponible');
     expect(seccion.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(seccion.querySelectorAll('p')).toHaveLength(1);
@@ -55,6 +55,7 @@ describe('portada publica', () => {
     const usuario = userEvent.setup();
     await usuario.tab(); // «Saltar al contenido»
     await usuario.tab(); // marca
+    await usuario.tab(); // Cómo funciona, en la cabecera de referencia
     await usuario.tab();
     expect(enlace).toHaveFocus();
     await usuario.keyboard('{Enter}');

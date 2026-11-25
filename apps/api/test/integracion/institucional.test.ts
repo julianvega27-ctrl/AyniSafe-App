@@ -395,12 +395,14 @@ describe('paneles minimos y permisos por rol', () => {
       rol: 'administrador',
     });
     expect(ok.body.secciones.map((s: { titulo: string }) => s.titulo)).toEqual([
+      'Inicio',
       'Instituciones y sedes',
       'Operadores',
       'Coberturas',
       'Categorías',
       'Reglas',
       'Contenido y contactos',
+      'Historial',
     ]);
     expect(ok.body.secciones.every((s: { disponible: boolean }) => s.disponible === false)).toBe(true);
     const ajeno = await request(app).get(RUTA_PANEL_OPERADOR).set('Cookie', cookie);
@@ -413,7 +415,8 @@ describe('paneles minimos y permisos por rol', () => {
     const { cookie } = await ingresar('operador');
     const ok = await request(app).get(RUTA_PANEL_OPERADOR).set('Cookie', cookie);
     expect(ok.status).toBe(200);
-    expect(ok.body.secciones.map((s: { titulo: string }) => s.titulo)).toEqual(['Reportes', 'Mapa', 'Indicadores']);
+    expect(ok.body.secciones.map((s: { titulo: string }) => s.titulo)).toEqual(['Inicio', 'Incidentes', 'Mapa', 'Indicadores', 'Historial']);
+    expect(ok.body.secciones.every((s: { disponible: boolean }) => s.disponible === false)).toBe(true);
     const ajeno = await request(app).get(RUTA_PANEL_ADMIN).set('Cookie', cookie);
     expect(ajeno.status).toBe(403);
     expect(ajeno.body.usuario).toBeUndefined();

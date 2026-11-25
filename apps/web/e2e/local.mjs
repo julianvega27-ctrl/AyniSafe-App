@@ -27,7 +27,8 @@ const CHROME = process.env.CHROME_PATH ?? ['C:/Program Files/Google/Chrome/Appli
 if (!CHROME) throw new Error('No se encontro Chrome ni Edge (define CHROME_PATH).');
 
 const PUERTO_API = 3100;
-const PUERTO_WEB = 5173; // Origin por defecto de la API en desarrollo
+// Origin por defecto de la API en desarrollo; E2E_PUERTO_WEB permite ejecutarlo junto a un `npm run dev` abierto.
+const PUERTO_WEB = Number(process.env.E2E_PUERTO_WEB ?? 5173);
 const ORIGEN = `http://localhost:${PUERTO_WEB}`;
 const CORREO_ADMIN = 'admin-e2e@ejemplo.com';
 const CORREO_OPERADOR = 'operador-e2e@ejemplo.com';
@@ -149,7 +150,7 @@ async function main() {
   await bd('TRUNCATE envios_correo, tokens_cuenta, sesiones, usuarios, ventanas_intentos CASCADE');
 
   lanzar('api', API, [join(API, 'node_modules/tsx/dist/cli.mjs'), 'src/main.ts'], entornoApi);
-  lanzar('web', WEB, [join(WEB, 'node_modules/vite/bin/vite.js'), '--host', 'localhost'], {
+  lanzar('web', WEB, [join(WEB, 'node_modules/vite/bin/vite.js'), '--host', 'localhost', '--port', String(PUERTO_WEB)], {
     PATH: process.env.PATH,
     SystemRoot: process.env.SystemRoot,
     API_DEV_URL: `http://127.0.0.1:${PUERTO_API}`,
@@ -243,6 +244,7 @@ async function main() {
 
     // 9. Cierre de sesion y Atras.
     await pagina.goto(`${ORIGEN}/panel/administrador`);
+    await pagina.getByRole('button', { name: /^Cuenta de / }).click();
     await pagina.getByRole('button', { name: 'Cerrar sesión' }).click();
     await pagina.getByRole('heading', { name: 'Finalidad' }).waitFor();
     comprobar('cierre: vuelve a la portada y revoca la sesion en el servidor', (await bd(`SELECT count(*)::int AS n FROM sesiones WHERE revoked_at IS NULL`)).rows[0].n === 0);
@@ -273,8 +275,10 @@ async function main() {
     await pagina.getByLabel('Contraseña').fill(CLAVE_FIXTURE);
     await pagina.getByRole('button', { name: 'Ingresar' }).click();
     await pagina.getByRole('heading', { name: 'Panel del operador' }).waitFor();
-    await pagina.getByText('Reportes').first().waitFor();
-    comprobar('operador de prueba: llega a su panel con Reportes, Mapa e Indicadores', (await pagina.getByText('Aún no disponible').count()) >= 3);
+    const destinosOperador = pagina.getByRole('navigation', { name: 'Secciones del panel del operador' }).getByRole('link');
+    await destinosOperador.first().waitFor();
+    comprobar('operador de prueba: llega a su panel con Inicio, Incidentes, Mapa, Indicadores e Historial pendientes',
+      (await destinosOperador.count()) === 5 && (await pagina.locator('.nav-pending').count()) === 5);
     await pagina.goto(`${ORIGEN}/panel/administrador`);
     await pagina.getByText('No tienes permiso para ver este panel').waitFor();
     comprobar('operador en el panel del administrador: sin secciones y con 403 de la API', (await pagina.getByText('Instituciones y sedes').count()) === 0 && respuestasApi.some((r) => r.url().endsWith('/administrador/panel') && r.status() === 403));

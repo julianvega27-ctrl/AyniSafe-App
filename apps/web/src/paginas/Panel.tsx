@@ -1,35 +1,37 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useParams } from 'react-router';
 import { api, type Rol, type SeccionPanel } from '../api/cliente';
 import { Boton, BotonEnlace } from '../componentes/Boton';
-import { Estructura, useTitulo } from '../componentes/Estructura';
+import { useTitulo } from '../componentes/Estructura';
 import { FalloDeConexion } from '../componentes/FalloDeConexion';
 import { Icono } from '../componentes/iconos';
+import { CampanaPendiente, ETIQUETA_ROL, MarcoInstitucional, MenuCuenta, rutaSeccion } from '../componentes/MarcoInstitucional';
 import { Mensaje } from '../componentes/Mensaje';
 import { useSesion } from '../sesion/SesionContexto';
 
 /**
  * Guard de ruta: solo guia la navegacion (experiencia de usuario). La autorizacion real esta en la
  * API, que vuelve a validar la cookie y el rol en cada peticion; manipular este estado no concede datos.
+ * Mientras comprueba, el marco no muestra identidad ni secciones (sin destello de otro rol).
  */
 export function RutaProtegida({ children }: { children: ReactNode }) {
   const { sesion, restaurar } = useSesion();
   useTitulo('Panel');
   if (sesion.estado === 'cargando') {
     return (
-      <Estructura>
+      <MarcoInstitucional titulo="Panel institucional">
         <p role="status" className="pendiente">
           <Icono nombre="reloj" />
           <span>Comprobando tu sesión…</span>
         </p>
-      </Estructura>
+      </MarcoInstitucional>
     );
   }
   if (sesion.estado === 'error') {
     return (
-      <Estructura>
+      <MarcoInstitucional titulo="Panel institucional">
         <FalloDeConexion tipo={sesion.causa} onReintentar={() => void restaurar()} />
-      </Estructura>
+      </MarcoInstitucional>
     );
   }
   if (sesion.estado === 'anonimo') {
@@ -48,20 +50,33 @@ export function PanelInicio() {
 
 const TITULO: Record<Rol, string> = { administrador: 'Panel del administrador', operador: 'Panel del operador' };
 
+/** Explicacion de cada destino pendiente: dice que falta, sin cifras, mapas ni datos de ejemplo. */
+const EXPLICACION: Record<string, string> = {
+  inicio: 'El resumen se habilitará cuando existan incidentes registrados. Hoy no se muestran cifras ni indicadores de ejemplo.',
+  historial: 'El historial autorizado se habilitará con las actuaciones sobre incidentes. Todavía no hay registros que consultar.',
+  incidentes: 'La bandeja de incidentes se habilitará en una próxima entrega, con su orden de llegada.',
+  mapa: 'El mapa de incidentes se habilitará en una próxima entrega. No se muestran ubicaciones de ejemplo.',
+  indicadores: 'Los indicadores se calcularán con incidentes reales cuando la gestión esté disponible.',
+};
+const EXPLICACION_GENERAL = 'Esta sección se habilitará en una próxima entrega. Por ahora no se muestran datos, mapas ni cifras de ejemplo.';
+
 type Carga =
   | { readonly estado: 'cargando' }
   | { readonly estado: 'listo'; readonly secciones: readonly SeccionPanel[] }
   | { readonly estado: 'sin-permiso' }
   | { readonly estado: 'fallo'; readonly causa: 'red' | 'servicio' };
 
-/** Panel minimo de un rol. Lo que se muestra depende solo de la respuesta de la API para ese rol. */
+/** Panel de un rol. Lo que se muestra depende solo de la respuesta de la API para ese rol. */
 export function PanelRol({ rol }: { rol: Rol }) {
-  useTitulo(TITULO[rol]);
+  const { seccion: idSeccion = 'inicio' } = useParams();
   const { sesion, salir, expirar } = useSesion();
   const [carga, setCarga] = useState<Carga>({ estado: 'cargando' });
   const [intento, setIntento] = useState(0);
   const [saliendo, setSaliendo] = useState(false);
   const [falloAlSalir, setFalloAlSalir] = useState(false);
+
+  const seccion = carga.estado === 'listo' ? carga.secciones.find((s) => s.id === idSeccion) : undefined;
+  useTitulo(seccion && seccion.id !== 'inicio' ? `${seccion.titulo} · ${TITULO[rol]}` : TITULO[rol]);
 
   useEffect(() => {
     const control = new AbortController();
@@ -94,23 +109,20 @@ export function PanelRol({ rol }: { rol: Rol }) {
   }
 
   const usuario = sesion.estado === 'autenticado' ? sesion.usuario : null;
-  const acciones = (
+  // Identidad de la propia sesion verificada; las secciones solo llegan con la respuesta de la API del rol.
+  const acciones = usuario ? (
     <>
-      {usuario ? (
-        <div className="cuenta">
-          <span>{usuario.nombre}</span>
-          <span className="cuenta__rol">{usuario.rol === 'administrador' ? 'Administrador' : 'Operador'}</span>
-        </div>
-      ) : null}
-      <Boton variante="secundario" onClick={() => void cerrarSesion()} cargando={saliendo}>
-        {saliendo ? 'Cerrando sesión…' : 'Cerrar sesión'}
-      </Boton>
+      <CampanaPendiente />
+      <MenuCuenta usuario={usuario} onSalir={() => void cerrarSesion()} saliendo={saliendo} />
     </>
-  );
+  ) : null;
 
   return (
-    <Estructura acciones={acciones}>
-      <h1>{TITULO[rol]}</h1>
+    <MarcoInstitucional rol={rol} titulo={TITULO[rol]} secciones={carga.estado === 'listo' ? carga.secciones : []} acciones={acciones}>
+      <div className="page-intro">
+        <span className="eyebrow">{carga.estado === 'sin-permiso' ? 'Panel institucional' : ETIQUETA_ROL[rol]}</span>
+        <h1>{TITULO[rol]}</h1>
+      </div>
 
       {falloAlSalir ? (
         <Mensaje
@@ -144,31 +156,23 @@ export function PanelRol({ rol }: { rol: Rol }) {
         </>
       ) : null}
 
-      {carga.estado === 'listo' ? (
-        <div className="panel">
-          <nav aria-label={`Secciones del ${TITULO[rol].toLowerCase()}`}>
-            <ul className="navegacion-panel">
-              {carga.secciones.map((s) => (
-                <li key={s.id} className="navegacion-panel__item">
-                  <span>{s.titulo}</span>
-                  {s.disponible ? null : (
-                    <span className="etiqueta">
-                      <Icono nombre="reloj" />
-                      Aún no disponible
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <section aria-labelledby="estado-panel">
-            <h2 id="estado-panel">Panel mínimo</h2>
-            <Mensaje tipo="info" titulo="Todavía no hay funciones disponibles">
-              Las secciones de la izquierda se habilitarán en próximas entregas. Por ahora no se muestran datos, mapas ni cifras de ejemplo.
+      {carga.estado === 'listo' && !seccion ? <Navigate to={rutaSeccion(rol, 'inicio')} replace /> : null}
+
+      {seccion ? (
+        <section className="panel" aria-labelledby="titulo-seccion">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">Sección</span>
+              <h2 id="titulo-seccion">{seccion.titulo}</h2>
+            </div>
+          </div>
+          {seccion.disponible ? null : (
+            <Mensaje tipo="info" titulo="Aún no disponible">
+              {EXPLICACION[seccion.id] ?? EXPLICACION_GENERAL}
             </Mensaje>
-          </section>
-        </div>
+          )}
+        </section>
       ) : null}
-    </Estructura>
+    </MarcoInstitucional>
   );
 }

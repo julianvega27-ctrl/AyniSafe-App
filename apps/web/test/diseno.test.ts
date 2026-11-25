@@ -10,17 +10,22 @@ describe('tokens y contraste (guia de UI, WCAG AA)', () => {
     expect(contraste(COLORES[texto], COLORES[fondo])).toBeGreaterThanOrEqual(minimo);
   });
 
-  it('usa la paleta de la guia: azul, verde azulado, fondo y texto', () => {
-    expect(COLORES['--color-azul']).toBe('#17324D');
-    expect(COLORES['--color-verde']).toBe('#007F78');
-    expect(COLORES['--color-fondo']).toBe('#F5F7FA');
-    expect(COLORES['--color-texto']).toBe('#172B3A');
-    // El texto de enlaces sobre fondos tintados usa #006B65, no el verde azulado (4,54:1 sobre el fondo).
-    expect(COLORES['--color-enlace']).toBe('#006B65');
+  it('usa los roles de color de la referencia elegida en DESIGN.md', () => {
+    expect(COLORES['--color-azul']).toBe('#203843');
+    expect(COLORES['--color-verde']).toBe('#177571');
+    expect(COLORES['--color-fondo']).toBe('#F4F7F7');
+    expect(COLORES['--color-texto']).toBe('#203843');
+    expect(COLORES['--color-enlace']).toBe('#0E7774');
   });
 
-  it('el verde azulado de la guia no se usa como color de texto', () => {
-    expect(css).not.toMatch(/color:\s*var\(--color-verde\)/);
+  it('carga las familias elegidas desde recursos propios sin importar estilos remotos', () => {
+    const adaptacion = readFileSync(resolve(__dirname, '../src/diseno/adaptacion-publica.css'), 'utf8');
+    const referencia = readFileSync(resolve(__dirname, '../src/diseno/referencia-publica.css'), 'utf8');
+    expect(adaptacion).toContain("font-family: 'DM Sans'");
+    expect(adaptacion).toContain('font-family: Manrope');
+    expect(adaptacion).toContain("url('/fuentes/DM-Sans.ttf')");
+    expect(adaptacion).toContain("url('/fuentes/Manrope.ttf')");
+    expect(`${css}\n${adaptacion}\n${referencia}`).not.toMatch(/@import\s+url\(['"]?https?:/);
   });
 
   it('estilos.css declara exactamente los mismos valores que colores.ts', () => {
@@ -31,9 +36,36 @@ describe('tokens y contraste (guia de UI, WCAG AA)', () => {
     }
   });
 
+  // Valores literales del marco institucional del origen (referencia-institucional.css), con sus adaptaciones.
+  it.each([
+    ['destino del lateral', '#C2D6D8', '#133941', 4.5],
+    ['«Aún no disponible» en el lateral', '#A9CBCC', '#133941', 4.5],
+    ['destino activo', '#FFFFFF', '#265D59', 4.5],
+    ['«Aún no disponible» en destino activo', '#DCEBEC', '#265D59', 4.5],
+    ['destino al pasar el cursor', '#FFFFFF', '#28645D', 4.5],
+    ['subtitulo de marca', '#9FC5C5', '#133941', 4.5],
+    ['etiqueta de plataforma', '#86A6A8', '#133941', 4.5],
+    ['lema del pie lateral', '#91B4B6', '#133941', 4.5],
+    ['boton de avisos', '#20565A', '#F7FBFA', 4.5],
+    ['inicial del avatar', '#136E63', '#E5F5EE', 4.5],
+    ['antetitulo', COLORES['--color-accion'], COLORES['--color-fondo'], 4.5],
+    ['cerrar sesion', COLORES['--color-error-texto'], '#FFFFFF', 4.5],
+    ['anillo de foco en el lateral', '#7AD8AB', '#133941', 3],
+  ] as const)('marco institucional: %s cumple el contraste minimo', (_n, texto, fondo, minimo) => {
+    expect(contraste(texto, fondo)).toBeGreaterThanOrEqual(minimo);
+  });
+
+  it('el marco institucional no importa estilos remotos y mantiene objetivos de 48 px', () => {
+    const institucional = readFileSync(resolve(__dirname, '../src/diseno/referencia-institucional.css'), 'utf8');
+    expect(institucional).not.toMatch(/@import|https?:/);
+    for (const clase of ['nav-item', 'notification-button', 'account-trigger']) {
+      expect(institucional).toMatch(new RegExp(`\\.${clase}\\s*{[^}]*min-height:\\s*var\\(--altura-minima\\)`));
+    }
+  });
+
   it('el calculo de contraste coincide con valores de referencia', () => {
     expect(contraste('#000000', '#FFFFFF')).toBeCloseTo(21, 1);
-    expect(contraste('#007F78', '#F5F7FA')).toBeCloseTo(4.54, 1); // dato de la guia de UI
+    expect(contraste('#007F78', '#F5F7FA')).toBeCloseTo(4.54, 1); // vector histórico del cálculo, no paleta vigente
   });
 
   it('los controles tienen altura minima de 48 px y el texto base es de 16 px', () => {

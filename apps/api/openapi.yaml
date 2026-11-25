@@ -398,8 +398,9 @@ paths:
       operationId: obtenerPanelAdministrador
       summary: Panel minimo del administrador
       description: |
-        Solo administradores activos. Devuelve la identidad y las secciones del panel segun la guia de UI,
-        todas `disponible: false` mientras no existan. Sin datos operativos.
+        Solo administradores activos. Devuelve la identidad y las secciones del panel segun la guia de UI
+        (Inicio, Instituciones y sedes, Operadores, Coberturas, Categorias, Reglas, Contenido y contactos,
+        Historial), todas `disponible: false` mientras no existan. Sin datos operativos ni metricas.
       security:
         - cookieAuth: []
       responses:
@@ -420,8 +421,8 @@ paths:
       operationId: obtenerPanelOperador
       summary: Panel minimo del operador
       description: |
-        Solo operadores activos. Devuelve la identidad y las secciones del panel (Reportes, Mapa, Indicadores),
-        todas `disponible: false` mientras no existan. Sin datos operativos.
+        Solo operadores activos. Devuelve la identidad y las secciones del panel (Inicio, Incidentes, Mapa,
+        Indicadores, Historial), todas `disponible: false` mientras no existan. Sin datos operativos ni metricas.
       security:
         - cookieAuth: []
       responses:
