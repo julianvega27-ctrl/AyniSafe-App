@@ -73,6 +73,10 @@ void main() {
       const clave = '  contraseña integración con espacios \u{1F600}  '; // espacios en extremos y Unicode no BMP
 
       await arrancar(tester);
+      // Sin sesión se abre Inicio público; la cuenta se abre desde la cabecera.
+      expect(find.byTooltip('Iniciar sesión o crear cuenta'), findsOneWidget);
+      await tester.tap(find.byTooltip('Iniciar sesión o crear cuenta'));
+      await tester.pumpAndSettle();
       expect(find.text('Inicia sesión'), findsWidgets);
 
       // 1. Registro desde la UI.
@@ -129,7 +133,6 @@ void main() {
       await esperar(tester, find.text('Reportar un incidente'));
       await tester.pumpAndSettle();
       expect(find.text('Hola, Rosa Integración'), findsOneWidget);
-      expect(find.textContaining(correo.toLowerCase()), findsOneWidget);
 
       // 5. En el almacén seguro solo hay token y vencimiento; la contraseña nunca.
       final guardado = await almacen.readAll();
@@ -153,9 +156,11 @@ void main() {
       expect((await almacen.readAll())['ayni.sesion.token'], token);
 
       // 7. Cierre de sesión: revoca, limpia el almacén y vuelve al acceso público.
-      await tester.tap(find.byTooltip('Perfil'));
+      await tester.tap(find.byTooltip('Abrir perfil'));
       await tester.pumpAndSettle();
-      final cerrarSesion = find.widgetWithText(FilledButton, 'Cerrar sesión');
+      // El perfil propio muestra el correo normalizado (dato del servidor, solo lectura).
+      await esperar(tester, find.text(correo.toLowerCase()));
+      final cerrarSesion = find.text('Cerrar sesión');
       await tester.ensureVisible(cerrarSesion);
       await tester.tap(cerrarSesion);
       await esperar(tester, find.text('Cerraste sesión.'));

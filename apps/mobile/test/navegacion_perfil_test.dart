@@ -6,6 +6,7 @@ import 'package:ayni_safe/presentacion/pantallas/acceso_pantalla.dart';
 import 'package:ayni_safe/presentacion/pantallas/inicio_pantalla.dart';
 import 'package:ayni_safe/presentacion/tema.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'dobles.dart';
@@ -47,7 +48,7 @@ Future<Montaje> montar(
 }
 
 Future<void> abrirPerfil(WidgetTester tester) async {
-  await tester.tap(find.byTooltip('Perfil'));
+  await tester.tap(find.byTooltip('Abrir perfil'));
   await tester.pumpAndSettle();
 }
 
@@ -60,26 +61,34 @@ Future<void> tocar(WidgetTester tester, Finder f) async {
 
 Finder get botonReportar => find.widgetWithText(FilledButton, 'Reportar un incidente');
 NavigationBar barra(WidgetTester t) => t.widget<NavigationBar>(find.byType(NavigationBar));
+Finder enBarra(String destino) => find.descendant(of: find.byType(NavigationBar), matching: find.text(destino));
+
+/// Abre un destino desde el Drawer.
+Future<void> desdeMenu(WidgetTester tester, String titulo) async {
+  await tester.tap(find.byTooltip('Open navigation menu'));
+  await tester.pumpAndSettle();
+  await tocar(tester, find.widgetWithText(ListTile, titulo));
+}
 
 void main() {
   group('navegación principal (6.1)', () {
     testWidgets('tras iniciar sesión: Inicio con cuatro destinos y el perfil en la cabecera', (tester) async {
       await montar(tester);
       expect(find.byType(InicioPantalla), findsOneWidget);
-      for (final destino in ['Inicio', 'Mapa', 'Mis reportes', 'Alertas']) {
-        expect(find.descendant(of: find.byType(NavigationBar), matching: find.text(destino)), findsOneWidget);
+      for (final destino in ['Inicio', 'Reportar', 'Mapa', 'Contactos']) {
+        expect(enBarra(destino), findsOneWidget);
       }
       expect(barra(tester).selectedIndex, 0);
-      expect(find.byTooltip('Perfil'), findsOneWidget);
-      expect(tester.getSize(find.byTooltip('Perfil')).shortestSide, greaterThanOrEqualTo(alturaMinimaControl));
+      expect(find.byTooltip('Abrir perfil'), findsOneWidget);
+      expect(tester.getSize(find.byTooltip('Abrir perfil')).shortestSide, greaterThanOrEqualTo(alturaMinimaControl));
       expect(tester.getSize(find.byType(NavigationBar)).height, greaterThanOrEqualTo(alturaMinimaControl));
     });
 
     testWidgets('el destino activo se reconoce (índice y estado seleccionado) y cada pestaña conserva su estado', (tester) async {
       await montar(tester);
-      await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Mapa')));
+      await tester.tap(enBarra('Mapa'));
       await tester.pumpAndSettle();
-      expect(barra(tester).selectedIndex, 1);
+      expect(barra(tester).selectedIndex, 2);
       expect(find.text('Aún no disponible'), findsWidgets);
       final inicio = tester.element(find.byType(InicioPantalla, skipOffstage: false));
       await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Inicio')));
@@ -99,11 +108,63 @@ void main() {
       expect(find.byType(NavigationBar), findsOneWidget);
     });
 
-    testWidgets('sin sesión verificada no se muestra el shell', (tester) async {
+    testWidgets('sin sesión verificada no se muestra el shell autenticado: Inicio público', (tester) async {
+      final m = await montar(tester, conSesion: false);
+      expect(find.byTooltip('Abrir perfil'), findsNothing);
+      expect(find.byTooltip('Iniciar sesión o crear cuenta'), findsOneWidget);
+      expect(find.text('Sin cuenta'), findsOneWidget);
+      for (final destino in ['Inicio', 'Reportar', 'Mapa', 'Contactos']) {
+        expect(enBarra(destino), findsOneWidget);
+      }
+      expect(find.text('Mis últimos reportes'), findsNothing);
+      // Sin sesión no se consulta perfil ni historial privado.
+      expect(m.api.solicitudes.where((s) => s.ruta.contains('/perfil')), isEmpty);
+    });
+
+    testWidgets('navegación pública: el Drawer ofrece destinos públicos e ingreso, sin Mis reportes', (tester) async {
       await montar(tester, conSesion: false);
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
+      for (final t in ['Inicio', 'Reportar', 'Mapa', 'Contactos', 'Alertas', 'Conoce AyniSafe', 'Iniciar sesión o crear cuenta']) {
+        expect(find.widgetWithText(ListTile, t), findsOneWidget, reason: t);
+      }
+      expect(find.widgetWithText(ListTile, 'Mis reportes'), findsNothing);
+      expect(find.widgetWithText(ListTile, 'Perfil'), findsNothing);
+      // El retroceso cierra primero el Drawer y conserva el destino.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(Drawer), findsNothing);
+      expect(find.byType(InicioPantalla), findsOneWidget);
+    });
+
+    testWidgets('con sesión el Drawer agrega Mis reportes y Perfil; Alertas y Mis reportes están pendientes', (tester) async {
+      final m = await montar(tester);
+      final antes = m.api.solicitudes.length;
+      await desdeMenu(tester, 'Mis reportes');
+      expect(find.text('Aún no disponible'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing); // destino del Drawer, como el origen
+      await desdeMenu(tester, 'Alertas');
+      expect(find.text('Aún no disponible'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(InicioPantalla), findsOneWidget);
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Perfil'), findsOneWidget);
+      expect(m.api.solicitudes.length, antes, reason: 'los destinos pendientes no consultan servicios');
+    });
+
+    testWidgets('acceso desde la navegación pública: cuenta y registro vigentes, sin sesión ficticia', (tester) async {
+      final m = await montar(tester, conSesion: false);
+      await tocar(tester, find.byTooltip('Iniciar sesión o crear cuenta'));
       expect(find.byType(AccesoPantalla), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
-      expect(find.byTooltip('Perfil'), findsNothing);
+      expect(find.widgetWithText(TextButton, 'Crear cuenta'), findsOneWidget);
+      expect(m.sesion.estado, isA<SesionAnonima>());
+      // Salir de la cuenta descarta el formulario (la contraseña no queda en memoria).
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(AccesoPantalla), findsNothing);
+      expect(find.byType(InicioPantalla), findsOneWidget);
     });
 
     testWidgets('sesión que vence o se revoca: sale del shell y no deja historial', (tester) async {
@@ -111,8 +172,9 @@ void main() {
       await abrirPerfil(tester);
       await m.sesion.alSesionInvalida();
       await tester.pumpAndSettle();
+      // Aviso de sesión vencida en el acceso de la navegación pública (como el origen).
       expect(find.byType(AccesoPantalla), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byTooltip('Abrir perfil'), findsNothing);
       expect(find.text('Hola, Rosa Quispe'), findsNothing);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -121,23 +183,24 @@ void main() {
   });
 
   group('Inicio y destinos pendientes (6.2)', () {
-    testWidgets('«Reportar un incidente» está deshabilitado con «Disponible próximamente» y no hace nada', (tester) async {
+    testWidgets('«Reportar un incidente» lleva a Reportar, que explica que está pendiente sin enviar nada', (tester) async {
       final m = await montar(tester);
       expect(find.text('Hola, Rosa Quispe'), findsOneWidget);
-      expect(tester.widget<FilledButton>(botonReportar).onPressed, isNull);
       expect(find.text('Disponible próximamente'), findsOneWidget);
       final antes = m.api.solicitudes.length;
-      await tester.tap(botonReportar, warnIfMissed: false);
-      await tester.pumpAndSettle();
+      await tocar(tester, botonReportar);
+      expect(barra(tester).selectedIndex, 1);
+      expect(find.text('Aún no disponible'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing); // sin formulario operativo
       expect(m.api.solicitudes.length, antes);
-      expect(find.byType(InicioPantalla), findsOneWidget);
-      expect(find.text('Disponible próximamente'), findsOneWidget);
     });
 
     testWidgets('los últimos reportes y el contenido están declarados pendientes, sin datos de ejemplo', (tester) async {
       await montar(tester);
       expect(find.textContaining('tus reportes aparecerán aquí cuando puedas enviarlos'), findsOneWidget);
       expect(find.text('Mis últimos reportes'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'\d{3,}')), findsNothing);
+      await tocar(tester, enBarra('Contactos'));
       expect(find.textContaining('aún no están disponibles'), findsOneWidget);
       expect(find.textContaining('no despacha emergencias'), findsOneWidget);
       expect(find.textContaining(RegExp(r'\d{3,}')), findsNothing);
@@ -146,11 +209,14 @@ void main() {
     testWidgets('Mapa, Mis reportes y Alertas dicen que aún no están disponibles, sin permisos ni datos', (tester) async {
       final m = await montar(tester);
       final antes = m.api.solicitudes.length;
-      for (final destino in ['Mapa', 'Mis reportes', 'Alertas']) {
-        await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text(destino)));
+      for (final destino in ['Reportar', 'Mapa']) {
+        await tester.tap(enBarra(destino));
         await tester.pumpAndSettle();
         expect(find.text('Aún no disponible'), findsOneWidget, reason: destino);
-        expect(find.byIcon(Icons.map_outlined), destino == 'Mapa' ? findsWidgets : findsWidgets);
+      }
+      for (final destino in ['Mis reportes', 'Alertas']) {
+        await desdeMenu(tester, destino);
+        expect(find.text('Aún no disponible'), findsOneWidget, reason: destino);
       }
       expect(find.textContaining('ubicación'), findsNothing);
       expect(find.textContaining('notificaciones'), findsNothing);
@@ -167,6 +233,7 @@ void main() {
           ],
         ),
       );
+      await tocar(tester, enBarra('Contactos'));
       expect(find.text('Institución de prueba'), findsOneWidget);
       expect(find.textContaining('aún no están disponibles'), findsNothing);
       await tocar(tester, find.widgetWithText(OutlinedButton, 'Llamar'));
@@ -197,7 +264,7 @@ void main() {
       for (final enlace in ['Privacidad', 'Acerca de AyniSafe', 'Desarrolladores']) {
         expect(find.widgetWithText(ListTile, enlace), findsOneWidget);
       }
-      expect(find.widgetWithText(FilledButton, 'Cerrar sesión'), findsOneWidget);
+      expect(find.text('Cerrar sesión'), findsOneWidget);
     });
 
     testWidgets('sin teléfono: «No registrado» y autorización «No autorizado»', (tester) async {
@@ -408,13 +475,15 @@ void main() {
       final m = await montar(tester, perfil: perfilJson(telefono: '987654321'));
       await abrirPerfil(tester);
       expect(find.text('987654321'), findsOneWidget);
-      await tocar(tester, find.widgetWithText(FilledButton, 'Cerrar sesión'));
-      expect(find.byType(AccesoPantalla), findsOneWidget);
+      await tocar(tester, find.text('Cerrar sesión'));
+      // Vuelve a Inicio público con el aviso de cierre y sin pila privada.
+      expect(find.byTooltip('Iniciar sesión o crear cuenta'), findsOneWidget);
+      expect(find.text('Cerraste sesión.'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.text('987654321'), findsNothing);
       expect(find.text('rosa@ejemplo.com'), findsNothing);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.text('Hola, Rosa Quispe'), findsNothing);
       expect(m.almacen.guardada, isNull);
       final navegador = tester.state<NavigatorState>(find.byType(Navigator));
       expect(navegador.canPop(), isFalse);
@@ -423,7 +492,7 @@ void main() {
     testWidgets('otra persona que inicia sesión después no ve el perfil anterior', (tester) async {
       final m = await montar(tester, perfil: perfilJson(nombre: 'Persona A', telefono: '987654321'));
       await abrirPerfil(tester);
-      await tocar(tester, find.widgetWithText(FilledButton, 'Cerrar sesión'));
+      await tocar(tester, find.text('Cerrar sesión'));
       m.servidor.perfil = perfilJson(nombre: 'Persona B');
       m.almacen.guardada = SesionGuardada(token: tokenSesionPrueba, expiresAt: ahoraFijo.add(const Duration(hours: 5)));
       await m.sesion.restaurar();
@@ -436,6 +505,26 @@ void main() {
   });
 
   group('accesibilidad (6.6)', () {
+    testWidgets('texto al 200 %: el lema y los títulos de Inicio no se recortan', (tester) async {
+      tester.view.physicalSize = const Size(360 * 3, 640 * 3);
+      tester.view.devicePixelRatio = 3;
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        tester.platformDispatcher.clearTextScaleFactorTestValue();
+      });
+      await montar(tester, conSesion: false);
+      for (final texto in ['Cuidarnos es tarea de todos', '¿Necesitas reportar?', 'Disponible próximamente']) {
+        final parrafo = tester.renderObject<RenderParagraph>(find.text(texto));
+        expect(parrafo.didExceedMaxLines, isFalse, reason: texto);
+        // Cabe en su ancho disponible: el recorte del Chip original dejaba texto fuera.
+        expect(parrafo.size.width, lessThanOrEqualTo(360), reason: texto);
+        expect(tester.getRect(find.text(texto)).right, lessThanOrEqualTo(360), reason: texto);
+      }
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('texto al 200 % en un teléfono estrecho: Inicio, destinos, perfil y edición sin desbordes', (tester) async {
       tester.view.physicalSize = const Size(360 * 3, 640 * 3);
       tester.view.devicePixelRatio = 3;
@@ -447,10 +536,13 @@ void main() {
       });
       await montar(tester, perfil: perfilJson(telefono: '987654321', compartir: true));
       expect(tester.takeException(), isNull);
-      expect(find.text('Mis reportes'), findsOneWidget);
-      for (final destino in ['Mapa', 'Mis reportes', 'Alertas']) {
-        await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text(destino)));
+      for (final destino in ['Reportar', 'Mapa', 'Contactos']) {
+        await tester.tap(enBarra(destino));
         await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: destino);
+      }
+      for (final destino in ['Alertas', 'Conoce AyniSafe', 'Mis reportes']) {
+        await desdeMenu(tester, destino);
         expect(tester.takeException(), isNull, reason: destino);
       }
       await abrirPerfil(tester);
@@ -470,12 +562,14 @@ void main() {
     testWidgets('semántica: perfil, destinos y estado pendiente tienen etiquetas anunciables', (tester) async {
       final semantica = tester.ensureSemantics();
       await montar(tester);
-      final nodo = tester.getSemantics(find.byTooltip('Perfil')).getSemanticsData();
-      expect('${nodo.label} ${nodo.tooltip}', contains('Perfil'));
+      final nodo = tester
+          .getSemantics(find.descendant(of: find.byTooltip('Abrir perfil'), matching: find.byWidgetPredicate((w) => w is OutlinedButton)))
+          .getSemanticsData();
+      expect('${nodo.label} ${nodo.tooltip}', contains('perfil'));
       expect(nodo.flagsCollection.isButton, isTrue);
       expect(find.bySemanticsLabel(RegExp('Reportar un incidente')), findsWidgets);
       expect(find.bySemanticsLabel(RegExp('Disponible próximamente')), findsWidgets);
-      await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Alertas')));
+      await tester.tap(enBarra('Mapa'));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel(RegExp('Aún no disponible')), findsWidgets);
       semantica.dispose();

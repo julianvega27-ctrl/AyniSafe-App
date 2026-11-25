@@ -1,28 +1,32 @@
 /**
- * Tokens de color de la guia de UI (docs/05-diseno-ui/guia-ui.md): azul profundo, verde azulado, fondos
- * claros. `estilos.css` declara los mismos valores como variables CSS; una prueba comprueba que no
+ * Tokens web de la referencia elegida en DESIGN.md. `estilos.css` declara los mismos valores;
+ * los roles de texto/borde mantienen el contraste exigido por AyniSafe. Una prueba comprueba que no
  * difieran y que cada par de texto cumpla WCAG AA (4,5:1; 3:1 para bordes y elementos graficos).
  */
 export const COLORES = {
-  '--color-azul': '#17324D',
-  '--color-verde': '#007F78',
-  '--color-enlace': '#006B65',
-  '--color-azul-hover': '#24496C',
-  '--color-fondo': '#F5F7FA',
-  '--color-banda': '#E9EFF1',
-  '--color-divisor': '#C5D2D6',
+  '--color-azul': '#203843',
+  '--color-verde': '#177571',
+  '--color-enlace': '#0E7774',
+  '--color-azul-hover': '#0B6058',
+  '--color-fondo': '#F4F7F7',
+  '--color-banda': '#E8F2E7',
+  '--color-divisor': '#E3EBEC',
   '--color-superficie': '#FFFFFF',
-  '--color-texto': '#172B3A',
-  '--color-texto-suave': '#46586A',
-  '--color-borde': '#5B6B78',
-  '--color-info-fondo': '#E7F1F8',
-  '--color-info-texto': '#17324D',
-  '--color-exito-fondo': '#E6F4EC',
-  '--color-exito-texto': '#0B5B35',
-  '--color-aviso-fondo': '#FFF4DB',
-  '--color-aviso-texto': '#5C3B00',
-  '--color-error-fondo': '#FDECEC',
-  '--color-error-texto': '#8A1C1C',
+  '--color-texto': '#203843',
+  '--color-texto-suave': '#537179',
+  '--color-borde': '#668087',
+  '--color-info-fondo': '#EAF4F4',
+  '--color-info-texto': '#286769',
+  '--color-exito-fondo': '#E9F6E9',
+  '--color-exito-texto': '#337944',
+  '--color-aviso-fondo': '#FFF4E3',
+  '--color-aviso-texto': '#92400E',
+  '--color-error-fondo': '#FFF0ED',
+  '--color-error-texto': '#9E453F',
+  '--color-accion': '#137D72',
+  '--color-portada-fondo': '#FAFBF7',
+  '--color-portada-texto': '#183E41',
+  '--color-portada-suave': '#58716C',
 } as const;
 
 export interface ParDeColor {
@@ -35,6 +39,9 @@ export interface ParDeColor {
 
 /** Combinaciones realmente usadas en la web. */
 export const PARES_DE_COLOR: readonly ParDeColor[] = [
+  { nombre: 'accion principal de referencia', texto: '--color-superficie', fondo: '--color-accion', minimo: 4.5 },
+  { nombre: 'texto de portada', texto: '--color-portada-texto', fondo: '--color-portada-fondo', minimo: 4.5 },
+  { nombre: 'texto secundario de portada', texto: '--color-portada-suave', fondo: '--color-portada-fondo', minimo: 4.5 },
   { nombre: 'texto sobre fondo', texto: '--color-texto', fondo: '--color-fondo', minimo: 4.5 },
   { nombre: 'texto sobre superficie', texto: '--color-texto', fondo: '--color-superficie', minimo: 4.5 },
   { nombre: 'texto suave sobre fondo', texto: '--color-texto-suave', fondo: '--color-fondo', minimo: 4.5 },

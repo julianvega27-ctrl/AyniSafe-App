@@ -8,7 +8,6 @@ import 'datos/contenido_repositorio.dart';
 import 'datos/perfil_repositorio.dart';
 import 'datos/enlaces_cuenta.dart';
 import 'presentacion/flujo_recuperacion.dart';
-import 'presentacion/pantallas/acceso_pantalla.dart';
 import 'presentacion/pantallas/estados_sesion.dart';
 import 'presentacion/navegacion/shell_ciudadano.dart';
 import 'presentacion/servicios.dart';
@@ -102,7 +101,9 @@ class _AyniSafeAppState extends State<AyniSafeApp> {
     if (widget.sesion.estado is SesionRestaurando) return;
     final navegador = _navegador.currentState;
     if (navegador == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _abrirEnlacePendiente());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _abrirEnlacePendiente(),
+      );
       return;
     }
     _tokenPendiente = null;
@@ -130,16 +131,21 @@ class _AyniSafeAppState extends State<AyniSafeApp> {
 
   Widget _pantalla(EstadoSesion estado) => switch (estado) {
     SesionRestaurando() => const VerificandoSesionPantalla(),
-    SesionAnonima(:final aviso) => AccesoPantalla(
-      key: const ValueKey('acceso'),
-      repositorio: widget.repositorio,
-      sesion: widget.sesion,
-      avisoDeSesion: aviso,
-      ahora: widget.ahora,
-    ),
-    SesionAutenticada() => ShellCiudadano(
+    // Navegación pública sin cuenta: una instancia por estado anónimo (cada aviso la reinicia).
+    SesionAnonima() => ShellCiudadano(
+      key: ObjectKey(estado),
       sesion: widget.sesion,
       estado: estado,
+      repositorio: widget.repositorio,
+      ahora: widget.ahora,
+    ),
+    // Variante autenticada: una instancia por persona; cambiar de cuenta descarta el estado privado.
+    SesionAutenticada(:final usuario) => ShellCiudadano(
+      key: ValueKey('cuenta-${usuario.id}'),
+      sesion: widget.sesion,
+      estado: estado,
+      repositorio: widget.repositorio,
+      ahora: widget.ahora,
     ),
     SesionNoVerificable() => SesionSinVerificarPantalla(sesion: widget.sesion),
     SesionLimpiezaPendiente() => LimpiezaPendientePantalla(

@@ -55,17 +55,21 @@ export const contenido = (extra: Partial<ContenidoPublico> = {}): ContenidoPubli
 });
 
 export const SECCIONES_ADMIN = [
+  { id: 'inicio', titulo: 'Inicio', disponible: false },
   { id: 'instituciones-sedes', titulo: 'Instituciones y sedes', disponible: false },
   { id: 'operadores', titulo: 'Operadores', disponible: false },
   { id: 'coberturas', titulo: 'Coberturas', disponible: false },
   { id: 'categorias', titulo: 'Categorías', disponible: false },
   { id: 'reglas', titulo: 'Reglas', disponible: false },
   { id: 'contenido-contactos', titulo: 'Contenido y contactos', disponible: false },
+  { id: 'historial', titulo: 'Historial', disponible: false },
 ];
 export const SECCIONES_OPERADOR = [
-  { id: 'reportes', titulo: 'Reportes', disponible: false },
+  { id: 'inicio', titulo: 'Inicio', disponible: false },
+  { id: 'incidentes', titulo: 'Incidentes', disponible: false },
   { id: 'mapa', titulo: 'Mapa', disponible: false },
   { id: 'indicadores', titulo: 'Indicadores', disponible: false },
+  { id: 'historial', titulo: 'Historial', disponible: false },
 ];
 
 /** API de un servidor ficticio con estado de sesion: simula la cookie sin que la web la toque. */

@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:ayni_safe/datos/almacenamiento_sesion.dart';
 import 'package:ayni_safe/datos/enlaces_cuenta.dart';
 import 'package:ayni_safe/datos/resultados_recuperacion.dart';
-import 'package:ayni_safe/presentacion/pantallas/acceso_pantalla.dart';
 import 'package:ayni_safe/presentacion/pantallas/nueva_contrasena_pantalla.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -77,7 +76,8 @@ void main() {
 
     testWidgets('con la app abierta: el enlace lleva a «nueva contraseña» con el token ya cargado y sin mostrarlo', (tester) async {
       final m = await montar(tester);
-      expect(find.byType(AccesoPantalla), findsOneWidget);
+      // El enlace entrante se abre desde la navegación pública (Inicio sin cuenta).
+      expect(find.byTooltip('Iniciar sesión o crear cuenta'), findsOneWidget);
       m.fuente.controlador.add(_enlace('/cuenta/restablecer', _token));
       await tester.pumpAndSettle();
       expect(find.byType(NuevaContrasenaPantalla), findsOneWidget);
@@ -148,7 +148,8 @@ void main() {
       m.fuente.controlador.add(Uri.parse('https://api.ayinisafe.test/cuenta/restablecer?t=$_token'));
       m.fuente.controlador.add(Uri.parse('https://api.ayinisafe.test/otra'));
       await tester.pumpAndSettle();
-      expect(find.byType(AccesoPantalla), findsOneWidget);
+      expect(find.byTooltip('Iniciar sesión o crear cuenta'), findsOneWidget);
+      expect(find.byType(NuevaContrasenaPantalla), findsNothing);
       expect(m.api.solicitudes, isEmpty);
     });
   });

@@ -52,20 +52,6 @@ function EstadoActual() {
   );
 }
 
-function Seccion({ id, titulo, banda = false, compacto = false, children }: { id: string; titulo: string; banda?: boolean; compacto?: boolean; children: React.ReactNode }) {
-  const clase = ['bloque', banda ? 'bloque--banda' : '', compacto ? 'bloque--compacto' : ''].filter(Boolean).join(' ');
-  return (
-    <section className={clase} aria-labelledby={id}>
-      <div className="contenedor bloque__interior">
-        <h2 id={id} className="bloque__titulo">
-          {titulo}
-        </h2>
-        <div className="bloque__cuerpo">{children}</div>
-      </div>
-    </section>
-  );
-}
-
 /**
  * Portada publica (RF38): accesible sin sesion y separada del panel. Todo su texto de finalidad,
  * funcionamiento, alcance del piloto y desarrolladores sale de `GET /publico/contenido`.
@@ -105,22 +91,29 @@ export function Portada() {
   );
 
   return (
-    <Estructura completa>
-      <section className="heroe" aria-labelledby="titulo-portada" data-enter>
-        <div className="contenedor heroe__interior">
-          <div className="heroe__texto">
-            <h1 id="titulo-portada" className="heroe__nombre">
-              AyniSafe
-            </h1>
-            <p className="heroe__lema">Cuidarnos es tarea de todos</p>
-            <div className="heroe__acciones">{acciones}</div>
+    <Estructura completa acciones={acciones}>
+      <section className="welcome-hero" aria-labelledby="titulo-portada">
+        <div className="welcome-copy">
+          <span className="welcome-tag">AYNISAFE · AYACUCHO</span>
+          <h1 id="titulo-portada">AyniSafe<br /><em>Cuidarnos es tarea de todos</em></h1>
+          <h2 id="finalidad" className="solo-lectores">Finalidad</h2>
+          {carga.estado === 'listo' ? (
+            carga.contenido.app.estado === 'aprobado' && carga.contenido.app.finalidad
+              ? <p>{carga.contenido.app.finalidad}</p> : <NoDisponible />
+          ) : null}
+          <div className="welcome-actions">
+            <BotonEnlace to={autenticado ? '/panel' : '/acceso'}>{autenticado ? 'Abrir mi panel' : 'Entrar al panel institucional'} <span aria-hidden="true">→</span></BotonEnlace>
+            <a className="boton boton--secundario" href="#funcionamiento">Conocer la plataforma</a>
           </div>
-          <EstadoActual />
         </div>
+        <figure className="welcome-art">
+          <img src="/community-hero.png" alt="Ilustración de una ciudadana y equipos médicos, de bomberos y municipales en una plaza de Ayacucho" fetchPriority="high" width="1536" height="1024" />
+          <figcaption><Icono nombre="info" /> Cuidarnos es tarea de todos</figcaption>
+        </figure>
       </section>
 
       {carga.estado === 'cargando' ? (
-        <div className="contenedor estado-carga">
+        <div className="estado-carga">
           <p role="status" className="pendiente">
             <Icono nombre="reloj" />
             <span>Cargando información…</span>
@@ -130,7 +123,7 @@ export function Portada() {
       ) : null}
 
       {carga.estado === 'fallo' ? (
-        <div className="contenedor estado-carga">
+        <div className="estado-carga">
           {carga.causa === 'respuesta' ? (
             <FalloDeConexion tipo="servicio" onReintentar={cargar} />
           ) : (
@@ -141,30 +134,27 @@ export function Portada() {
 
       {carga.estado === 'listo' ? (
         <>
-          <Seccion id="finalidad" titulo="Finalidad" banda>
-            {carga.contenido.app.estado === 'aprobado' && carga.contenido.app.finalidad ? (
-              <p>{carga.contenido.app.finalidad}</p>
-            ) : (
-              <NoDisponible />
-            )}
-          </Seccion>
-          <Seccion id="funcionamiento" titulo="Funcionamiento">
-            {carga.contenido.app.estado === 'aprobado' && carga.contenido.app.funcionamiento ? (
-              <p>{carga.contenido.app.funcionamiento}</p>
-            ) : (
-              <NoDisponible />
-            )}
-          </Seccion>
-          <Seccion id="piloto" titulo="Alcance del piloto" banda compacto>
-            {carga.contenido.piloto.estado === 'aprobado' && carga.contenido.piloto.texto ? (
-              <p>{carga.contenido.piloto.texto}</p>
-            ) : (
-              <NoDisponible />
-            )}
-          </Seccion>
-          <Seccion id="desarrolladores" titulo="Desarrolladores" compacto>
+          <section className="welcome-channels" aria-labelledby="titulo-plataforma">
+            <h2 id="titulo-plataforma">Información de AyniSafe</h2>
+            <div className="channel-cards">
+              <article aria-labelledby="funcionamiento">
+                <Icono nombre="info" />
+                <h3 id="funcionamiento">Funcionamiento</h3>
+                {carga.contenido.app.estado === 'aprobado' && carga.contenido.app.funcionamiento
+                  ? <p>{carga.contenido.app.funcionamiento}</p> : <NoDisponible />}
+              </article>
+              <article aria-labelledby="piloto">
+                <Icono nombre="reloj" />
+                <h3 id="piloto">Alcance del piloto</h3>
+                {carga.contenido.piloto.estado === 'aprobado' && carga.contenido.piloto.texto
+                  ? <p>{carga.contenido.piloto.texto}</p> : <NoDisponible />}
+              </article>
+            </div>
+          </section>
+          <section className="welcome-how" aria-labelledby="desarrolladores">
+            <h2 id="desarrolladores">Desarrolladores</h2>
             {carga.contenido.desarrolladores.estado === 'aprobado' && (carga.contenido.desarrolladores.personas?.length ?? 0) > 0 ? (
-              <ul className="lista-simple">
+              <ul className="welcome-steps lista-simple">
                 {carga.contenido.desarrolladores.personas?.map((p) => (
                   <li key={`${p.nombre}-${p.rol}`}>
                     {p.nombre} — {p.rol}
@@ -174,9 +164,14 @@ export function Portada() {
             ) : (
               <NoDisponible />
             )}
-          </Seccion>
+          </section>
         </>
       ) : null}
+      <EstadoActual />
+      <section className="welcome-access" aria-labelledby="titulo-institucional">
+        <div><h2 id="titulo-institucional">Acceso institucional</h2><p>Para administradores y operadores. Las cuentas se crean por invitación.</p></div>
+        <BotonEnlace to={autenticado ? '/panel' : '/acceso'}>{autenticado ? 'Continuar a mi panel' : 'Iniciar sesión'} <span aria-hidden="true">→</span></BotonEnlace>
+      </section>
     </Estructura>
   );
 }

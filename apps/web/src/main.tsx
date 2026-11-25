@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router';
 import { App } from './App';
 import { ProveedorSesion } from './sesion/SesionContexto';
 import './estilos.css';
+import './diseno/referencia-publica.css';
+import './diseno/adaptacion-publica.css';
+import './diseno/referencia-institucional.css';
 
 const raiz = document.getElementById('raiz');
 if (!raiz) throw new Error('Falta el elemento raiz');

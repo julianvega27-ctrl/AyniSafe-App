@@ -122,8 +122,10 @@ export function Activar() {
   );
 
   return (
-    <Estructura acciones={volver}>
-      <section className="tarjeta tarjeta--formulario" aria-labelledby="titulo-activar">
+    <Estructura>
+      <section className="tarjeta tarjeta--formulario login-card" aria-labelledby="titulo-activar">
+        {volver}
+        <p className="login-identity">AyniSafe</p>
         <h1 id="titulo-activar">Activa tu cuenta</h1>
 
         {fase.fase === 'consultando' ? <p role="status">Comprobando tu enlace…</p> : null}

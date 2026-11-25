@@ -6,7 +6,7 @@
 
 web
 
-La plataforma registrada es `web` porque el lenguaje visual es **propio y único**: el panel y la portada son web (React + TypeScript) y la app ciudadana es Flutter (Android primero, iPhone después) con la misma identidad, tokens y componentes (confirmado por la persona responsable). La app respeta comportamientos de plataforma (retroceso, permisos, objetivos táctiles de al menos 48) sin copiar el estilo nativo de cada sistema.
+La plataforma registrada es `web` para las herramientas de diseño. El panel y la portada usan React + TypeScript; la app ciudadana usa Flutter (Android primero, iPhone después). La dirección elegida reproduce cada superficie de `Proyecto_incidencias_400par`: web con DM Sans/Manrope y móvil con su tema Material propio. Comparten identidad de producto y roles de interacción, sin imponer una tercera estética ni componentes de una tecnología a la otra. DESIGN.md es la autoridad visual.
 
 ## Users
 
@@ -18,7 +18,7 @@ La plataforma registrada es `web` porque el lenguaje visual es **propio y único
 
 Solo existen tres roles: ciudadano, administrador y operador.
 
-Decisiones de integración del 23 de noviembre de 2026: se permite informar como invitado o con cuenta; invitado no es un cuarto rol y consulta estado y resumen ciudadano mediante código secreto, sin vinculación posterior a cuenta. El administrador sigue siendo global y no obtiene permisos de atención; el operador asume inicialmente el caso y el administrador puede reasignar con motivo. Cada envío crea un incidente y conserva originales; etapas Registrado, En revisión, En atención y Cerrado, con verificación separada y cierre distinguido como Atendido o Descartado. Los duplicados se vinculan a un principal preservando cada envío y su seguimiento. La categoría propone prioridad inicial que el operador confirma o corrige, manteniendo FIFO; falta elegir la tabla por categoría. Son cambios acordados, todavía no implementados; reglas completas en el documento 11.
+Decisiones de integración del 23 de noviembre de 2026: se permite informar como invitado o con cuenta; invitado no es un cuarto rol y consulta estado y resumen ciudadano mediante código secreto, sin vinculación posterior a cuenta. El administrador sigue siendo global y no obtiene permisos de atención; el operador asume inicialmente el caso y el administrador puede reasignar con motivo. Cada envío crea un incidente y conserva originales; etapas Registrado, En revisión, En atención y Cerrado, con verificación separada y cierre distinguido como Atendido o Descartado. Los duplicados se vinculan a un principal preservando cada envío y su seguimiento. La categoría propone prioridad inicial que el operador confirma o corrige, manteniendo FIFO; la tabla por categoría fue aprobada en el documento 11. Son cambios acordados, todavía no implementados; reglas completas en el documento 11.
 
 ## Product Purpose
 

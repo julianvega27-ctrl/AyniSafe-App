@@ -16,8 +16,12 @@ final class SesionRestaurando extends EstadoSesion {
 
 /// Sin sesión: acceso público (login, registro, información y contactos).
 final class SesionAnonima extends EstadoSesion {
-  const SesionAnonima({this.aviso});
+  const SesionAnonima({this.aviso, this.porCierre = false});
   final Aviso? aviso;
+
+  /// Cierre voluntario desde el perfil: la navegación pública vuelve a Inicio (con el aviso) en vez
+  /// de abrir el acceso.
+  final bool porCierre;
 }
 
 final class SesionAutenticada extends EstadoSesion {
@@ -193,7 +197,7 @@ class SesionControlador extends ChangeNotifier {
       _fijar(SesionLimpiezaPendiente(revocadaEnServidor: revocada));
       return;
     }
-    _fijar(SesionAnonima(aviso: _avisoDeCierre(revocada)));
+    _fijar(SesionAnonima(aviso: _avisoDeCierre(revocada), porCierre: true));
   }
 
   /// Tras definir una contraseña nueva (recuperación o activación) el servidor revoca todas las
@@ -232,7 +236,7 @@ class SesionControlador extends ChangeNotifier {
       _fijar(SesionLimpiezaPendiente(revocadaEnServidor: revocada));
       return;
     }
-    _fijar(SesionAnonima(aviso: _avisoDeCierre(revocada)));
+    _fijar(SesionAnonima(aviso: _avisoDeCierre(revocada), porCierre: true));
   }
 
   Aviso _avisoDeCierre(bool revocada) => revocada

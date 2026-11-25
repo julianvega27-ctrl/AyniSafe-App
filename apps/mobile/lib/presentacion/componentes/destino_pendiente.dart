@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tema.dart';
+import 'tarjeta_mensaje.dart';
 
 /// Destino que aún no se construyó. Lo declara con texto e icono, sin mapas, reportes, avisos ni
 /// cifras de ejemplo, y sin pedir permisos.
@@ -32,52 +33,26 @@ class DestinoPendiente extends StatelessWidget {
                 header: true,
                 child: Text(
                   titulo,
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
               const SizedBox(height: Espaciado.s2),
-              Container(
-                padding: const EdgeInsets.all(Espaciado.s2),
-                decoration: BoxDecoration(
-                  color: Colores.fondoInfo,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colores.info, width: 1.5),
-                ),
+              TarjetaMensaje(
+                icono: icono,
                 child: Semantics(
                   container: true,
                   excludeSemantics: true,
                   label: 'Aún no disponible: $explicacion',
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        icono,
-                        color: Colores.info,
-                        size: MediaQuery.textScalerOf(context).scale(24),
+                      const Text(
+                        'Aún no disponible',
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
-                      const SizedBox(width: Espaciado.s1),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Aún no disponible',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: Colores.info,
-                              ),
-                            ),
-                            const SizedBox(height: Espaciado.s1),
-                            Text(
-                              explicacion,
-                              style: const TextStyle(
-                                color: Colores.info,
-                                height: 1.35,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      const SizedBox(height: Espaciado.s1),
+                      Text(explicacion, style: const TextStyle(height: 1.35)),
                     ],
                   ),
                 ),

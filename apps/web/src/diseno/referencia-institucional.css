@@ -1,0 +1,134 @@
+/* Marco institucional extraído de la referencia (DESIGN.md): style.css del origen en efc1bce8, cascada efectiva
+   de .app-shell, .sidebar, .topbar, cuenta, avisos y .panel, incluidas sus sobrescrituras finales a 900/700/600 px.
+   Medidas en rem (16 px base) para permitir ampliación. Adaptaciones AyniSafe marcadas con «AyniSafe:»:
+   controles ≥48, contraste AA, marca tipográfica y destinos pendientes con texto. */
+
+.app-shell { display: flex; min-height: 100vh; background: var(--color-fondo); }
+.sidebar { width: 248px; background: #133941; color: #dcebec; display: flex; flex-direction: column; padding: 28px 14px 24px; flex-shrink: 0; }
+.sidebar :focus-visible, .sidebar-footer :focus-visible { outline-color: #7ad8ab; }
+.brand { display: flex; gap: 12px; align-items: center; color: #fff; padding: 4px 14px 34px; min-height: var(--altura-minima); }
+.brand:hover { text-decoration: none; }
+/* AyniSafe: el logo del origen es el símbolo Flutter; se conserva su contenedor blanco (sobrescritura final del
+   origen) con la inicial tipográfica en el verde de marca, sin inventar otro símbolo. */
+.brand-symbol { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; overflow: hidden; background: #fff; color: #177571; font: 800 1.375rem/1 Manrope, sans-serif; }
+.brand strong { display: block; font: 800 0.9375rem/1.2 Manrope, sans-serif; }
+.brand small { display: block; font-size: 0.75rem; color: #9fc5c5; margin-top: 5px; }
+.sidebar-label { font-size: 0.625rem; letter-spacing: .18em; color: #86a6a8; font-weight: 700; margin: 10px 16px; }
+.sidebar-list { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px; min-height: var(--altura-minima); padding: 11px 15px;
+  border: 1px solid transparent; border-radius: 9px; color: #c2d6d8; font-size: 0.8125rem; font-weight: 600;
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+.nav-item:hover, .nav-item.active { background: #25525a; color: white; text-decoration: none; }
+.nav-item.active { border-color: #51847d; background: #265d59; color: #fff; box-shadow: inset 3px 0 #7ad8ab; }
+.nav-icon { font-size: 1.25rem; width: 22px; text-align: center; line-height: 1; flex: none; }
+.nav-text { display: grid; gap: 2px; min-width: 0; }
+/* AyniSafe: cada destino sin capacidad dice «Aún no disponible» con texto, no solo con color. */
+.nav-pending { font-size: 0.75rem; font-weight: 500; color: #a9cbcc; }
+.nav-item.active .nav-pending { color: #dcebec; }
+@media (hover: hover) {
+  .nav-item:hover { border-color: #599c8e; background: #28645d; color: #fff; }
+}
+.sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid #315a61; }
+.sidebar-footer small { color: #91b4b6; font-size: 0.75rem; }
+/* AyniSafe: el pie del origen anuncia «Piloto · Datos DEMO»; aquí solo nombre y lema, sin indicador en vivo. */
+.pilot { display: flex; gap: 8px; align-items: center; color: #dcebea; font-size: 0.75rem; font-weight: 700; margin: 0 0 6px; }
+
+.main-area { flex: 1; min-width: 0; }
+.topbar {
+  position: relative; z-index: 1000; min-height: 72px; background: #fff; border-bottom: 1px solid #e4ecee;
+  display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 36px;
+}
+/* AyniSafe: #668087 del origen no alcanza 4,5:1 a este tamaño; se usa el texto suave central. */
+.topbar-title { font-size: 0.8125rem; color: var(--color-texto-suave); }
+.topbar-actions { display: flex; align-items: center; gap: 16px; min-width: 0; margin-left: auto; }
+.main-area main { padding: 34px 38px 60px; max-width: 1540px; margin: auto; min-height: 0; }
+.main-area main:focus { outline: none; }
+
+.page-intro { margin-bottom: 24px; }
+.page-intro h1 { margin: 6px 0 9px; font-size: 2rem; line-height: 1.18; letter-spacing: -.035em; hyphens: auto; }
+/* AyniSafe: eyebrow en #137D72 (el #188477 del origen queda bajo 4,5:1 sobre el fondo). */
+.eyebrow { font-size: 0.625rem; letter-spacing: .16em; text-transform: uppercase; color: var(--color-accion); font-weight: 800; }
+.app-shell .panel { background: #fff; border: 1px solid #e3ebec; border-radius: 14px; box-shadow: 0 5px 22px rgba(24, 59, 67, .035); padding: 23px 26px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; }
+.panel-heading h2 { margin: 4px 0 0; font-size: 1.12rem; letter-spacing: -.02em; }
+.app-shell .mensaje { border: 0; border-radius: 9px; padding: 11px 14px; font-size: 0.875rem; }
+.app-shell .mensaje p { margin: 0 0 6px; }
+.app-shell .mensaje__cuerpo > :last-child { margin-bottom: 0; }
+
+/* Avisos (campana) */
+.notification-area, .account-area { position: relative; min-width: 0; }
+.notification-button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: var(--altura-minima); padding: 6px 10px;
+  border: 1px solid #dce9e8; border-radius: 9px; background: #f7fbfa; color: #20565a; font-size: 0.75rem; font-weight: 700;
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .12s ease;
+}
+.notification-button:hover, .notification-button[aria-expanded='true'] { background: #e8f5f1; border-color: #a9d7ce; }
+.notification-button:active { transform: translateY(1px); box-shadow: inset 0 2px 5px #143b4328; background: #cce6dc; color: #103d34; border-color: #126c5e; }
+.notification-popover {
+  position: absolute; top: calc(100% + 10px); right: 0; width: min(360px, calc(100vw - 32px)); max-height: 430px; overflow: auto;
+  border: 1px solid #dce9e8; border-radius: 12px; background: #fff; box-shadow: 0 14px 38px #143b4350; z-index: 2000;
+}
+.notification-heading { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid #ebf0f0; font-size: 0.875rem; }
+.notification-empty { padding: 14px 16px; font-size: 0.8125rem; margin: 0; color: var(--color-texto); line-height: 1.5; }
+.notification-pending { display: flex; gap: 10px; align-items: flex-start; }
+.notification-pending .icono { color: var(--color-info-texto); }
+
+/* Cuenta */
+.account-trigger {
+  display: flex; align-items: center; gap: 10px; max-width: 330px; min-height: var(--altura-minima); padding: 7px 10px;
+  background: #fff; border: 1px solid #dce8e6; border-radius: 10px; color: #203843; text-align: left;
+}
+.avatar { width: 34px; height: 34px; flex-shrink: 0; background: #e5f5ee; border-radius: 50%; display: grid; place-items: center; color: #136e63; font-weight: 800; }
+.account-identity { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.account-identity strong { font-size: 0.75rem; }
+.account-identity small { font-size: 0.75rem; color: var(--color-texto-suave); }
+.account-options {
+  position: absolute; right: 0; top: calc(100% + 8px); width: 260px; max-width: calc(100vw - 32px); display: grid; padding: 6px;
+  border: 1px solid #dce8e6; border-radius: 10px; background: #fff; box-shadow: 0 12px 30px #143b4330; z-index: 2000;
+}
+.account-summary { display: grid; gap: 2px; margin: 0; padding: 12px; font-size: 0.8125rem; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+.account-summary strong { color: var(--color-texto); }
+.app-shell .account-signout { justify-content: flex-start; width: 100%; padding: 12px; border-top: 1px solid #e7eeec; border-radius: 6px; color: var(--color-error-texto); font-size: 0.8125rem; font-weight: 400; }
+@media (hover: hover) {
+  .app-shell .account-signout:hover { background: #fff0ed; color: #9d302a; text-decoration: none; }
+}
+
+/* Cascada responsive efectiva del origen (las sobrescrituras finales prevalecen). */
+@media (max-width: 900px) {
+  .sidebar { width: 220px; padding: 18px 10px; }
+  .brand { padding: 0 8px 25px; }
+  .nav-item { padding: 11px 12px; }
+  .topbar { padding: 12px 18px; }
+  .topbar-title { display: none; }
+  .main-area main { padding: 24px 20px; }
+  .notification-popover { left: 0; right: auto; width: min(360px, calc(100vw - 250px)); }
+}
+@media (max-width: 700px) {
+  .account-identity { max-width: 160px; }
+}
+@media (max-width: 600px) {
+  .app-shell .panel { padding: 18px; }
+  .sidebar { width: 64px; padding: 18px 6px; }
+  .sidebar .brand { padding: 0 6px 24px; justify-content: center; }
+  .sidebar-label, .sidebar-footer { display: none; }
+  /* AyniSafe: el texto de marca queda para lectores (nombre del enlace), con el mismo resultado visual. */
+  .sidebar .brand-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .sidebar .nav-item { justify-content: center; padding: 12px 6px; }
+  /* AyniSafe: el origen usa font-size:0; aquí el nombre queda solo para lectores, con el mismo resultado visual. */
+  .sidebar .nav-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .topbar { padding: 8px 12px; }
+  .topbar-actions { width: 100%; justify-content: space-between; gap: 8px; }
+  .notification-button { padding: 5px 7px; }
+  .notification-button > span:nth-child(2) { display: none; }
+  .notification-popover { width: min(320px, calc(100vw - 214px)); }
+  .account-trigger { padding: 6px; gap: 6px; }
+  .account-identity { max-width: 110px; }
+  .account-identity small { display: none; }
+  .main-area main { padding: 22px 12px 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-item, .notification-button { transition: none; }
+  .notification-button:active { transform: none; }
+}

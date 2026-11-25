@@ -21,7 +21,9 @@ Esta guía complementa las reglas de producto existentes, sin sustituirlas:
 
 Elección explícita del 23/11/2026: reproducir la apariencia de la web y móvil de `Proyecto_incidencias_400par`, sin mejoras durante esta integración. DESIGN.md fija la referencia y sus componentes. Los acuerdos funcionales de AyniSafe se conservan; las secciones de entregas anteriores describen su estado histórico, no una excepción gráfica al diseño elegido.
 
-Los acuerdos heredados de identidad, tipografía, espaciado, controles y semántica de color se mantienen en [DESIGN.md](../../DESIGN.md). Allí se distingue la base existente de la propuesta de rediseño pendiente de elección. Esta guía conserva los flujos; no fija paletas, tokens ni apariencia de componentes. El orden por llegada de la bandeja sigue siendo una regla de producto.
+Los acuerdos de identidad, tipografía, espaciado, controles y semántica de color se mantienen en [DESIGN.md](../../DESIGN.md). La réplica del origen ya fue elegida; no hay una dirección gráfica pendiente de selección. Esta guía conserva los flujos; no fija paletas, tokens ni apariencia de componentes. El orden por llegada de la bandeja sigue siendo una regla de producto.
+
+P2 se aplica por incrementos: P2.1 adapta portada, acceso y activación web; P2.2 el panel institucional; P2.3–P2.4 el tema, los formularios y la navegación Flutter. La aceptación visual Android sigue pendiente. La [evidencia P2](../validacion/p2-replica-visual.md) distingue código implementado, pruebas ejecutadas y aceptación visual pendiente.
 
 ### 2.2 Navegación móvil
 
@@ -42,7 +44,7 @@ En Drawer: Inicio, Reportar, Mapa, Contactos, Alertas, información, Perfil y Mi
 
 El perfil se abre desde la cabecera. Agrupa datos personales, preferencias, privacidad, información sobre AyniSafe y cierre de sesión. La acción «Reportar» es protagonista en Inicio; el mapa no será la pantalla principal de esta alternativa.
 
-La información pública, los contactos y el envío como invitado no requieren sesión. Con cuenta se permite enviar y consultar historial privado propio; perfil y datos de cuenta requieren autenticación. El invitado consulta solo estado/resumen mediante código secreto, sin vinculación posterior a cuenta. La navegación exacta sin sesión se detallará al implementar, manteniendo esas reglas. Las entregas descritas en 2.8 conservan su estado implementado hasta su adaptación.
+La información pública, los contactos y el envío como invitado no requieren sesión. Con cuenta se permite enviar y consultar historial privado propio; perfil y datos de cuenta requieren autenticación. El invitado consulta solo estado/resumen mediante código secreto, sin vinculación posterior a cuenta. Sin sesión, la app abre Inicio público con la misma barra y Drawer; el control de cuenta de la cabecera («Sin cuenta») y la entrada «Iniciar sesión o crear cuenta» del Drawer abren el acceso y registro vigentes. Mis reportes y Perfil solo aparecen con sesión verificada. Tras cerrar sesión se vuelve a Inicio público con el aviso; una sesión vencida o una contraseña nueva abren el acceso con su aviso. Reportar, Mapa, Alertas y Mis reportes muestran su estado pendiente, sin formularios, permisos ni consultas. Las entregas descritas en 2.8 conservan su estado implementado hasta su adaptación.
 
 ### 2.3 Navegación web
 

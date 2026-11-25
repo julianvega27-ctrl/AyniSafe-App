@@ -104,6 +104,7 @@ void main() {
       'inicio correcto: guarda token y vencimiento, nunca la contraseña, y abre Inicio',
       (tester) async {
         final (api, almacen, _) = await montar(tester);
+        await irAlAcceso(tester);
         await escribirEn(tester, 'Correo', 'rosa@ejemplo.com');
         await escribirEn(tester, 'Contraseña', claveValida);
         await tester.tap(find.widgetWithText(FilledButton, 'Ingresar'));
@@ -121,8 +122,12 @@ void main() {
         );
         // El destino autenticado declara honestamente lo que aún no existe.
         expect(find.text('Disponible próximamente'), findsOneWidget);
-        expect(find.text('Mapa'), findsOneWidget);
-        expect(find.text('Alertas'), findsOneWidget);
+        for (final destino in ['Inicio', 'Reportar', 'Mapa', 'Contactos']) {
+          expect(
+            find.widgetWithText(NavigationDestination, destino),
+            findsOneWidget,
+          );
+        }
         // La contraseña solo viajó en el cuerpo del login.
         expect(
           api.solicitudes.where((s) => s.cuerpo.contains(claveValida)),
@@ -136,6 +141,7 @@ void main() {
       (tester) async {
         final (api, almacen, _) = await montar(tester);
         almacen.fallarGuardar = true;
+        await irAlAcceso(tester);
         await escribirEn(tester, 'Correo', 'rosa@ejemplo.com');
         await escribirEn(tester, 'Contraseña', claveValida);
         await tester.tap(find.widgetWithText(FilledButton, 'Ingresar'));
@@ -170,6 +176,7 @@ void main() {
           if (req.method == 'DELETE') throw http.ClientException('sin red');
           return base(req);
         };
+        await irAlAcceso(tester);
         await escribirEn(tester, 'Correo', 'rosa@ejemplo.com');
         await escribirEn(tester, 'Contraseña', claveValida);
         await tester.tap(find.widgetWithText(FilledButton, 'Ingresar'));
@@ -206,7 +213,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Hola, Rosa Quispe'), findsOneWidget);
         // Solo se cuenta la verificación de sesión: Inicio también lee el contenido público.
-        final get = api.solicitudes.where((s) => s.ruta.endsWith('/auth/sesion')).single;
+        final get = api.solicitudes
+            .where((s) => s.ruta.endsWith('/auth/sesion'))
+            .single;
         expect(get.metodo, 'GET');
         expect(get.cabeceras['Authorization'], 'Bearer $tokenGuardado');
         // Sin parámetros: no se puede elegir la identidad de otra persona.
@@ -317,7 +326,10 @@ void main() {
       'sin sesión guardada o con el almacén ilegible: acceso público',
       (tester) async {
         await montar(tester);
-        expect(find.byType(AccesoPantalla), findsOneWidget);
+        expect(
+          find.byTooltip('Iniciar sesión o crear cuenta'),
+          findsOneWidget,
+        ); // Inicio público
 
         final api = ApiFalsa();
         final almacen = AlmacenamientoEnMemoria(guardadaVigente())
@@ -326,7 +338,10 @@ void main() {
         await sesion.restaurar();
         await tester.pumpWidget(appDePrueba(api, sesion));
         await tester.pumpAndSettle();
-        expect(find.byType(AccesoPantalla), findsOneWidget);
+        expect(
+          find.byTooltip('Iniciar sesión o crear cuenta'),
+          findsOneWidget,
+        ); // Inicio público
         expect(api.solicitudes, isEmpty);
       },
     );
@@ -350,10 +365,16 @@ void main() {
             .single;
         expect(delete.cabeceras['Authorization'], 'Bearer $tokenGuardado');
         expect(almacen.guardada, isNull);
-        expect(find.byType(AccesoPantalla), findsOneWidget);
+        expect(
+          find.byTooltip('Iniciar sesión o crear cuenta'),
+          findsOneWidget,
+        ); // Inicio público
         expect(find.text('Cerraste sesión.'), findsOneWidget);
         expect(find.text('Hola, Rosa Quispe'), findsNothing);
-        expect(textoDe(tester, 'Contraseña'), isEmpty);
+        expect(
+          find.byType(TextField),
+          findsNothing,
+        ); // sin formulario con la contraseña anterior
       },
     );
 
@@ -372,7 +393,10 @@ void main() {
         await cerrar(tester);
 
         expect(almacen.guardada, isNull);
-        expect(find.byType(AccesoPantalla), findsOneWidget);
+        expect(
+          find.byTooltip('Iniciar sesión o crear cuenta'),
+          findsOneWidget,
+        ); // Inicio público
         expect(
           find.textContaining('no pudimos cerrar la sesión en el servidor'),
           findsOneWidget,
@@ -444,7 +468,10 @@ void main() {
         await tester.tap(find.widgetWithText(FilledButton, 'Reintentar'));
         await tester.pumpAndSettle();
         expect(almacen.guardada, isNull);
-        expect(find.byType(AccesoPantalla), findsOneWidget);
+        expect(
+          find.byTooltip('Iniciar sesión o crear cuenta'),
+          findsOneWidget,
+        ); // Inicio público
         expect(find.text('Cerraste sesión.'), findsOneWidget);
         expect(
           api.solicitudes.where((s) => s.metodo == 'GET').length,
@@ -479,9 +506,8 @@ void main() {
       tester,
     ) async {
       await montar(tester);
-      await tester.tap(
-        find.widgetWithText(TextButton, 'Contactos de emergencia'),
-      );
+      // Contactos está en la barra de la navegación pública, sin pedir autenticación.
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Contactos'));
       await tester.pumpAndSettle();
       expect(find.text('Contactos de emergencia'), findsWidgets);
       expect(
@@ -502,8 +528,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Hola, Rosa Quispe'), findsNothing);
       expect(find.textContaining('rosa@ejemplo.com'), findsNothing);
-      expect(find.text('Reportar un incidente'), findsNothing);
-      expect(find.byType(AccesoPantalla), findsOneWidget);
+      expect(find.text('Mis últimos reportes'), findsNothing);
+      expect(
+        find.byTooltip('Iniciar sesión o crear cuenta'),
+        findsOneWidget,
+      ); // Inicio público
       // El destino privado es la raíz: no queda una ruta que se pueda reabrir.
       final navegador = tester.state<NavigatorState>(find.byType(Navigator));
       expect(navegador.canPop(), isFalse);

@@ -25,13 +25,17 @@ export function MarcoApp() {
   const [conAcciones, setConAcciones] = useState(false);
   const [completa, setCompleta] = useState(false);
   const { pathname } = useLocation();
+  const publica = pathname === '/';
+  const cuenta = pathname === '/acceso' || pathname === '/activar';
+  // El panel institucional dibuja su propio marco (lateral, cabecera y area de trabajo del origen).
+  const institucional = pathname === '/panel' || pathname.startsWith('/panel/');
   const principal = useRef<HTMLElement>(null);
   const anterior = useRef(pathname);
 
   useEffect(() => {
     if (anterior.current === pathname) return;
     anterior.current = pathname;
-    principal.current?.focus({ preventScroll: true });
+    (principal.current ?? document.getElementById('contenido'))?.focus({ preventScroll: true });
     document.documentElement.scrollTop = 0;
   }, [pathname]);
 
@@ -43,28 +47,41 @@ export function MarcoApp() {
     },
   };
 
+  if (institucional) {
+    return (
+      <ContextoMarco.Provider value={marco}>
+        <Outlet />
+      </ContextoMarco.Provider>
+    );
+  }
+
   return (
     <ContextoMarco.Provider value={marco}>
+      <div className={publica ? 'welcome-page' : cuenta ? 'account-page' : 'app-pendiente'}>
       <a className="saltar" href="#contenido">
         Saltar al contenido
       </a>
-      <header className={completa ? 'cabecera cabecera--sobre-heroe' : 'cabecera'}>
-        <div className="contenedor cabecera__interior">
-          <Link to="/" className="marca" aria-label="AyniSafe, ir a la portada">
-            AyniSafe
+      {!cuenta ? <header className={publica ? 'welcome-header' : 'cabecera'}>
+        <div className={publica ? 'welcome-header__interior' : 'contenedor cabecera__interior'}>
+          <Link to="/" className={publica ? 'welcome-brand marca' : 'marca'} aria-label={publica ? undefined : 'AyniSafe, ir a la portada'}>
+            <span>AyniSafe{publica ? <small>Cuidarnos es tarea de todos</small> : null}</span>
           </Link>
-          <nav className="cabecera__acciones" aria-label="Acciones de la cuenta" hidden={!conAcciones} ref={setRanura} />
+          <div className={publica ? 'welcome-header__nav' : undefined}>
+            {publica ? <a className="welcome-header__anchor" href="#funcionamiento">Cómo funciona</a> : null}
+            <nav className="cabecera__acciones" aria-label="Acciones de la cuenta" hidden={!conAcciones} ref={setRanura} />
+          </div>
         </div>
-      </header>
-      <main id="contenido" tabIndex={-1} ref={principal} className={completa ? 'principal--completa' : undefined}>
+      </header> : null}
+      <main id="contenido" tabIndex={-1} ref={principal} className={publica ? 'principal--completa' : cuenta ? 'login-page' : completa ? 'principal--completa' : undefined}>
         <Outlet />
       </main>
-      <footer className="pie">
+      {!cuenta ? <footer className={publica ? 'welcome-footer pie' : 'pie'}>
         <div className="contenedor">
           <p className="pie__marca">AyniSafe</p>
           <p className="pie__lema">Cuidarnos es tarea de todos</p>
         </div>
-      </footer>
+      </footer> : null}
+      </div>
     </ContextoMarco.Provider>
   );
 }

@@ -26,12 +26,14 @@ class BotonPrincipal extends StatelessWidget {
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(
+                SizedBox(
                   width: 20,
                   height: 20,
+                  // El botón queda deshabilitado (como en el origen): el indicador usa su primer plano,
+                  // porque el blanco no se distinguía sobre el fondo gris.
                   child: CircularProgressIndicator(
                     strokeWidth: 3,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(width: Espaciado.s1),

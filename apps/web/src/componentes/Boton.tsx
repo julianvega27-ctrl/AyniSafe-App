@@ -15,12 +15,12 @@ interface PropsBoton extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /** Estados: normal, pulsado (CSS :active), cargando y deshabilitado. Altura minima de 48 px. */
-export function Boton({ variante = 'primario', cargando = false, bloque, children, onClick, type = 'button', ...resto }: PropsBoton) {
+export function Boton({ variante = 'primario', cargando = false, bloque, children, onClick, type = 'button', className, ...resto }: PropsBoton) {
   return (
     <button
       {...resto}
       type={type}
-      className={clase(variante, bloque)}
+      className={className ? `${clase(variante, bloque)} ${className}` : clase(variante, bloque)}
       aria-busy={cargando || undefined}
       aria-disabled={cargando || undefined}
       onClick={(e) => {

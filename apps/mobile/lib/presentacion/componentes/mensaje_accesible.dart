@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../aplicacion/aviso.dart';
 import '../tema.dart';
+import 'tarjeta_mensaje.dart';
 
 /// Mensaje con icono y texto (nunca solo color) y, si corresponde, una acción para continuar.
 /// El texto se anuncia como región en vivo; la acción es un botón independiente y accesible.
@@ -42,13 +43,10 @@ class MensajeAccesible extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final estilo = _estilo;
-    return Container(
-      padding: const EdgeInsets.all(Espaciado.s2),
-      decoration: BoxDecoration(
-        color: estilo.fondo,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: estilo.color, width: 1.5),
-      ),
+    // Lenguaje de MessageCard del origen: tarjeta blanca, icono de color y texto del tema.
+    return TarjetaMensaje(
+      icono: estilo.icono,
+      colorIcono: estilo.color,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -57,26 +55,16 @@ class MensajeAccesible extends StatelessWidget {
             container: true,
             excludeSemantics: true,
             label: '${estilo.prefijo}: ${aviso.texto}',
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  estilo.icono,
-                  color: estilo.color,
-                  size: MediaQuery.textScalerOf(context).scale(24),
-                ),
-                const SizedBox(width: Espaciado.s1),
-                Expanded(
-                  child: Text(
-                    aviso.texto,
-                    style: TextStyle(
-                      fontSize: tamanoTextoBase,
-                      color: estilo.color,
-                      height: 1.35,
-                    ),
-                  ),
-                ),
-              ],
+            child: Text(
+              aviso.texto,
+              style: TextStyle(
+                fontSize: tamanoTextoBase,
+                height: 1.35,
+                color: aviso.tipo == TipoAviso.error ? estilo.color : null,
+                fontWeight: aviso.tipo == TipoAviso.error
+                    ? FontWeight.w600
+                    : null,
+              ),
             ),
           ),
           if (etiquetaAccion != null && alAccionar != null)

@@ -28,7 +28,9 @@ class EstructuraPantalla extends StatelessWidget {
       appBar: conBarra ? AppBar(title: Text(titulo)) : null,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(Espaciado.s2),
+          padding: const EdgeInsets.all(
+            Espaciado.s3,
+          ), // ListView(padding: 24) del origen
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
@@ -37,15 +39,14 @@ class EstructuraPantalla extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (!conBarra) ...[
-                    const SizedBox(height: Espaciado.s2),
                     Semantics(
                       header: true,
                       child: Text(
                         titulo,
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: Theme.of(context).textTheme.headlineMedium,
                       ),
                     ),
-                    const SizedBox(height: Espaciado.s2),
+                    const SizedBox(height: 12),
                   ],
                   ...hijos,
                 ],

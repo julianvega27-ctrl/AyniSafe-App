@@ -70,6 +70,9 @@ void main() {
     ),
       );
       await tester.pumpAndSettle();
+      // Navegación pública: la cuenta se abre desde la cabecera.
+      await tester.tap(find.byTooltip('Iniciar sesión o crear cuenta'));
+      await tester.pumpAndSettle();
 
       final enlace = find.widgetWithText(TextButton, 'Crear cuenta');
       await tester.ensureVisible(enlace);
@@ -124,9 +127,9 @@ void main() {
       expect(find.text('Hola, Rosa Corte'), findsOneWidget);
 
       // Cierra para no dejar una sesión viva.
-      await tester.tap(find.byTooltip('Perfil'));
+      await tester.tap(find.byTooltip('Abrir perfil'));
       await tester.pumpAndSettle();
-      final cerrarSesion = find.widgetWithText(FilledButton, 'Cerrar sesión');
+      final cerrarSesion = find.text('Cerrar sesión');
       await tester.ensureVisible(cerrarSesion);
       await tester.tap(cerrarSesion);
       await esperar(tester, find.text('Cerraste sesión.'));

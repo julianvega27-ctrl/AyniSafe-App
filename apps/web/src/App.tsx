@@ -34,7 +34,7 @@ export function App() {
         }
       />
       <Route
-        path="/panel/administrador"
+        path="/panel/administrador/:seccion?"
         element={
           <RutaProtegida>
             <PanelRol rol="administrador" />
@@ -42,7 +42,7 @@ export function App() {
         }
       />
       <Route
-        path="/panel/operador"
+        path="/panel/operador/:seccion?"
         element={
           <RutaProtegida>
             <PanelRol rol="operador" />

@@ -1,0 +1,125 @@
+/* Adaptadores de los componentes AyniSafe al origen. Autoridad: DESIGN.md.
+   Diferencias obligatorias: marca, contenido real, controles ≥48 y contraste AA. */
+@font-face {
+  font-family: 'DM Sans';
+  src: url('/fuentes/DM-Sans.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: Manrope;
+  src: url('/fuentes/Manrope.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
+h1, h2, h3 { font-family: Manrope, sans-serif; }
+::selection { background: #c5efe4; color: var(--color-texto); }
+input { caret-color: var(--color-accion); }
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.welcome-header { display: block; }
+.welcome-header__interior { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.welcome-header__nav { display: flex; align-items: center; gap: 28px; font-size: 0.8125rem; font-weight: 700; }
+.welcome-header__anchor { display: inline-flex; align-items: center; min-height: var(--altura-minima); color: #f2f8ed; }
+.welcome-brand { font-size: 1rem; }
+.welcome-brand small { color: #c4dad1; }
+.welcome-page > main { padding-top: 24px; padding-bottom: 24px; }
+.welcome-copy h1 { color: var(--color-portada-texto); }
+.welcome-copy em { display: inline; }
+.welcome-copy .pendiente { margin-top: 24px; }
+.welcome-art figcaption { display: flex; align-items: center; gap: 8px; line-height: 1.6; }
+.welcome-art figcaption .icono { color: var(--color-enlace); }
+.welcome-page .boton, .account-page .boton, .app-shell .boton {
+  min-height: var(--altura-minima);
+  padding: 10px 17px;
+  border: 1px solid var(--color-accion);
+  border-radius: 9px;
+  background: var(--color-accion);
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.4;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .12s ease;
+}
+.welcome-page .boton--secundario, .account-page .boton--secundario, .app-shell .boton--secundario {
+  background: #f2f6f6;
+  border-color: #d5e3e3;
+  color: var(--color-texto-suave);
+}
+.welcome-page .boton--enlace, .account-page .boton--enlace, .app-shell .boton--enlace {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-enlace);
+  padding-left: 0;
+  padding-right: 0;
+  text-decoration: none;
+}
+.welcome-page .boton:active, .account-page .boton:active, .app-shell .boton:active { transform: translateY(1px); background: #084d46; color: white; }
+.welcome-page .boton[aria-disabled='true'], .account-page .boton[aria-disabled='true'], .app-shell .boton[aria-disabled='true'] { transform: none; }
+@media (hover: hover) {
+  .welcome-page .boton:hover, .account-page .boton:hover, .app-shell .boton:hover { background: var(--color-azul-hover); border-color: #064c45; color: white; box-shadow: 0 4px 12px #12695d30; text-decoration: none; }
+  .welcome-page .boton--secundario:hover, .account-page .boton--secundario:hover, .app-shell .boton--secundario:hover { background: #d7eee5; border-color: #4d9d88; color: #164f43; }
+  .welcome-page .boton--enlace:hover, .account-page .boton--enlace:hover, .app-shell .boton--enlace:hover { background: transparent; color: #084e45; border-color: transparent; box-shadow: none; text-decoration: underline; }
+}
+.channel-cards article > .icono { width: 36px; height: 36px; color: #147d72; }
+.channel-cards article:nth-child(2) > .icono { color: #4965be; }
+.welcome-how h2 { color: var(--color-portada-texto); }
+.welcome-access h2 { color: inherit; }
+.welcome-steps { list-style: none; padding: 0; }
+.welcome-steps li { padding: 25px; border: 1px solid #e0e7dc; border-top-width: 4px; border-radius: 18px; background: white; font-size: 1rem; line-height: 1.7; color: var(--color-texto); }
+.estado { margin: 20px 0 40px; }
+.estado__titulo { font: 700 1.12rem Manrope, sans-serif; }
+.estado__lista { list-style: none; margin: 0; padding: 0; }
+.estado__fila { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 0; border-bottom: 1px solid #e0e7dc; font-size: 0.875rem; }
+.estado__marca { margin-left: auto; font-size: 0.75rem; color: var(--color-portada-suave); }
+.estado-carga { padding: 24px 0; }
+.esqueleto { min-height: 180px; background: var(--color-info-fondo); border-radius: 14px; }
+.welcome-footer.pie { margin-top: 0; }
+.welcome-footer .contenedor { max-width: none; padding: 0; }
+.welcome-footer .pie__marca, .welcome-footer .pie__lema { color: inherit; }
+.account-page .login-page { min-height: 100svh; margin: 0; padding: 20px; }
+.login-page > .contenedor { width: 100%; max-width: 430px; padding: 0; }
+.login-card.tarjeta { width: 100%; max-width: 430px; margin: 0; border: 0; }
+.login-card > .boton { margin-bottom: 18px; }
+.login-card .login-identity { color: var(--color-verde); font: 800 1.12rem Manrope, sans-serif; margin: 0 0 24px; }
+.login-card h1 { font-size: 1.6875rem; line-height: 1.18; letter-spacing: -.035em; margin: 9px 0; hyphens: auto; }
+.login-card p { color: var(--color-texto-suave); font-size: 1rem; }
+.login-card .campo__etiqueta { font-size: 0.8125rem; color: var(--color-texto-suave); font-weight: 700; margin-bottom: 7px; }
+.login-card .campo__entrada { padding: 10px 11px; border-width: 1px; border-radius: 8px; }
+.login-card .campo__entrada:focus { border-color: #168b80; }
+.login-card .campo__fila { flex-wrap: nowrap; }
+.login-card .campo__fila .campo__entrada { flex: 1 1 0; width: 0; }
+.login-card .mensaje { border: 0; border-radius: 9px; padding: 11px 14px; }
+.login-card .mensaje p { color: inherit; font-size: 0.8125rem; margin-bottom: 12px; }
+.login-card .mensaje__cuerpo > :last-child { margin-bottom: 0; }
+.login-card .mensaje--info { color: var(--color-info-texto); }
+.login-card .mensaje--error { color: var(--color-error-texto); }
+.login-card .mensaje--exito { color: var(--color-exito-texto); }
+.login-card .mensaje--aviso { color: var(--color-aviso-texto); }
+.login-card .campo__error { color: var(--color-error-texto); font-size: 0.8125rem; }
+.login-card .campo__ayuda { font-size: 0.8125rem; }
+@media (max-width: 600px) {
+  .welcome-header__interior { flex-wrap: wrap; gap: 18px; }
+  .welcome-header__nav { width: 100%; justify-content: space-between; gap: 12px; }
+  .welcome-header nav { width: auto; }
+  .welcome-page .welcome-header { padding: 20px; }
+  .login-card.tarjeta { padding: 30px 24px; }
+  .estado__marca { margin-left: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-page .boton, .account-page .boton, .app-shell .boton { transition: none; }
+  .welcome-page .boton:active, .account-page .boton:active, .app-shell .boton:active { transform: none; }
+}

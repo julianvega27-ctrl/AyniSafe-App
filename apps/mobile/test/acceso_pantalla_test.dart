@@ -17,7 +17,7 @@ Future<ApiFalsa> abrirAcceso(
   final sesion = crearSesion(api, almacen ?? AlmacenamientoEnMemoria());
   await sesion.restaurar();
   await tester.pumpWidget(appDePrueba(api, sesion));
-  await tester.pumpAndSettle();
+  await irAlAcceso(tester);
   expect(find.byType(AccesoPantalla), findsOneWidget);
   return api;
 }
