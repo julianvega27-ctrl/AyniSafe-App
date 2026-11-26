@@ -132,3 +132,56 @@
   .nav-item, .notification-button { transition: none; }
   .notification-button:active { transform: none; }
 }
+
+/* Página Organización (P3.2): reglas efectivas de style.css del origen en efc1bce8 para .page-stack, .cards,
+   .mini-card, .form-grid.compact, .choice-list y .text-button, usadas por Organization.jsx. Adaptaciones
+   AyniSafe: controles ≥48 px, rem, texto con contraste AA (tokens existentes) y estados con texto. */
+.page-stack { display: grid; gap: 24px; }
+.page-stack > .panel { min-width: 0; }
+.page-intro p { margin: 0; color: var(--color-texto-suave); }
+.app-shell .panel > p { margin: 0 0 12px; }
+.cards { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; }
+.mini-card { background: #f9fbfb; border: 1px solid #e0e9e9; border-radius: 10px; padding: 16px; min-width: 190px; max-width: 100%; display: grid; gap: 5px; text-align: left; overflow-wrap: anywhere; }
+.mini-card .boton { margin-top: 12px; }
+.mini-card strong { font-size: 0.875rem; }
+.mini-card span, .mini-card small { font-size: 0.8125rem; color: var(--color-texto-suave); }
+/* AyniSafe: cada estado de la sede se lee como texto con icono, nunca solo con color. */
+.estados { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 18px; padding: 5px 9px; background: #ecf3f2; color: #476d70; font-size: 0.75rem; font-weight: 800; white-space: nowrap; }
+/* AyniSafe: el ámbar del origen (#9b6813 sobre #fff1db) se ajusta al aviso del sistema para AA. */
+.pill.warn { background: var(--color-aviso-fondo); color: var(--color-aviso-texto); }
+.form-grid { display: flex; gap: 15px; flex-wrap: wrap; align-items: end; margin-top: 12px; }
+.form-grid > * { flex: 1 1 200px; min-width: 0; }
+.form-grid.compact { border-top: 1px solid #ecf1f1; padding-top: 17px; margin-top: 18px; }
+.form-grid .campo { margin: 0; }
+.form-grid > .form-grid__completo { flex-basis: 100%; }
+.form-grid h3 { margin: 0; font-size: 1rem; }
+.acciones-tarjeta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.text-button {
+  min-height: var(--altura-minima); padding: 5px 10px; border: 1px solid transparent; border-radius: 7px; background: none;
+  color: var(--color-accion); font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease;
+}
+.text-button:not(:disabled):hover { background: #e5f3ef; border-color: #85b9ab; color: #0d5b50; }
+/* AyniSafe: el rojo del origen (#c45149) no alcanza 4,5:1 sobre la tarjeta; se usa el texto de error del sistema. */
+.text-button.danger { color: var(--color-error-texto); }
+.text-button.danger:not(:disabled):hover { background: #fff0ed; border-color: #d98b83; color: #9d302a; }
+.text-button:disabled, .text-button[aria-disabled="true"] { cursor: not-allowed; opacity: .7; }
+/* AyniSafe: el gris del origen (#8da0a5) no alcanza 4,5:1; se usa el texto suave del sistema. */
+.empty { padding: 20px; text-align: center; color: var(--color-texto-suave); font-size: 0.875rem; }
+.choice-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 10px; margin: 0; padding: 0; border: 0; }
+.choice-list legend { font-weight: 700; margin-bottom: 8px; padding: 0; }
+.choice-list label { display: flex; align-items: center; gap: 8px; min-height: var(--altura-minima); padding: 7px; border: 1px solid transparent; border-radius: 7px; cursor: pointer; }
+.choice-list label:has(input:checked) { background: #e6f5ee; border-color: #4c9e87; color: #174f46; font-weight: 700; }
+.choice-list input, .check input { accent-color: #137d72; width: 20px; height: 20px; cursor: pointer; flex: none; }
+.check { display: flex; align-items: center; gap: 8px; min-height: var(--altura-minima); font-size: 0.875rem; }
+.selector-sede { max-width: 32rem; display: grid; gap: 8px; }
+.faltantes { margin: 6px 0 0; padding-left: 1.25rem; }
+@media (max-width: 600px) {
+  .mini-card { min-width: 0; flex-basis: 100%; }
+  .panel-heading { flex-wrap: wrap; }
+  .choice-list { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-button { transition: none; }
+}

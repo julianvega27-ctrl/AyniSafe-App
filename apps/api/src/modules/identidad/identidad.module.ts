@@ -8,6 +8,14 @@ import { ConsultarTokenUseCase } from './aplicacion/consultar-token.use-case';
 import { ConsumirTokenCuentaUseCase } from './aplicacion/consumir-token.use-case';
 import { EmitirTokenCuentaUseCase } from './aplicacion/emitir-token-cuenta.use-case';
 import { InvitarCuentaUseCase } from './aplicacion/invitar-cuenta.use-case';
+import {
+  AdministrarOrganizacionUseCase,
+  AgregarOperadorUseCase,
+  ConsultarAmbitoOperadorUseCase,
+  CrearSedeConOperadorUseCase,
+  ReenviarInvitacionUseCase,
+} from './aplicacion/organizacion.use-case';
+import type { CatalogoIdsPort, OrganizacionPort } from './aplicacion/puertos/organizacion.port';
 import { ProcesarEnviosCorreoUseCase, type RedactorCorreo } from './aplicacion/procesar-envios-correo.use-case';
 import { ConsultarSesionInstitucionalUseCase } from './aplicacion/consultar-sesion-institucional.use-case';
 import { IniciarSesionInstitucionalUseCase } from './aplicacion/iniciar-sesion-institucional.use-case';
@@ -34,6 +42,7 @@ import type { PrismaClient } from './infraestructura/prisma-cliente';
 import { PrismaCuentasAdapter } from './infraestructura/prisma-cuentas.adapter';
 import { PrismaEnviosCorreoAdapter } from './infraestructura/prisma-envios-correo.adapter';
 import { PrismaLimitadorAdapter } from './infraestructura/prisma-limitador.adapter';
+import { PrismaOrganizacionAdapter } from './infraestructura/prisma-organizacion.adapter';
 import { PrismaPurgaAdapter } from './infraestructura/prisma-purga.adapter';
 import { PrismaSesionesAdapter } from './infraestructura/prisma-sesiones.adapter';
 import { PrismaTokensCuentaAdapter } from './infraestructura/prisma-tokens-cuenta.adapter';
@@ -63,6 +72,18 @@ export interface DependenciasIdentidad {
   readonly web: { readonly origen: string };
   /** Datos para verificar los App Links de Android (assetlinks.json). */
   readonly android: ConfigAndroid;
+  /** Instituciones, sedes, operadores, coberturas y competencias (P3.2). */
+  readonly organizacion: OrganizacionPort;
+  /** Distritos del catalogo territorial (modulo Consultas), inyectados por la composicion. */
+  readonly catalogoDistritos: CatalogoIdsPort;
+  /** Categorias activas (modulo Reportes), inyectadas por la composicion. */
+  readonly catalogoCategorias: CatalogoIdsPort;
+}
+
+/** Catalogos de otros modulos que Identidad consume por puerto; los aporta la composicion. */
+export interface CatalogosExternos {
+  readonly distritos: CatalogoIdsPort;
+  readonly categorias: CatalogoIdsPort;
 }
 
 export interface ModuloIdentidad {
@@ -77,10 +98,12 @@ export interface ModuloIdentidad {
   /** Cola de correos: llamar a `despertar()` tras encolar y a `iniciar()` al arrancar. */
   readonly gestorEnvios: GestorEnvios;
   /**
-   * Capacidad de invitacion para Spec 06: encola el correo de activacion dentro de la transaccion
+   * Capacidad de invitacion: encola el correo de activacion dentro de la transaccion
    * del llamador. No crea cuentas. Tras el commit debe llamarse a `gestorEnvios.despertar()`.
    */
   readonly invitarCuenta: InvitarCuentaUseCase;
+  /** Contrato interno de ambito del operador (institucion, sede, distritos, categorias) para P4/P6. */
+  readonly consultarAmbitoOperador: ConsultarAmbitoOperadorUseCase;
 }
 
 /**
@@ -103,6 +126,9 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
     deps.reloj,
     deps.logger,
   );
+  const invitarCuenta = new InvitarCuentaUseCase(deps.envios, deps.reloj);
+  const despertarEnvios = (): void => gestorEnvios.despertar();
+  const consultarAmbitoOperador = new ConsultarAmbitoOperadorUseCase(deps.organizacion);
   const router = crearRutasAuth(
     {
       registrar: new RegistrarCiudadanoUseCase(deps.cuentas, deps.hash, deps.limitador, deps.reloj, deps.politicaLimites),
@@ -149,6 +175,18 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
         ),
         consultarSesion: new ConsultarSesionInstitucionalUseCase(deps.sesiones, deps.tokens, deps.reloj),
         cerrarSesion: new CerrarSesionUseCase(deps.sesiones, deps.tokens, deps.reloj),
+        organizacion: {
+          administrar: new AdministrarOrganizacionUseCase(
+            deps.organizacion,
+            deps.catalogoDistritos,
+            deps.catalogoCategorias,
+            deps.reloj,
+          ),
+          crearSede: new CrearSedeConOperadorUseCase(deps.organizacion, invitarCuenta, deps.catalogoDistritos, despertarEnvios),
+          agregarOperador: new AgregarOperadorUseCase(deps.organizacion, invitarCuenta, despertarEnvios),
+          reenviarInvitacion: new ReenviarInvitacionUseCase(deps.organizacion, invitarCuenta, despertarEnvios),
+          consultarAmbito: consultarAmbitoOperador,
+        },
       },
     },
     deps.logger,
@@ -162,7 +200,8 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
     emitirToken,
     consumirToken,
     gestorEnvios,
-    invitarCuenta: new InvitarCuentaUseCase(deps.envios, deps.reloj),
+    invitarCuenta,
+    consultarAmbitoOperador,
   };
 }
 
@@ -171,6 +210,7 @@ export function crearModuloIdentidadConPrisma(
   entorno: Entorno,
   prisma: PrismaClient,
   logger: Logger,
+  catalogos: CatalogosExternos,
   reloj: RelojPort = new RelojSistemaAdapter(),
 ): ModuloIdentidad {
   return crearModuloIdentidad({
@@ -193,5 +233,8 @@ export function crearModuloIdentidadConPrisma(
     logger,
     web: { origen: entorno.origenWeb },
     android: { paquete: entorno.androidPaquete, huellasSha256: entorno.androidHuellasSha256 },
+    organizacion: new PrismaOrganizacionAdapter(prisma),
+    catalogoDistritos: catalogos.distritos,
+    catalogoCategorias: catalogos.categorias,
   });
 }

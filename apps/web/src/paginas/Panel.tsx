@@ -8,6 +8,7 @@ import { Icono } from '../componentes/iconos';
 import { CampanaPendiente, ETIQUETA_ROL, MarcoInstitucional, MenuCuenta, rutaSeccion } from '../componentes/MarcoInstitucional';
 import { Mensaje } from '../componentes/Mensaje';
 import { useSesion } from '../sesion/SesionContexto';
+import { DESCRIPCION_SECCION, SeccionOrganizacion } from './organizacion/Organizacion';
 
 /**
  * Guard de ruta: solo guia la navegacion (experiencia de usuario). La autorizacion real esta en la
@@ -76,6 +77,8 @@ export function PanelRol({ rol }: { rol: Rol }) {
   const [falloAlSalir, setFalloAlSalir] = useState(false);
 
   const seccion = carga.estado === 'listo' ? carga.secciones.find((s) => s.id === idSeccion) : undefined;
+  // Seccion construida (P3.2: organizacion del administrador): cabecera y paneles como la pagina del origen.
+  const operativa = seccion?.disponible === true && rol === 'administrador';
   useTitulo(seccion && seccion.id !== 'inicio' ? `${seccion.titulo} · ${TITULO[rol]}` : TITULO[rol]);
 
   useEffect(() => {
@@ -120,8 +123,9 @@ export function PanelRol({ rol }: { rol: Rol }) {
   return (
     <MarcoInstitucional rol={rol} titulo={TITULO[rol]} secciones={carga.estado === 'listo' ? carga.secciones : []} acciones={acciones}>
       <div className="page-intro">
-        <span className="eyebrow">{carga.estado === 'sin-permiso' ? 'Panel institucional' : ETIQUETA_ROL[rol]}</span>
-        <h1>{TITULO[rol]}</h1>
+        <span className="eyebrow">{carga.estado === 'sin-permiso' ? 'Panel institucional' : operativa ? 'Organización' : ETIQUETA_ROL[rol]}</span>
+        <h1>{operativa && seccion ? seccion.titulo : TITULO[rol]}</h1>
+        {operativa && seccion ? <p>{DESCRIPCION_SECCION[seccion.id]}</p> : null}
       </div>
 
       {falloAlSalir ? (
@@ -158,7 +162,9 @@ export function PanelRol({ rol }: { rol: Rol }) {
 
       {carga.estado === 'listo' && !seccion ? <Navigate to={rutaSeccion(rol, 'inicio')} replace /> : null}
 
-      {seccion ? (
+      {seccion && operativa ? <SeccionOrganizacion id={seccion.id} /> : null}
+
+      {seccion && !operativa ? (
         <section className="panel" aria-labelledby="titulo-seccion">
           <div className="panel-heading">
             <div>

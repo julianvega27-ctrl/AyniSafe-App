@@ -78,6 +78,8 @@ Alternativa descartada: `Idempotency-Key` con tabla de respuestas. Añade almace
 
 Suspender un operador cambia `usuarios.estado` y llama a `revocarTodasDe` en la misma transacción. Suspender una sede pone `habilitada_atencion=false`. Sus operadores conservan la cuenta, pero su ámbito queda vacío.
 
+Suspender también invalida los enlaces de activación sin usar. Decisión del 25/11/2026 tomada al implementar: un operador pendiente puede suspenderse para revocar su invitación. Para ello la migración relaja `usuarios_hash_estado_chk` de «pendiente ⇔ sin contraseña» a «pendiente ⇒ sin contraseña y activo ⇒ con contraseña»; una cuenta suspendida admite ambos casos. La activación sigue exigiendo estado pendiente y el acceso, estado activo. Reactivar una cuenta que nunca se activó la devuelve a pendiente.
+
 Reenviar una invitación solo aplica a `pendiente_activacion`. Si ya hay un envío activo, devuelve 202 sin duplicar (índice parcial existente). El token se genera al enviar e invalida el anterior, según el mecanismo vigente.
 
 ### 5. HTTP y OpenAPI
@@ -93,7 +95,7 @@ Rutas de otros roles:
 - **Operador:** `GET /operador/ambito`.
 - **Pública:** `GET /publico/categorias` (Reportes), con HEAD y 405/Allow como en territorio.
 
-Errores: `CORREO_EN_USO`, `SEDE_EXISTENTE`, `REQUISITOS_HABILITACION` (con `faltantes[]`), `ULTIMO_OPERADOR_ACTIVO`, `INVITACION_NO_APLICABLE`, `VALIDATION_ERROR`, `NOT_FOUND`, `FORBIDDEN`, `SERVICE_UNAVAILABLE`. OpenAPI se actualiza en el mismo incremento y cada estado queda cubierto en `contrato.test.ts`.
+Errores: `EMAIL_IN_USE` (el mismo código del registro, con mensaje propio; sustituye al `CORREO_EN_USO` planificado para no duplicar códigos del contrato), `SEDE_EXISTENTE`, `REQUISITOS_HABILITACION` (con `faltantes[]`), `SEDE_HABILITADA`, `ULTIMO_OPERADOR_ACTIVO`, `INVITACION_NO_APLICABLE`, `VALIDATION_ERROR`, `NOT_FOUND`, `FORBIDDEN`, `FORBIDDEN_ORIGIN`, `SERVICE_UNAVAILABLE` y `METHOD_NOT_ALLOWED` (405 con `Allow` en métodos no declarados). Un catálogo de otro módulo caído se informa como 503. OpenAPI se actualiza en el mismo incremento y cada estado queda cubierto en `contrato.test.ts`.
 
 `PUT` reemplaza conjuntos completos: es idempotente y más simple de razonar que altas y bajas de elementos sueltos.
 
@@ -107,7 +109,7 @@ Nuevas vistas en `apps/web/src/paginas/organizacion/` montadas desde `PanelRol` 
 
 El cliente API añade funciones tipadas, y cada estado de error se traduce a un mensaje de campo o de formulario. Pruebas: Vitest + Testing Library con `api-falsa`, a11y con axe y la captura `e2e/panel-visual.mjs` en escritorio y 360 px.
 
-`paneles.ts` marca disponibles `instituciones-sedes`, `operadores` y `coberturas`.
+`paneles.ts` marca disponibles `instituciones-sedes`, `operadores` y `coberturas`. En esas secciones, `Panel.tsx` usa la intro del origen (eyebrow «Organización», título de la sección y descripción) y cada institución, sede o bloque de configuración va en su propio `.panel`, como `Organization.jsx`. El botón «Usuarios con acceso» del origen se reproduce como enlace «Operadores de la sede» a la sección Operadores con `?sede=`. Las clases portadas del `style.css` del origen se registran en `referencia-institucional.css`. Allí también se anotan las adaptaciones AyniSafe: 48 px, contraste AA y estados con texto e icono.
 
 ## Risks / Trade-offs
 

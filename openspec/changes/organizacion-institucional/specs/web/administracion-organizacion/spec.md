@@ -25,7 +25,7 @@ El formulario de nueva sede MUST pedir institución, nombre, distrito de ubicaci
 - **THEN** la sede aparece en su institución, se informa que se envió la invitación al operador y la sede figura deshabilitada para atención
 
 #### Scenario: Correo en uso o sede existente
-- **WHEN** la API responde 409 CORREO_EN_USO o SEDE_EXISTENTE
+- **WHEN** la API responde 409 EMAIL_IN_USE o SEDE_EXISTENTE
 - **THEN** el formulario conserva los datos, señala el campo afectado y no crea duplicados
 
 #### Scenario: Fallo de conexión

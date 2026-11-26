@@ -19,6 +19,19 @@ import {
   TokenVencidoError,
   ValidacionError,
 } from '../dominio/errores';
+import {
+  ConflictoOrganizacionError,
+  CorreoOperadorEnUsoError,
+  RecursoNoEncontradoError,
+  RequisitosHabilitacionError,
+  SedeExistenteError,
+} from '../dominio/organizacion';
+
+const MENSAJES_CONFLICTO: Record<ConflictoOrganizacionError['codigo'], string> = {
+  ULTIMO_OPERADOR_ACTIVO: 'No se puede suspender al único operador activo de una sede habilitada para atención.',
+  SEDE_HABILITADA: 'La sede está habilitada para atención: deshabilítala antes de este cambio.',
+  INVITACION_NO_APLICABLE: 'Solo se puede reenviar la invitación de una cuenta pendiente de activación.',
+};
 
 /** Limite del cuerpo JSON de autenticacion: 8 KiB. */
 export const LIMITE_CUERPO = '8kb';
@@ -37,7 +50,14 @@ export type CodigoError =
   | 'UNSUPPORTED_MEDIA_TYPE'
   | 'RATE_LIMITED'
   | 'SERVICE_UNAVAILABLE'
-  | 'INTERNAL_ERROR';
+  | 'INTERNAL_ERROR'
+  | 'NOT_FOUND'
+  | 'METHOD_NOT_ALLOWED'
+  | 'SEDE_EXISTENTE'
+  | 'REQUISITOS_HABILITACION'
+  | 'ULTIMO_OPERADOR_ACTIVO'
+  | 'SEDE_HABILITADA'
+  | 'INVITACION_NO_APLICABLE';
 
 /**
  * Extrae el token de `Authorization: Bearer <token>`. Es el unico lugar desde el que se acepta
@@ -201,6 +221,33 @@ export function manejadorDeErrores(logger: Logger): ErrorRequestHandler {
     }
     if (error instanceof ValidacionError) {
       responderError(res, 400, 'VALIDATION_ERROR', 'Revisa los datos ingresados.', { ...error.campos });
+      return;
+    }
+    if (error instanceof CorreoOperadorEnUsoError) {
+      responderError(res, 409, 'EMAIL_IN_USE', 'Este correo ya pertenece a otra cuenta.');
+      return;
+    }
+    if (error instanceof SedeExistenteError) {
+      responderError(res, 409, 'SEDE_EXISTENTE', 'Ya existe una sede con ese nombre en la institución.');
+      return;
+    }
+    if (error instanceof RequisitosHabilitacionError) {
+      res.status(409).json({
+        error: {
+          code: 'REQUISITOS_HABILITACION',
+          message: 'La sede no cumple los requisitos para habilitarse.',
+          faltantes: error.faltantes,
+          requestId: res.locals.requestId as string,
+        },
+      });
+      return;
+    }
+    if (error instanceof ConflictoOrganizacionError) {
+      responderError(res, 409, error.codigo, MENSAJES_CONFLICTO[error.codigo]);
+      return;
+    }
+    if (error instanceof RecursoNoEncontradoError) {
+      responderError(res, 404, 'NOT_FOUND', 'El recurso no existe.');
       return;
     }
     if (error instanceof CorreoEnUsoError) {

@@ -1,12 +1,14 @@
 import express, { type Express } from 'express';
 import type { ModuloConsultas } from './modules/consultas';
 import type { ModuloIdentidad } from './modules/identidad';
+import type { ModuloReportes } from './modules/reportes';
 
 export interface OpcionesApp {
   /** Saltos de proxy de confianza para obtener la IP real del cliente (0 = sin proxy). */
   readonly saltosProxyConfianza: number;
   readonly identidad: ModuloIdentidad;
   readonly consultas: ModuloConsultas;
+  readonly reportes: ModuloReportes;
 }
 
 /** Composicion general del backend. */
@@ -18,6 +20,8 @@ export function crearApp(opciones: OpcionesApp): Express {
   app.use('/api/v1', opciones.identidad.router);
   // Contenido publico (sin sesion). Se monta tras Identidad: sus rutas no se solapan.
   app.use('/api/v1', opciones.consultas.router);
+  // Catalogo publico de categorias (Reportes).
+  app.use('/api/v1', opciones.reportes.router);
   // Paginas de respaldo del enlace del correo y assetlinks.json (fuera de /api/v1).
   app.use(opciones.identidad.routerPublico);
   return app;

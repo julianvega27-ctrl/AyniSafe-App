@@ -3,6 +3,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import fuente from './contenido/contenido-publico.json';
 import { exigirContenidoValido, type ContenidoPublico } from './dominio/contenido';
+import { DISTRITOS_PILOTO } from './dominio/territorio';
 import { ConsultarTerritorio, type TerritorioRepositorio } from './aplicacion/territorio.use-case';
 import { PrismaTerritorioAdapter } from './infraestructura/prisma-territorio.adapter';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -12,6 +13,11 @@ import { crearRouterTerritorial } from './presentacion/territorio.routes';
 export type { TerritorioRepositorio } from './aplicacion/territorio.use-case';
 export type { SnapshotTerritorial, ResultadoTerritorial, Distrito } from './dominio/territorio';
 export { ConsultarTerritorio } from './aplicacion/territorio.use-case';
+
+/** Identificadores estables del catalogo distrital (DIS-01..05), con o sin cartografia activa. */
+export function idsDistritosPiloto(): ReadonlySet<string> {
+  return new Set(DISTRITOS_PILOTO.map((d) => d.id));
+}
 
 export interface OpcionesTerritorio {
   readonly repositorio: TerritorioRepositorio;

@@ -15,7 +15,7 @@ El sistema MUST contener exactamente las instituciones PNP, Bomberos, SAMU y Ser
 
 #### Scenario: Tipo fuera del alcance
 - **WHEN** se intenta registrar por API o directamente en la BD una institución de tipo municipalidad u otro
-- **THEN** la API no ofrece ruta de creación (404/405) y la BD rechaza la fila por restricción
+- **THEN** la API responde 405 con `Allow` y la BD rechaza la fila por restricción
 
 #### Scenario: Edición de datos visibles
 - **WHEN** el administrador cambia el nombre o contacto de una institución con datos válidos
@@ -45,7 +45,7 @@ La creación de sede MUST ser segura ante reintentos: el nombre normalizado de l
 
 #### Scenario: Correo ya registrado
 - **WHEN** el correo del operador inicial pertenece a cualquier cuenta existente
-- **THEN** se responde 409 CORREO_EN_USO sin crear la sede ni modificar la cuenta existente
+- **THEN** se responde 409 EMAIL_IN_USE sin crear la sede ni modificar la cuenta existente
 
 #### Scenario: Altas concurrentes
 - **WHEN** dos solicitudes crean simultáneamente la misma sede o usan el mismo correo
@@ -101,7 +101,7 @@ El administrador MUST configurar las categorías que atiende cada sede eligiendo
 
 #### Scenario: Habilitada sin competencias
 - **WHEN** se intenta dejar vacías la cobertura o las competencias de una sede habilitada para atención
-- **THEN** se rechaza con 409 hasta deshabilitarla primero
+- **THEN** se rechaza con 409 SEDE_HABILITADA hasta deshabilitarla primero
 
 ### Requirement: Operadores adicionales por sede
 El administrador MUST poder agregar operadores a una sede existente con nombre y correo. Cada alta MUST crear la cuenta pendiente, su pertenencia a una única sede y la invitación en la misma transacción. Cada operador MUST pertenecer a exactamente una sede.
@@ -115,7 +115,7 @@ El administrador MUST poder agregar operadores a una sede existente con nombre y
 - **THEN** se responde 404 sin crear cuenta
 
 ### Requirement: Suspensión y reactivación sin borrar historial
-El administrador MUST poder suspender y reactivar sedes y operadores. Suspender un operador MUST revocar sus sesiones e impedir nuevos accesos. Suspender una sede MUST deshabilitarla para atención. Ninguna acción MUST borrar filas.
+El administrador MUST poder suspender y reactivar sedes y operadores. Suspender un operador MUST revocar sus sesiones y enlaces de activación sin usar. Suspender una sede MUST deshabilitarla para atención. Ninguna acción MUST borrar filas.
 
 #### Scenario: Suspender operador con sesión
 - **WHEN** el administrador suspende un operador que tiene una sesión abierta
@@ -123,11 +123,15 @@ El administrador MUST poder suspender y reactivar sedes y operadores. Suspender 
 
 #### Scenario: Último operador activo de una sede habilitada
 - **WHEN** se suspende el único operador activo de una sede habilitada para atención
-- **THEN** se rechaza con 409 hasta deshabilitar la sede o activar otro operador
+- **THEN** se rechaza con 409 ULTIMO_OPERADOR_ACTIVO hasta deshabilitar la sede o activar otro operador
 
 #### Scenario: Reactivar
 - **WHEN** se reactiva un operador suspendido que ya había activado su cuenta
 - **THEN** puede volver a iniciar sesión con su contraseña sin crear otra cuenta
+
+#### Scenario: Suspender un operador pendiente de activación
+- **WHEN** se suspende un operador que aún no activó su cuenta y luego se reactiva
+- **THEN** el enlace recibido deja de servir en ambos momentos y la cuenta vuelve a pendiente hasta reenviar la invitación
 
 ### Requirement: Reenvío de invitación pendiente
 El administrador MUST poder reenviar la invitación de un operador pendiente de activación. El reenvío MUST invalidar el enlace anterior y MUST NOT aplicarse a cuentas activas o suspendidas.

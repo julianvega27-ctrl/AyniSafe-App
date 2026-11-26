@@ -1,4 +1,4 @@
-import { useId, useState, type InputHTMLAttributes } from 'react';
+import { useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { Icono } from './iconos';
 
 interface PropsCampo extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
@@ -80,6 +80,47 @@ export function CampoContrasena({ etiqueta, ayuda, error, ...entrada }: Omit<Pro
           {visible ? 'Ocultar' : 'Mostrar'}
         </button>
       </div>
+      {error ? (
+        <p className="campo__error" id={idError}>
+          <Icono nombre="error" />
+          <span>{error}</span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+interface PropsSeleccion extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'id'> {
+  readonly etiqueta: string;
+  readonly ayuda?: string;
+  readonly error?: string;
+  readonly children: ReactNode;
+}
+
+/** Selector nativo con la misma etiqueta, ayuda, error y altura minima que `Campo`. */
+export function CampoSeleccion({ etiqueta, ayuda, error, children, ...seleccion }: PropsSeleccion) {
+  const id = useId();
+  const idAyuda = ayuda ? `${id}-ayuda` : undefined;
+  const idError = error ? `${id}-error` : undefined;
+  return (
+    <div className="campo">
+      <label className="campo__etiqueta" htmlFor={id}>
+        {etiqueta}
+      </label>
+      {ayuda ? (
+        <p className="campo__ayuda" id={idAyuda}>
+          {ayuda}
+        </p>
+      ) : null}
+      <select
+        {...seleccion}
+        id={id}
+        className="campo__entrada"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={[idAyuda, idError].filter(Boolean).join(' ') || undefined}
+      >
+        {children}
+      </select>
       {error ? (
         <p className="campo__error" id={idError}>
           <Icono nombre="error" />

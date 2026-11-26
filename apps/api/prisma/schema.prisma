@@ -1,4 +1,5 @@
-// Esquema de Identidad y catálogo territorial de Consultas (P3.1). Ver
+// Esquema de Identidad (cuentas y organizacion, P3.2), catalogo territorial de Consultas (P3.1)
+// y catalogo de categorias de Reportes (P3.2). Ver
 // openspec/changes/registro-login-ciudadano/design.md, seccion 5.
 // Las restricciones que Prisma no expresa (CHECK) viven en el SQL de la migracion.
 
@@ -16,6 +17,8 @@ model Distrito {
   id         String @id
   nombre     String @unique
   geometrias GeometriaDistrital[]
+  sedesUbicadas Sede[]
+  coberturas CoberturaSede[]
   @@map("distritos")
 }
 
@@ -78,8 +81,8 @@ model Usuario {
   nombre            String
   /// Correo recortado y en minusculas: clave de identidad unica.
   correoNormalizado String        @unique @map("correo_normalizado")
-  /// Hash Argon2id codificado (con parametros y sal). Nunca la contrasena. Es nulo si y solo si
-  /// la cuenta esta pendiente de activacion (CHECK en la migracion).
+  /// Hash Argon2id codificado (con parametros y sal). Nunca la contrasena. Nulo en cuentas pendientes de
+  /// activacion y presente en las activas; una suspendida puede no tenerlo si nunca se activo (CHECK en la migracion).
   passwordHash      String?       @map("password_hash")
   rol               RolUsuario
   estado            EstadoUsuario
@@ -92,6 +95,8 @@ model Usuario {
   sesiones          Sesion[]
   tokensCuenta      TokenCuenta[]
   enviosCorreo      EnvioCorreo[]
+  sedesCreadas      Sede[]
+  pertenencia       PertenenciaOperador?
 
   @@map("usuarios")
 }
@@ -163,4 +168,85 @@ model EnvioCorreo {
   @@index([estado, proximoIntentoAt])
   @@index([usuarioId])
   @@map("envios_correo")
+}
+
+/// Catalogo cerrado de las 16 categorias (modulo Reportes). Sin edicion libre.
+model Categoria {
+  id           String @id
+  nombre       String @unique
+  orden        Int    @unique @db.SmallInt
+  activa       Boolean @default(true)
+  competencias CompetenciaSede[]
+  @@map("categorias")
+}
+
+/// Catalogo institucional cerrado: pnp, bomberos, samu y serenazgo (CHECK en la migracion).
+model Institucion {
+  id            String   @id
+  tipo          String   @unique
+  nombre        String
+  contacto      String?
+  activa        Boolean  @default(true)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(3)
+  sedes         Sede[]
+  @@map("instituciones")
+}
+
+model Sede {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institucionId       String    @map("institucion_id")
+  nombre              String
+  nombreNormalizado   String    @map("nombre_normalizado")
+  distritoUbicacionId String?   @map("distrito_ubicacion_id")
+  direccion           String?
+  contacto            String?
+  verificacion        String    @default("sin_verificar")
+  fuenteVerificacion  String?   @map("fuente_verificacion")
+  verificadaEn        DateTime? @map("verificada_en") @db.Date
+  habilitadaAtencion  Boolean   @default(false) @map("habilitada_atencion")
+  activa              Boolean   @default(true)
+  esDemostracion      Boolean   @default(false) @map("es_demostracion")
+  creadoPor           String    @map("creado_por") @db.Uuid
+  creadoEn            DateTime  @default(now()) @map("creado_en") @db.Timestamptz(3)
+  actualizadoEn       DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(3)
+  institucion         Institucion @relation(fields: [institucionId], references: [id], onDelete: Restrict)
+  distritoUbicacion   Distrito?   @relation(fields: [distritoUbicacionId], references: [id], onDelete: Restrict)
+  creador             Usuario     @relation(fields: [creadoPor], references: [id], onDelete: Restrict)
+  operadores          PertenenciaOperador[]
+  coberturas          CoberturaSede[]
+  competencias        CompetenciaSede[]
+  @@unique([institucionId, nombreNormalizado], map: "sedes_nombre_por_institucion")
+  @@map("sedes")
+}
+
+/// Cada operador pertenece a exactamente una sede (trigger de rol en la migracion).
+model PertenenciaOperador {
+  usuarioId      String   @id @map("usuario_id") @db.Uuid
+  sedeId         String   @map("sede_id") @db.Uuid
+  esDemostracion Boolean  @default(false) @map("es_demostracion")
+  creadoEn       DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  sede           Sede     @relation(fields: [sedeId], references: [id], onDelete: Restrict)
+  @@index([sedeId])
+  @@map("pertenencias_operador")
+}
+
+model CoberturaSede {
+  sedeId     String   @map("sede_id") @db.Uuid
+  distritoId String   @map("distrito_id")
+  sede       Sede     @relation(fields: [sedeId], references: [id], onDelete: Restrict)
+  distrito   Distrito @relation(fields: [distritoId], references: [id], onDelete: Restrict)
+  @@id([sedeId, distritoId])
+  @@index([distritoId])
+  @@map("coberturas_sede")
+}
+
+model CompetenciaSede {
+  sedeId      String    @map("sede_id") @db.Uuid
+  categoriaId String    @map("categoria_id")
+  sede        Sede      @relation(fields: [sedeId], references: [id], onDelete: Restrict)
+  categoria   Categoria @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  @@id([sedeId, categoriaId])
+  @@index([categoriaId])
+  @@map("competencias_sede")
 }

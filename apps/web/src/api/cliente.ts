@@ -22,6 +22,73 @@ export interface SeccionPanel {
 
 export type EstadoAprobacion = 'aprobado' | 'pendiente';
 
+// --- Organizacion institucional (P3.2) -----------------------------------------------------
+
+export type TipoInstitucion = 'pnp' | 'bomberos' | 'samu' | 'serenazgo';
+
+export interface Institucion {
+  readonly id: TipoInstitucion;
+  readonly tipo: TipoInstitucion;
+  readonly nombre: string;
+  readonly contacto: string | null;
+  readonly activa: boolean;
+}
+
+export interface Sede {
+  readonly id: string;
+  readonly institucionId: TipoInstitucion;
+  readonly nombre: string;
+  readonly distritoUbicacionId: string | null;
+  readonly direccion: string | null;
+  readonly contacto: string | null;
+  readonly verificacion: { readonly estado: 'sin_verificar' | 'verificada'; readonly fuente: string | null; readonly fecha: string | null };
+  readonly habilitadaAtencion: boolean;
+  readonly activa: boolean;
+  readonly esDemostracion: boolean;
+  readonly distritos: readonly string[];
+  readonly categorias: readonly string[];
+}
+
+export type EstadoOperador = 'pendiente_activacion' | 'activo' | 'suspendido';
+
+export interface OperadorSede {
+  readonly id: string;
+  readonly nombre: string;
+  readonly correo: string;
+  readonly estado: EstadoOperador;
+  readonly sedeId: string;
+  readonly esDemostracion: boolean;
+}
+
+export interface AltaSede {
+  readonly institucionId: TipoInstitucion;
+  readonly nombre: string;
+  readonly distritoUbicacionId?: string;
+  readonly esDemostracion?: boolean;
+  readonly operador: { readonly nombre: string; readonly correo: string };
+}
+
+export interface CambiosSede {
+  readonly nombre?: string;
+  readonly activa?: boolean;
+  readonly verificacion?: { readonly estado: 'sin_verificar' } | { readonly estado: 'verificada'; readonly fuente: string; readonly fecha: string };
+}
+
+export interface DistritoCatalogo {
+  readonly id: string;
+  readonly nombre: string;
+}
+
+export interface CategoriaCatalogo {
+  readonly id: string;
+  readonly nombre: string;
+  readonly orden: number;
+  readonly activa: boolean;
+}
+
+const ORG = '/api/v1/administrador/organizacion';
+const enc = encodeURIComponent;
+
 export interface ContenidoPublico {
   readonly version: number;
   readonly app: { readonly estado: EstadoAprobacion; readonly finalidad?: string; readonly funcionamiento?: string };
@@ -43,6 +110,8 @@ export type Resultado<T> =
       readonly campos?: Readonly<Record<string, string>>;
       /** Segundos de espera (Retry-After) cuando el estado es 429. */
       readonly reintentarEn?: number;
+      /** Requisitos incumplidos cuando el codigo es REQUISITOS_HABILITACION. */
+      readonly faltantes?: readonly string[];
     }
   /** Sin conexion o la solicitud no llego. */
   | { readonly tipo: 'red' }
@@ -53,7 +122,7 @@ export type Resultado<T> =
 const TIEMPO_MAXIMO_MS = 45_000;
 
 interface Opciones {
-  readonly metodo?: 'GET' | 'POST' | 'DELETE';
+  readonly metodo?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   readonly cuerpo?: unknown;
   readonly senal?: AbortSignal;
 }
@@ -98,10 +167,12 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}): Promise<Resulta
   }
   let codigo: string | undefined;
   let campos: Record<string, string> | undefined;
+  let faltantes: string[] | undefined;
   try {
-    const json = (await respuesta.json()) as { error?: { code?: string; fields?: Record<string, string> } };
+    const json = (await respuesta.json()) as { error?: { code?: string; fields?: Record<string, string>; faltantes?: string[] } };
     codigo = json.error?.code;
     campos = json.error?.fields;
+    faltantes = Array.isArray(json.error?.faltantes) ? json.error.faltantes : undefined;
   } catch {
     /* cuerpo no JSON */
   }
@@ -112,6 +183,7 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}): Promise<Resulta
     codigo,
     campos,
     reintentarEn: respuesta.status === 429 && Number.isFinite(espera) && espera > 0 ? espera : undefined,
+    faltantes,
   };
 }
 
@@ -140,4 +212,29 @@ export const api = {
 
   activarCuenta: (token: string, contrasena: string) =>
     llamar<undefined>('/api/v1/auth/activaciones', { metodo: 'POST', cuerpo: { token, contrasena } }),
+
+  // Organizacion: la API decide la autorizacion; el cliente solo traduce resultados.
+  instituciones: (senal?: AbortSignal) => llamar<{ instituciones: readonly Institucion[] }>(`${ORG}/instituciones`, { senal }),
+  actualizarInstitucion: (id: TipoInstitucion, cambios: { nombre?: string; contacto?: string | null }) =>
+    llamar<{ institucion: Institucion }>(`${ORG}/instituciones/${enc(id)}`, { metodo: 'PATCH', cuerpo: cambios }),
+  sedes: (senal?: AbortSignal) => llamar<{ sedes: readonly Sede[] }>(`${ORG}/sedes`, { senal }),
+  crearSede: (alta: AltaSede) => llamar<{ sede: Sede; operador: OperadorSede }>(`${ORG}/sedes`, { metodo: 'POST', cuerpo: alta }),
+  actualizarSede: (id: string, cambios: CambiosSede) =>
+    llamar<{ sede: Sede }>(`${ORG}/sedes/${enc(id)}`, { metodo: 'PATCH', cuerpo: cambios }),
+  guardarCobertura: (id: string, distritos: readonly string[]) =>
+    llamar<{ sede: Sede }>(`${ORG}/sedes/${enc(id)}/cobertura`, { metodo: 'PUT', cuerpo: { distritos } }),
+  guardarCompetencias: (id: string, categorias: readonly string[]) =>
+    llamar<{ sede: Sede }>(`${ORG}/sedes/${enc(id)}/competencias`, { metodo: 'PUT', cuerpo: { categorias } }),
+  habilitarSede: (id: string) => llamar<{ sede: Sede }>(`${ORG}/sedes/${enc(id)}/habilitacion`, { metodo: 'POST' }),
+  deshabilitarSede: (id: string) => llamar<{ sede: Sede }>(`${ORG}/sedes/${enc(id)}/habilitacion`, { metodo: 'DELETE' }),
+  operadores: (sedeId: string, senal?: AbortSignal) =>
+    llamar<{ operadores: readonly OperadorSede[] }>(`${ORG}/sedes/${enc(sedeId)}/operadores`, { senal }),
+  agregarOperador: (sedeId: string, datos: { nombre: string; correo: string }) =>
+    llamar<{ operador: OperadorSede }>(`${ORG}/sedes/${enc(sedeId)}/operadores`, { metodo: 'POST', cuerpo: datos }),
+  cambiarEstadoOperador: (id: string, estado: 'activo' | 'suspendido') =>
+    llamar<{ operador: OperadorSede }>(`${ORG}/operadores/${enc(id)}`, { metodo: 'PATCH', cuerpo: { estado } }),
+  reenviarInvitacion: (id: string) => llamar<{ estado: 'invitacion_encolada' }>(`${ORG}/operadores/${enc(id)}/invitacion`, { metodo: 'POST' }),
+  distritos: (senal?: AbortSignal) =>
+    llamar<{ distritos: readonly DistritoCatalogo[] }>('/api/v1/publico/territorio/distritos', { senal }),
+  categorias: (senal?: AbortSignal) => llamar<{ categorias: readonly CategoriaCatalogo[] }>('/api/v1/publico/categorias', { senal }),
 };

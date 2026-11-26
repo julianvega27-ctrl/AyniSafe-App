@@ -2,7 +2,9 @@ import 'dotenv/config';
 import { afterAll } from '@jest/globals';
 import type { Express } from 'express';
 import { crearApp } from '../../src/app';
-import { crearModuloConsultasConPrisma } from '../../src/modules/consultas';
+import { crearModuloConsultasConPrisma, idsDistritosPiloto } from '../../src/modules/consultas';
+import { crearModuloReportesConPrisma, type ModuloReportes } from '../../src/modules/reportes';
+import { PrismaOrganizacionAdapter } from '../../src/modules/identidad/infraestructura/prisma-organizacion.adapter';
 import type { EventoLog, Logger } from '../../src/compartido/logger';
 import type { PoliticaLimites } from '../../src/modules/identidad/aplicacion/politica-limites';
 import type { HashContrasenaPort } from '../../src/modules/identidad/aplicacion/puertos/hash-contrasena.port';
@@ -86,6 +88,7 @@ export interface Arnes {
   readonly reloj: RelojControlable;
   readonly logger: LoggerCapturado;
   readonly modulo: ModuloIdentidad;
+  readonly reportes: ModuloReportes;
   readonly deps: DependenciasIdentidad;
   /** Adaptador de correo en memoria (salvo que se sobrescriba): no valida el proveedor real. */
   readonly correo: CorreoPruebaAdapter;
@@ -112,6 +115,7 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   const reloj = opciones.reloj ?? new RelojControlable();
   const logger = new LoggerCapturado();
   const correo = new CorreoPruebaAdapter();
+  const reportes = crearModuloReportesConPrisma(prisma);
   const deps: DependenciasIdentidad = {
     cuentas: new PrismaCuentasAdapter(prisma),
     sesiones: new PrismaSesionesAdapter(prisma),
@@ -134,13 +138,21 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     android: { paquete: 'pe.edu.unsch.ayni_safe', huellasSha256: [HUELLA_PRUEBA] },
     web: { origen: ORIGEN_WEB_PRUEBA },
     logger,
+    organizacion: new PrismaOrganizacionAdapter(prisma),
+    catalogoDistritos: { idsValidos: async () => idsDistritosPiloto() },
+    catalogoCategorias: { idsValidos: () => reportes.categorias.idsActivos() },
     ...opciones.sobrescribir,
   };
   const modulo = crearModuloIdentidad(deps);
   modulosCreados.add(modulo);
   clientesCreados.add(prisma);
-  const app = crearApp({ saltosProxyConfianza: opciones.saltosProxy ?? 0, identidad: modulo, consultas: crearModuloConsultasConPrisma(prisma, SECRETO_PRUEBA) });
-  return { app, prisma, reloj, logger, modulo, deps, correo };
+  const app = crearApp({
+    saltosProxyConfianza: opciones.saltosProxy ?? 0,
+    identidad: modulo,
+    consultas: crearModuloConsultasConPrisma(prisma, SECRETO_PRUEBA),
+    reportes,
+  });
+  return { app, prisma, reloj, logger, modulo, reportes, deps, correo };
 }
 
 export async function limpiarBd(prisma: PrismaClient): Promise<void> {
@@ -157,6 +169,8 @@ export const RUTA_INST_SESIONES = '/api/v1/auth/institucional/sesiones';
 export const RUTA_INST_SESION = '/api/v1/auth/institucional/sesion';
 export const RUTA_PANEL_ADMIN = '/api/v1/administrador/panel';
 export const RUTA_PANEL_OPERADOR = '/api/v1/operador/panel';
+export const RUTA_ORG = '/api/v1/administrador/organizacion';
+export const RUTA_AMBITO = '/api/v1/operador/ambito';
 
 export interface CuentaDePrueba {
   readonly id: string;

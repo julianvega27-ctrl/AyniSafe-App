@@ -8,6 +8,7 @@ import { PrismaTerritorioAdapter } from '../../src/modules/consultas/infraestruc
 import { paqueteSintetico } from '../fixtures/territorio';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultas } from '../../src/modules/consultas';
+import { crearModuloReportes } from '../../src/modules/reportes';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import type { CuentasPort } from '../../src/modules/identidad/aplicacion/puertos/cuentas.port';
 import type { SesionesPort } from '../../src/modules/identidad/aplicacion/puertos/sesiones.port';
@@ -391,7 +392,7 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     expect(cuota.status).toBe(429); verificar(P, 'post', cuota);
     const otraIp = await request(app).post(url(P)).set('X-Forwarded-For', '192.0.2.32').send({ latitud: 1, longitud: 1 });
     expect(otraIp.status).toBe(200);
-    const rota = crearApp({ saltosProxyConfianza: 0, identidad: arnes.modulo,
+    const rota = crearApp({ saltosProxyConfianza: 0, identidad: arnes.modulo, reportes: arnes.reportes,
       consultas: crearModuloConsultas(undefined, { repositorio: { leer: async () => { throw new Error('secreto SQL'); } }, secretoLimitador: 'solo-pruebas' }) });
     for (const ruta of [C, L]) {
       const r = await request(rota).get(url(ruta)); verificar(ruta, 'get', r);
@@ -401,6 +402,210 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     expect(await prisma.usuario.count()).toBe(cuentas); expect(await prisma.sesion.count()).toBe(sesiones);
     expect(await prisma.geometriaDistrital.count()).toBe(5);
     expect(arnes.logger.texto()).not.toMatch(/latitud|longitud|secreto SQL/);
+  });
+
+  it('organizacion y categorias: cada estado documentado coincide con la respuesta real', async () => {
+    const ORG = '/administrador/organizacion';
+    const U = (r: string) => `/api/v1${r}`;
+    const arnes = crearArnes({ prisma });
+    const { app, modulo, correo } = arnes;
+    const NUEVA = 'contraseña de operador del contrato 4b';
+    const sesion = async (rol: 'administrador' | 'operador', cuenta?: { correo: string }, clave = CLAVE) => {
+      const c = cuenta ?? (await crearCuentaDePrueba(prisma, { rol }));
+      const r = await request(app).post('/api/v1/auth/institucional/sesiones').set('Origin', ORIGEN_WEB_PRUEBA).send({ correo: c.correo, contrasena: clave });
+      expect(r.status).toBe(200);
+      return `__Host-ayni_inst=${cookieDe(r) as string}`;
+    };
+    const cookieAdmin = await sesion('administrador');
+    const cookieOpSinSede = await sesion('operador');
+    const conAdmin = { Cookie: cookieAdmin, Origin: ORIGEN_WEB_PRUEBA };
+    const conOp = { Cookie: cookieOpSinSede, Origin: ORIGEN_WEB_PRUEBA };
+    const grande = { nombre: 'x'.repeat(9000) };
+    const NADA = '00000000-0000-4000-8000-000000000000';
+    const activar = async (para: string) => {
+      await modulo.gestorEnvios.esperarReposo();
+      const token = /#t=([A-Za-z0-9_-]+)/.exec([...correo.enviados].reverse().find((m) => m.para === para)!.texto)![1];
+      expect((await request(app).post('/api/v1/auth/activaciones').send({ token, contrasena: NUEVA })).status).toBe(204);
+    };
+    type Metodo = 'get' | 'post' | 'put' | 'patch' | 'delete';
+    const llamar = (metodo: Metodo, ruta: string, cabeceras: Record<string, string>, cuerpo?: object | string, tipo?: string) => {
+      let r = request(app)[metodo](U(ruta)).set(cabeceras);
+      if (tipo) r = r.set('Content-Type', tipo);
+      return cuerpo === undefined ? r : r.send(cuerpo);
+    };
+    const v = async (doc: string, metodo: Metodo, ruta: string, cab: Record<string, string>, esperado: number, cuerpo?: object | string, tipo?: string) => {
+      const r = await llamar(metodo, ruta, cab, cuerpo, tipo);
+      expectConContexto(r.status, `${metodo.toUpperCase()} ${ruta} ${JSON.stringify(r.body)}`).toBe(esperado);
+      verificar(doc, metodo, r);
+      return r;
+    };
+
+    // --- Instituciones
+    await v(`${ORG}/instituciones`, 'get', `${ORG}/instituciones`, conAdmin, 200);
+    await v(`${ORG}/instituciones`, 'get', `${ORG}/instituciones`, {}, 401);
+    await v(`${ORG}/instituciones`, 'get', `${ORG}/instituciones`, conOp, 403);
+    const INS = `${ORG}/instituciones/{id}`;
+    await v(INS, 'patch', `${ORG}/instituciones/samu`, conAdmin, 200, { contacto: '106' });
+    await v(INS, 'patch', `${ORG}/instituciones/samu`, conAdmin, 400, { tipo: 'pnp' });
+    await v(INS, 'patch', `${ORG}/instituciones/samu`, {}, 401, { contacto: '106' });
+    await v(INS, 'patch', `${ORG}/instituciones/samu`, conOp, 403, { contacto: '106' });
+    await v(INS, 'patch', `${ORG}/instituciones/samu`, { Cookie: cookieAdmin }, 403, { contacto: '106' });
+    await v(INS, 'patch', `${ORG}/instituciones/otra`, conAdmin, 404, { contacto: '106' });
+    await v(INS, 'patch', `${ORG}/instituciones/samu`, conAdmin, 413, grande);
+    await v(INS, 'patch', `${ORG}/instituciones/samu`, conAdmin, 415, 'x', 'text/plain');
+
+    // --- Sedes
+    const SED = `${ORG}/sedes`;
+    const alta = (n: number) => ({ institucionId: 'pnp', nombre: `Sede contrato ${n}`, operador: { nombre: `Op ${n}`, correo: `opc${n}@ejemplo.com` } });
+    const creada = await v(SED, 'post', SED, conAdmin, 201, alta(1));
+    const sedeId = creada.body.sede.id as string;
+    const operadorId = creada.body.operador.id as string;
+    await v(SED, 'post', SED, conAdmin, 409, alta(1));
+    await v(SED, 'post', SED, conAdmin, 400, { institucionId: 'municipalidad' });
+    await v(SED, 'post', SED, {}, 401, alta(2));
+    await v(SED, 'post', SED, conOp, 403, alta(2));
+    await v(SED, 'post', SED, conAdmin, 413, { ...alta(2), nombre: 'x'.repeat(9000) });
+    await v(SED, 'post', SED, conAdmin, 415, 'x', 'text/plain');
+    await v(SED, 'get', SED, conAdmin, 200);
+    await v(SED, 'get', SED, {}, 401);
+    await v(SED, 'get', SED, conOp, 403);
+
+    const SID = `${ORG}/sedes/{id}`;
+    const sede = `${SED}/${sedeId}`;
+    await v(SID, 'patch', sede, conAdmin, 200, { verificacion: { estado: 'verificada', fuente: 'Oficio', fecha: '2026-11-25' } });
+    await v(SID, 'patch', sede, conAdmin, 400, { habilitadaAtencion: true });
+    await v(SID, 'patch', sede, {}, 401, { nombre: 'X' });
+    await v(SID, 'patch', sede, conOp, 403, { nombre: 'X' });
+    await v(SID, 'patch', `${SED}/${NADA}`, conAdmin, 404, { nombre: 'X' });
+    await v(SID, 'patch', sede, conAdmin, 413, grande);
+    await v(SID, 'patch', sede, conAdmin, 415, 'x', 'text/plain');
+
+    for (const [sufijo, cuerpo, malo] of [
+      ['cobertura', { distritos: ['DIS-01'] }, { distritos: ['DIS-09'] }],
+      ['competencias', { categorias: ['robo'] }, { categorias: ['inventada'] }],
+    ] as const) {
+      const doc = `${ORG}/sedes/{id}/${sufijo}`;
+      const ruta = `${sede}/${sufijo}`;
+      await v(doc, 'put', ruta, conAdmin, 200, cuerpo);
+      await v(doc, 'put', ruta, conAdmin, 400, malo);
+      await v(doc, 'put', ruta, {}, 401, cuerpo);
+      await v(doc, 'put', ruta, conOp, 403, cuerpo);
+      await v(doc, 'put', `${SED}/${NADA}/${sufijo}`, conAdmin, 404, cuerpo);
+      await v(doc, 'put', ruta, conAdmin, 413, { [Object.keys(cuerpo)[0]!]: ['x'.repeat(9000)] });
+      await v(doc, 'put', ruta, conAdmin, 415, 'x', 'text/plain');
+    }
+
+    const HAB = `${ORG}/sedes/{id}/habilitacion`;
+    const habilitacion = `${sede}/habilitacion`;
+    const faltan = await v(HAB, 'post', habilitacion, conAdmin, 409);
+    expect(faltan.body.error.faltantes).toEqual(['operador_activo']);
+    await v(HAB, 'post', habilitacion, {}, 401);
+    await v(HAB, 'post', habilitacion, conOp, 403);
+    await v(HAB, 'post', `${SED}/${NADA}/habilitacion`, conAdmin, 404);
+    await v(HAB, 'post', habilitacion, conAdmin, 415, 'x', 'text/plain');
+    await v(HAB, 'delete', habilitacion, conAdmin, 200);
+    await v(HAB, 'delete', habilitacion, {}, 401);
+    await v(HAB, 'delete', habilitacion, conOp, 403);
+    await v(HAB, 'delete', `${SED}/${NADA}/habilitacion`, conAdmin, 404);
+    await v(HAB, 'delete', habilitacion, conAdmin, 415, 'x', 'text/plain');
+
+    // --- Operadores e invitacion
+    const OPS = `${ORG}/sedes/{id}/operadores`;
+    await v(OPS, 'post', `${sede}/operadores`, conAdmin, 201, { nombre: 'Ana', correo: 'anac@ejemplo.com' });
+    await v(OPS, 'post', `${sede}/operadores`, conAdmin, 409, { nombre: 'Ana', correo: 'anac@ejemplo.com' });
+    await v(OPS, 'post', `${sede}/operadores`, conAdmin, 400, { nombre: 'Ana' });
+    await v(OPS, 'post', `${sede}/operadores`, {}, 401, { nombre: 'B', correo: 'b@ejemplo.com' });
+    await v(OPS, 'post', `${sede}/operadores`, conOp, 403, { nombre: 'B', correo: 'b@ejemplo.com' });
+    await v(OPS, 'post', `${SED}/${NADA}/operadores`, conAdmin, 404, { nombre: 'B', correo: 'b@ejemplo.com' });
+    await v(OPS, 'post', `${sede}/operadores`, conAdmin, 413, grande);
+    await v(OPS, 'post', `${sede}/operadores`, conAdmin, 415, 'x', 'text/plain');
+    await v(OPS, 'get', `${sede}/operadores`, conAdmin, 200);
+    await v(OPS, 'get', `${sede}/operadores`, {}, 401);
+    await v(OPS, 'get', `${sede}/operadores`, conOp, 403);
+    await v(OPS, 'get', `${SED}/${NADA}/operadores`, conAdmin, 404);
+
+    const INV = `${ORG}/operadores/{id}/invitacion`;
+    const invitacion = `${ORG}/operadores/${operadorId}/invitacion`;
+    await v(INV, 'post', invitacion, conAdmin, 202);
+    await v(INV, 'post', invitacion, {}, 401);
+    await v(INV, 'post', invitacion, conOp, 403);
+    await v(INV, 'post', `${ORG}/operadores/${NADA}/invitacion`, conAdmin, 404);
+    await v(INV, 'post', invitacion, conAdmin, 415, 'x', 'text/plain');
+    await activar('opc1@ejemplo.com');
+    await v(INV, 'post', invitacion, conAdmin, 409);
+
+    await v(HAB, 'post', habilitacion, conAdmin, 200);
+    await v(SID, 'patch', sede, conAdmin, 409, { verificacion: { estado: 'sin_verificar' } });
+    await v(`${ORG}/sedes/{id}/cobertura`, 'put', `${sede}/cobertura`, conAdmin, 409, { distritos: [] });
+    await v(`${ORG}/sedes/{id}/competencias`, 'put', `${sede}/competencias`, conAdmin, 409, { categorias: [] });
+    await v(INS, 'patch', `${ORG}/instituciones/pnp`, conAdmin, 409, { activa: false });
+
+    const OP = `${ORG}/operadores/{id}`;
+    const operador = `${ORG}/operadores/${operadorId}`;
+    await v(OP, 'patch', operador, conAdmin, 409, { estado: 'suspendido' });
+    await v(OP, 'patch', operador, conAdmin, 200, { estado: 'activo' });
+    await v(OP, 'patch', operador, conAdmin, 400, { estado: 'borrado' });
+    await v(OP, 'patch', operador, {}, 401, { estado: 'activo' });
+    await v(OP, 'patch', operador, conOp, 403, { estado: 'activo' });
+    await v(OP, 'patch', `${ORG}/operadores/${NADA}`, conAdmin, 404, { estado: 'activo' });
+    await v(OP, 'patch', operador, conAdmin, 413, grande);
+    await v(OP, 'patch', operador, conAdmin, 415, 'x', 'text/plain');
+
+    // --- Ambito del operador
+    const cookieOp = await sesion('operador', { correo: 'opc1@ejemplo.com' }, NUEVA);
+    await v('/operador/ambito', 'get', '/operador/ambito', { Cookie: cookieOp }, 200);
+    await v('/operador/ambito', 'get', '/operador/ambito', {}, 401);
+    await v('/operador/ambito', 'get', '/operador/ambito', { Cookie: cookieAdmin }, 403);
+
+    // --- 503 y 500: sesiones reales; falla el almacenamiento de organizacion y los catalogos.
+    for (const [falla, estado] of [[noDisponible, 503], [reventada, 500]] as const) {
+      const organizacion = new Proxy({}, { get: () => falla }) as never;
+      // Un catalogo caido es una dependencia no disponible (503) en ambos casos: solo se rompe en el 503.
+      const catalogo = estado === 503 ? { catalogoDistritos: { idsValidos: falla }, catalogoCategorias: { idsValidos: falla } } : {};
+      const rota = crearArnes({ prisma, sobrescribir: { organizacion, ...catalogo } }).app;
+      const casos: [string, Metodo, string, object?][] = [
+        [`${ORG}/instituciones`, 'get', `${ORG}/instituciones`],
+        [INS, 'patch', `${ORG}/instituciones/samu`, { contacto: '1' }],
+        [SED, 'get', SED], [SED, 'post', SED, alta(9)],
+        [SID, 'patch', sede, { nombre: 'X' }],
+        [`${ORG}/sedes/{id}/cobertura`, 'put', `${sede}/cobertura`, { distritos: ['DIS-01'] }],
+        [`${ORG}/sedes/{id}/competencias`, 'put', `${sede}/competencias`, { categorias: ['robo'] }],
+        [HAB, 'post', habilitacion], [HAB, 'delete', habilitacion],
+        [OPS, 'get', `${sede}/operadores`], [OPS, 'post', `${sede}/operadores`, { nombre: 'Z', correo: 'z@ejemplo.com' }],
+        [OP, 'patch', operador, { estado: 'activo' }], [INV, 'post', invitacion],
+      ];
+      for (const [doc, metodo, ruta, cuerpo] of casos) {
+        const r = request(rota)[metodo](U(ruta)).set(conAdmin);
+        const res = await (cuerpo ? r.send(cuerpo) : r);
+        expectConContexto(res.status, `${metodo} ${ruta}`).toBe(estado);
+        verificar(doc, metodo, res);
+      }
+      const ambito = await request(rota).get(U('/operador/ambito')).set('Cookie', cookieOp);
+      expect(ambito.status).toBe(estado);
+      verificar('/operador/ambito', 'get', ambito);
+    }
+
+    // --- Catalogo publico de categorias: mismo cuerpo con o sin sesion
+    const CAT = '/publico/categorias';
+    const anonimo = await v(CAT, 'get', CAT, {}, 200);
+    expect(anonimo.body.categorias).toHaveLength(16);
+    const ciudadano = await crearCuentaDePrueba(prisma, { rol: 'ciudadano' });
+    const token = (await request(app).post(RUTA_LOGIN).send({ correo: ciudadano.correo, contrasena: CLAVE })).body.token as string;
+    for (const cab of [{ Authorization: `Bearer ${token}` }, { Cookie: cookieAdmin }, { Cookie: cookieOp }]) {
+      expect((await request(app).get(U(CAT)).set(cab)).body).toEqual(anonimo.body);
+    }
+    await v(CAT, 'get', `${CAT}?activa=true`, {}, 400);
+    const sinCatalogo = crearApp({
+      saltosProxyConfianza: 0, identidad: arnes.modulo, consultas: crearModuloConsultas(),
+      reportes: crearModuloReportes({ listar: async () => { throw new Error('secreto SQL'); } }),
+    });
+    const caido = await request(sinCatalogo).get(U(CAT));
+    expect(caido.status).toBe(503);
+    expect(caido.text).not.toContain('secreto');
+    verificar(CAT, 'get', caido);
+    const post = await request(app).post(U(CAT));
+    expect(post.status).toBe(405);
+    expect(post.headers.allow).toBe('GET, HEAD');
   });
 
   it('todos los estados documentados fueron ejercitados y ninguna respuesta real quedo sin documentar', () => {
