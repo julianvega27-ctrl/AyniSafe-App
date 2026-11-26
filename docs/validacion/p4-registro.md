@@ -524,4 +524,9 @@ Con los archivos ya versionados, el escaneo de secretos cubre también los archi
 
 **Pendiente:**
 - configurar `TRACKING_CODE_HMAC_SECRET` en Render antes de desplegar;
-- sincronizar y archivar `registro-incidentes` cuando el responsable lo pida.
+
+**Cierre OpenSpec (rama `docs/p4-cierre`):**
+- Specs sincronizadas: 6 capacidades nuevas (`reportes/registro-incidentes`, `operaciones/incidentes`, `plataforma/eventos-asincronos`, `consultas/seguimiento-ciudadano`, `movil/reporte-incidente` y `movil/seguimiento-incidentes`) y el delta de `movil/navegacion-ciudadana` (+2, ~3, -1).
+- Cambio archivado en `openspec/changes/archive/2026-11-26-registro-incidentes`.
+- `openspec validate --specs`: 23/23. En modo estricto fallan 4 specs de identidad y web por avisos de longitud que ya existían; no los introdujo este cierre.
+- Las migraciones conservan en sus comentarios la ruta del cambio sin archivar: no se editan porque Prisma valida su checksum.
