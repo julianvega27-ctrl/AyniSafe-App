@@ -61,7 +61,7 @@ No se precargaron las 13 sedes candidatas del documento 10. Las sedes y operador
 
 ## Validación ejecutada
 
-Entorno: Windows x64, Node 24.21.0, PostgreSQL 18.1 en un clúster aislado (`.cache/p3-postgres`, loopback 55433, base `ayni_p32_test`), Prisma 7.10.1 y Chrome headless local. Estado local sin commit sobre `b2a15f4`.
+Entorno: Windows x64, Node 24.21.0, PostgreSQL 18.1 en un clúster aislado (`.cache/p3-postgres`, loopback 55433, base `ayni_p32_test`), Prisma 7.10.1 y Chrome headless local. Validación local sobre el estado previo al commit `b54adb1`; CI remoto sobre `3844a8e`.
 
 | Comprobación | Resultado |
 |---|---|
@@ -164,6 +164,6 @@ La comparación es visual, sin diferencia automática de píxeles.
 
 ## Pendientes
 
-- CI remoto de esta revisión: pendiente hasta que el responsable publique la rama. No se afirma aprobación remota.
+- CI remoto aprobado: PR #3, GitHub Actions run [45848328438](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45848328438) sobre `3844a8e`. API (tipos, arquitectura, contrato y Jest con cobertura, 2 min 7 s), Flutter, web y escaneo de secretos aprobados. La ejecución anterior falló por el código RESTRICT de PostgreSQL 17 (ver resultados negativos).
 - Proveedor de correo real y validación con instituciones: no se tocan.
-- Sincronizar y archivar `organizacion-institucional` y `territorio-versionado` (CI de P3.1 aprobado en el PR #2): solo cuando el responsable lo pida.
+- `territorio-versionado` archivado en `cc6f23c`; `organizacion-institucional` se archiva en esta misma rama de cierre (`docs/p3-cierre`).

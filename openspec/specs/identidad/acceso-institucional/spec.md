@@ -116,11 +116,11 @@ Las rutas del panel MUST aceptar únicamente la cookie de sesión institucional 
 - **THEN** su contrato y resultados permanecen sin cambios
 
 ### Requirement: Paneles mínimos y permisos por rol
-`GET /administrador/panel` MUST responder solo a un administrador activo y `GET /operador/panel` solo a un operador activo. Cada uno MUST devolver la identidad del titular y la lista de secciones de su panel según la guía de UI, marcadas como no disponibles mientras no existan, sin datos operativos ni cifras de ejemplo. Una sesión de otro rol institucional MUST recibir 403 y la falta de sesión 401.
+`GET /administrador/panel` MUST responder solo a un administrador activo y `GET /operador/panel` solo a un operador activo. Cada uno MUST devolver la identidad del titular y la lista de secciones de su panel según la guía de UI. Una sección MUST marcarse disponible solo si su capacidad está implementada; las demás MUST marcarse no disponibles, sin datos operativos ni cifras de ejemplo. Una sesión de otro rol institucional MUST recibir 403 y la falta de sesión 401.
 
 #### Scenario: Administrador en su panel
 - **WHEN** un administrador activo consulta `GET /administrador/panel`
-- **THEN** recibe 200 con su identidad y las secciones de administración marcadas como no disponibles
+- **THEN** recibe 200 con su identidad, «Instituciones y sedes», «Operadores» y «Coberturas» marcadas como disponibles y el resto de secciones de administración como no disponibles
 
 #### Scenario: Operador en el panel del administrador
 - **WHEN** un operador activo consulta `GET /administrador/panel`
@@ -136,10 +136,10 @@ Las rutas del panel MUST aceptar únicamente la cookie de sesión institucional 
 
 #### Scenario: Operador de prueba
 - **WHEN** una prueba usa un operador creado directamente en la base de pruebas
-- **THEN** su acceso se verifica sin que exista ninguna ruta de alta de operadores
+- **THEN** su acceso se verifica igual que el de un operador creado mediante el alta de sede
 
 ### Requirement: Sin recuperación pública ni altas privilegiadas
-Esta capacidad MUST NOT exponer rutas que creen cuentas administrador u operador, ni extender la solicitud pública de recuperación de contraseña a cuentas privilegiadas. La solicitud de recuperación MUST seguir respondiendo el 202 uniforme sin enviar correo a administradores u operadores.
+Esta capacidad MUST NOT exponer rutas públicas que creen cuentas administrador u operador, ni ninguna ruta que cree administradores. Los operadores MUST crearse solo por un administrador autenticado mediante la organización institucional. La solicitud pública de recuperación MUST seguir respondiendo el 202 uniforme sin enviar correo a administradores u operadores.
 
 #### Scenario: Recuperación solicitada para un administrador
 - **WHEN** se solicita recuperación con el correo de un administrador activo
@@ -147,7 +147,7 @@ Esta capacidad MUST NOT exponer rutas que creen cuentas administrador u operador
 
 #### Scenario: Inspección de rutas
 - **WHEN** se inspecciona el contrato publicado
-- **THEN** ninguna ruta crea administradores ni operadores y el registro ciudadano sigue rechazando rol y campos extra
+- **THEN** ninguna ruta crea administradores, las únicas que crean operadores exigen sesión de administrador y el registro ciudadano sigue rechazando rol y campos extra
 
 ### Requirement: Secretos de sesión fuera de registros
 La cookie de sesión, el token, las contraseñas y los valores de `Set-Cookie` MUST excluirse de logs, errores y trazas, y de cualquier respuesta distinta del establecimiento de la cookie.

@@ -77,7 +77,7 @@ El consumo de un token MUST ser atómico: de varias solicitudes simultáneas con
 - **THEN** la respuesta es 503 sin detalles internos y el mismo token puede usarse después, con la contraseña y las sesiones sin cambios
 
 ### Requirement: Invitación y activación de cuentas
-El sistema MUST ofrecer una capacidad interna para invitar una cuenta en estado `pendiente_activacion` que se ejecute dentro de la transacción del llamador, y un endpoint público de activación que, con un token vigente y una contraseña válida, deje la cuenta activa y responda 204 sin crear sesión. Esta entrega MUST NOT exponer ninguna ruta que cree operadores, administradores ni sedes.
+El sistema MUST ofrecer una capacidad interna para invitar una cuenta en estado `pendiente_activacion` que se ejecute dentro de la transacción del llamador, y un endpoint público de activación que, con un token vigente y una contraseña válida, deje la cuenta activa y responda 204 sin crear sesión. Solo la organización institucional, con sesión de administrador, MUST poder crear cuentas operador e invitarlas; ninguna ruta MUST crear administradores ni sedes fuera de ese flujo.
 
 #### Scenario: Activación correcta
 - **WHEN** una cuenta pendiente recibe su invitación y su titular envía el token con una contraseña válida
@@ -88,7 +88,7 @@ El sistema MUST ofrecer una capacidad interna para invitar una cuenta en estado 
 - **THEN** no existen cuenta, token ni envío pendientes
 
 #### Scenario: Sin creación pública de privilegiados
-- **WHEN** se inspeccionan las rutas de esta entrega y el registro público
+- **WHEN** se inspeccionan las rutas públicas y el registro ciudadano
 - **THEN** ninguna permite crear cuentas operador o administrador y el registro ciudadano sigue rechazando rol y campos extra
 
 ### Requirement: Cuenta pendiente sin acceso
