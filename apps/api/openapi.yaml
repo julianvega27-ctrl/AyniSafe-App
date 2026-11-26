@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
-  title: AyniSafe API - Acceso ciudadano, acceso institucional, perfil y contenido publico
-  version: 0.4.0
+  title: AyniSafe API - Identidad, contenido público y territorio
+  version: 0.5.0
   description: |
     Contrato del modulo Identidad: registro, inicio de sesion, consulta y cierre de sesion del
     ciudadano (entrega `registro-login-ciudadano`), mas recuperacion de contrasena y activacion de
@@ -42,6 +42,11 @@ info:
       `FORBIDDEN`. Limites propios: 30 por IP y 5 por correo+IP en 15 min (`login_inst_*`).
     - No hay endpoints para crear operadores, administradores ni sedes en este contrato. La capacidad
       de invitacion es interna (se invoca dentro de la transaccion de quien crea la cuenta).
+    - Territorio P3.1: catálogo y límites públicos, resolución de puntos sin sesión ni persistencia de
+      coordenadas. Resolver solo por POST JSON (4 KiB), sin coordenadas en query, cuota de 60/IP/minuto
+      por instancia. Todas sus respuestas no-store. Cambiar filtros/versiones no concede permisos.
+      Métodos distintos de los declarados reciben 405 con Allow y ErrorTerritorialRespuesta.
+      Valores/campos inválidos reciben 422; JSON mal formado recibe 400.
     - Las paginas de respaldo del enlace del correo (`GET /cuenta/restablecer`, `GET /cuenta/activar`) y
       `GET /.well-known/assetlinks.json` no son parte de esta API JSON; se describen en el README.
 servers:
@@ -53,6 +58,7 @@ tags:
   - name: Contenido publico
   - name: Acceso institucional
   - name: Paneles
+  - name: Territorio
 paths:
   /auth/ciudadanos/registro:
     post:
@@ -457,6 +463,86 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ContenidoPublico' }
+  /publico/territorio/distritos:
+    get:
+      tags: [Territorio]
+      operationId: listarDistritosPiloto
+      summary: Cinco distritos y estado del catálogo territorial
+      description: Sin sesión; no admite parámetros. Sin cartografía activa entrega versión y UBIGEO nulos.
+      security: []
+      responses:
+        '200':
+          description: Catálogo disponible o pendiente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogoTerritorial' }
+              example: { estado: pendiente, version: null, distritos: [{ id: DIS-01, nombre: Ayacucho, ubigeo: null }, { id: DIS-02, nombre: San Juan Bautista, ubigeo: null }, { id: DIS-03, nombre: Carmen Alto, ubigeo: null }, { id: DIS-04, nombre: Jesús Nazareno, ubigeo: null }, { id: DIS-05, nombre: Andrés Avelino Cáceres Dorregaray, ubigeo: null }] }
+        '422': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+        '503': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+  /publico/territorio/limites:
+    get:
+      tags: [Territorio]
+      operationId: obtenerLimitesDistritales
+      summary: Cartografía de referencia de una única versión
+      description: Sin versión explícita usa la activa; sin activa responde 503. Una versión explícita ausente recibe 404 y nunca se sustituye por la activa. Admite HEAD.
+      security: []
+      parameters:
+        - in: query
+          name: version
+          required: false
+          schema: { type: string, pattern: '^[a-f0-9]{64}$' }
+      responses:
+        '200':
+          description: FeatureCollection WGS84 de cinco distritos. No representa delimitación legal ni cobertura institucional.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LimitesTerritoriales' }
+        '404': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+        '422': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+        '503': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+  /publico/territorio/resolver:
+    post:
+      tags: [Territorio]
+      operationId: resolverDistritoDelPunto
+      summary: Resolver un punto sin guardar su ubicación
+      description: |
+        Solo interiores inequívocos. Borde tiene precedencia sobre solapamiento; huecos se excluyen.
+        Fuera del área es un resultado pendiente, distinto de cartografía no disponible. No recibe
+        coordenadas por query ni concede permisos. Cuota 60/IP/minuto por instancia; 4 KiB JSON.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PuntoTerritorial' }
+            example: { latitud: -13.158, longitud: -74.224 }
+      responses:
+        '200':
+          description: Resultado con la versión efectivamente evaluada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoTerritorial' }
+              example: { estado: pendiente, distrito: null, motivo: fuera_area, version: '5cb61fbee9a0e8b24fc33c3ddc346864479b9b01d685901c36dafca130fe8067' }
+        '400': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+        '404': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+        '413': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+        '415': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+        '422': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+        '429':
+          description: Cuota por IP o capacidad de claves agotada; no se clasifica el punto.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+            Retry-After: { $ref: '#/components/headers/RetryAfter' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorTerritorialRespuesta' }
+        '503': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
 components:
   securitySchemes:
     bearerAuth:
@@ -495,6 +581,139 @@ components:
       required: false
       schema: { type: integer, minimum: 1 }
   schemas:
+    DistritoTerritorial:
+      type: object
+      additionalProperties: false
+      required: [id, nombre, ubigeo]
+      properties:
+        id: { type: string, enum: [DIS-01, DIS-02, DIS-03, DIS-04, DIS-05] }
+        nombre: { type: string, minLength: 1 }
+        ubigeo: { type: [string, 'null'], pattern: '^0501[0-9]{2}$' }
+    CatalogoTerritorial:
+      type: object
+      additionalProperties: false
+      required: [estado, version, distritos]
+      properties:
+        estado: { type: string, enum: [pendiente, disponible] }
+        version: { type: [string, 'null'], pattern: '^[a-f0-9]{64}$' }
+        distritos:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items: { $ref: '#/components/schemas/DistritoTerritorial' }
+    PuntoTerritorial:
+      type: object
+      additionalProperties: false
+      required: [latitud, longitud]
+      properties:
+        latitud: { type: number, minimum: -90, maximum: 90 }
+        longitud: { type: number, minimum: -180, maximum: 180 }
+        version: { type: string, pattern: '^[a-f0-9]{64}$' }
+    ResultadoTerritorial:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [estado, distrito, motivo, version]
+          properties:
+            estado: { const: resuelto }
+            distrito: { $ref: '#/components/schemas/DistritoTerritorial' }
+            motivo: { type: 'null' }
+            version: { type: string, pattern: '^[a-f0-9]{64}$' }
+        - type: object
+          additionalProperties: false
+          required: [estado, distrito, motivo, version]
+          properties:
+            estado: { const: pendiente }
+            distrito: { type: 'null' }
+            motivo: { enum: [frontera, solapamiento, fuera_area] }
+            version: { type: string, pattern: '^[a-f0-9]{64}$' }
+    PosicionTerritorial:
+      type: array
+      prefixItems:
+        - { type: number, minimum: -180, maximum: 180 }
+        - { type: number, minimum: -90, maximum: 90 }
+      items: false
+      minItems: 2
+      maxItems: 2
+    AnilloTerritorial:
+      type: array
+      minItems: 4
+      items: { $ref: '#/components/schemas/PosicionTerritorial' }
+    PoligonoTerritorial:
+      type: array
+      minItems: 1
+      items: { $ref: '#/components/schemas/AnilloTerritorial' }
+    GeometriaTerritorial:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [type, coordinates]
+          properties:
+            type: { const: Polygon }
+            coordinates: { $ref: '#/components/schemas/PoligonoTerritorial' }
+        - type: object
+          additionalProperties: false
+          required: [type, coordinates]
+          properties:
+            type: { const: MultiPolygon }
+            coordinates:
+              type: array
+              minItems: 1
+              items: { $ref: '#/components/schemas/PoligonoTerritorial' }
+    MetadatosTerritoriales:
+      type: object
+      additionalProperties: false
+      required: [fuente, publicador, versionFuente, actualizadoFuente, obtenidoEn, sha256Fuente, sha256GeoPackage, sha256Archivo, referencia, contraste]
+      properties:
+        fuente: { type: string, format: uri }
+        publicador: { type: string }
+        versionFuente: { type: string }
+        actualizadoFuente: { type: string }
+        obtenidoEn: { type: string }
+        sha256Fuente: { type: string, pattern: '^[a-f0-9]{64}$' }
+        sha256GeoPackage: { type: string, pattern: '^[a-f0-9]{64}$' }
+        sha256Archivo: { type: string, pattern: '^[a-f0-9]{64}$' }
+        referencia: { type: boolean, const: true }
+        contraste: { type: string }
+    LimitesTerritoriales:
+      type: object
+      additionalProperties: false
+      required: [type, version, metadatos, features]
+      properties:
+        type: { const: FeatureCollection }
+        version: { type: string, pattern: '^[a-f0-9]{64}$' }
+        metadatos: { $ref: '#/components/schemas/MetadatosTerritoriales' }
+        features:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            type: object
+            additionalProperties: false
+            required: [type, properties, geometry, bbox]
+            properties:
+              type: { const: Feature }
+              properties: { $ref: '#/components/schemas/DistritoTerritorial' }
+              geometry: { $ref: '#/components/schemas/GeometriaTerritorial' }
+              bbox:
+                type: array
+                minItems: 4
+                maxItems: 4
+                items: { type: number }
+    ErrorTerritorialRespuesta:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId]
+          properties:
+            code:
+              enum: [VALIDATION_ERROR, TERRITORY_UNAVAILABLE, TERRITORY_VERSION_NOT_FOUND, INVALID_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED, METHOD_NOT_ALLOWED]
+            message: { type: string }
+            requestId: { type: string, format: uuid }
     RegistroSolicitud:
       type: object
       additionalProperties: false
@@ -798,6 +1017,13 @@ components:
               type: string
               description: Identificador aleatorio de la solicitud; no contiene datos de cuenta.
   responses:
+    ErrorConsultaTerritorial:
+      description: Error territorial de validación, disponibilidad, versión o formato; sin ubicación ni detalles internos. Los métodos no admitidos reciben 405 con Allow y este mismo esquema.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorTerritorialRespuesta' }
     OrigenNoPermitido:
       description: |
         La solicitud no viene del origen web configurado (falta `Origin`, es otro, o `Sec-Fetch-Site` es

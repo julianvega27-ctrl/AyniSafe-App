@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { afterAll } from '@jest/globals';
 import type { Express } from 'express';
 import { crearApp } from '../../src/app';
-import { crearModuloConsultas } from '../../src/modules/consultas';
+import { crearModuloConsultasConPrisma } from '../../src/modules/consultas';
 import type { EventoLog, Logger } from '../../src/compartido/logger';
 import type { PoliticaLimites } from '../../src/modules/identidad/aplicacion/politica-limites';
 import type { HashContrasenaPort } from '../../src/modules/identidad/aplicacion/puertos/hash-contrasena.port';
@@ -139,12 +139,14 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   const modulo = crearModuloIdentidad(deps);
   modulosCreados.add(modulo);
   clientesCreados.add(prisma);
-  const app = crearApp({ saltosProxyConfianza: opciones.saltosProxy ?? 0, identidad: modulo, consultas: crearModuloConsultas() });
+  const app = crearApp({ saltosProxyConfianza: opciones.saltosProxy ?? 0, identidad: modulo, consultas: crearModuloConsultasConPrisma(prisma, SECRETO_PRUEBA) });
   return { app, prisma, reloj, logger, modulo, deps, correo };
 }
 
 export async function limpiarBd(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe('TRUNCATE envios_correo, tokens_cuenta, sesiones, usuarios, ventanas_intentos CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE estado_territorial, geometrias_distritales, versiones_territoriales CASCADE');
+  await prisma.$executeRaw`INSERT INTO estado_territorial(ambito) VALUES ('ayacucho-metropolitano')`;
 }
 
 export const RUTA_REGISTRO = '/api/v1/auth/ciudadanos/registro';

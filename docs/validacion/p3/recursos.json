@@ -1,0 +1,20 @@
+{
+  "fecha": "2026-11-25",
+  "donante": "Proyecto_incidencias_400par",
+  "commitDonante": "efc1bce8c29b3c88487e36e10a324c71ae9c2029",
+  "archivo": "apps/api/data/ayacucho-metropolitan.geojson",
+  "sha256LeidoGeojson": "d070ef33e3aa6dcb53c4bec8731ddde641195389b6b6750273e29e2e6d16d938",
+  "destinoPrevisto": "apps/api/data/ayacucho-metropolitano.geojson",
+  "estadoContraste": "contrastado_con_archivo_inei_2026-11-25",
+  "evidencia": "contraste-inei.json",
+  "metadatosDeclaradosDonante": {
+    "source": "https://ide.inei.gob.pe/files/Distrito.rar",
+    "publisher": "INEI",
+    "portalVersion": "2023",
+    "sourceUpdatedAt": "2026-03-06T16:55:35.154Z",
+    "downloadedAt": "2026-11-17T18:46:48.406Z",
+    "referenceOnly": true,
+    "sourceSha256": "ae22428029000d801b3d68afd0914ba94ca40a789a9b56231f6131a75abb9654",
+    "geopackageSha256": "b4b6485e4161ce4413bf118f39411071f7627d979a4c271acb35103f1d3e2756"
+  }
+}

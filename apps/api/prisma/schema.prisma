@@ -1,4 +1,4 @@
-// Esquema del modulo Identidad (acceso ciudadano). Ver
+// Esquema de Identidad y catálogo territorial de Consultas (P3.1). Ver
 // openspec/changes/registro-login-ciudadano/design.md, seccion 5.
 // Las restricciones que Prisma no expresa (CHECK) viven en el SQL de la migracion.
 
@@ -10,6 +10,42 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model Distrito {
+  id         String @id
+  nombre     String @unique
+  geometrias GeometriaDistrital[]
+  @@map("distritos")
+}
+
+model VersionTerritorial {
+  id          String @id
+  metadatos   Json
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+  geometrias  GeometriaDistrital[]
+  activaEn    EstadoTerritorial[]
+  @@map("versiones_territoriales")
+}
+
+model GeometriaDistrital {
+  versionId String @map("version_id")
+  distritoId String @map("distrito_id")
+  ubigeo String
+  geometria Json
+  bbox Float[]
+  version VersionTerritorial @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  distrito Distrito @relation(fields: [distritoId], references: [id], onDelete: Restrict)
+  @@id([versionId, distritoId])
+  @@unique([versionId, ubigeo])
+  @@map("geometrias_distritales")
+}
+
+model EstadoTerritorial {
+  ambito String @id
+  versionId String? @map("version_id")
+  version VersionTerritorial? @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  @@map("estado_territorial")
 }
 
 enum RolUsuario {

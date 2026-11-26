@@ -14,7 +14,7 @@ Fecha: 19 de noviembre de 2026. Catálogo documental aportado por el usuario y c
 
 La municipalidad es una entidad administrativa; no es el nombre de un distrito. Huamanga identifica la provincia y su municipalidad provincial; para este filtro se utiliza el distrito **Ayacucho**. Se normaliza el nombre completo de Andrés Avelino Cáceres Dorregaray. El [directorio territorial del MEF](https://www.mef.gob.pe/es/?Itemid=102844&id=8342&lang=es-ES&language=es-ES&option=com_content&view=article) recoge esas denominaciones en Huamanga. La selección de los cinco distritos procede de la decisión del usuario, no de esa fuente cartográfica.
 
-Los ID internos no son códigos UBIGEO. Falta incorporar UBIGEO y polígonos oficiales versionados antes del cálculo punto-en-polígono. No dibujar fronteras inventadas ni usar la ubicación de una municipalidad como límite distrital.
+Los ID internos no son códigos UBIGEO. El 25/11/2026 se contrastó el paquete distrital del portal INEI: DIS-01 = 050101, DIS-02 = 050110, DIS-03 = 050104, DIS-04 = 050115 y DIS-05 = 050116. Los cinco MultiPolygon del donante coinciden con el GeoPackage descargado, EPSG:4326. Es cartografía de referencia, no delimitación legal ni cobertura institucional. Fuente, huellas y condiciones observadas: [contraste P3.1](../validacion/p3/contraste-inei.json). Su importación/activación y pruebas se registran por separado en el [informe P3.1](../validacion/p3-territorio.md). No dibujar fronteras inventadas ni usar la ubicación de una municipalidad como límite distrital.
 
 ## 2. Referencia municipal, sin quinta institución
 
