@@ -51,7 +51,7 @@ No se precargaron las 13 sedes candidatas del documento 10. Las sedes y operador
 - **Composición:** `main.ts` inyecta los catálogos de Consultas (`idsDistritosPiloto`) y Reportes (`categorias.idsActivos`) como puertos. Identidad no importa internos de otros módulos. La fachada de Identidad exporta `consultarAmbitoOperador` para P4/P6.
 - **Migración aditiva `20261126100000_organizacion_institucional`:**
   - tablas `categorias`, `instituciones` (4 filas, CHECK de tipo), `sedes`, `pertenencias_operador` (trigger de rol operador), `coberturas_sede` y `competencias_sede`;
-  - FK sin cascada (borrar una fila referenciada falla con `23001`);
+  - FK sin cascada: borrar una fila referenciada se rechaza con `23001` en PostgreSQL 18 (local) y `23503` en PostgreSQL 17 (CI);
   - CHECK de verificación con fuente y de habilitación solo de sedes activas y verificadas.
 - **Decisión del 25/11/2026 tomada al implementar:** suspender un operador pendiente revoca su invitación. Para permitirlo, `usuarios_hash_estado_chk` pasa de «pendiente ⇔ sin contraseña» a «pendiente ⇒ sin contraseña; activo ⇒ con contraseña». La activación sigue exigiendo estado pendiente.
 - **Alta atómica:** bloqueo compartido de la institución, `INSERT … ON CONFLICT DO NOTHING` de sede y cuenta (así PostgreSQL no registra el correo en su log), pertenencia e `InvitarCuentaUseCase` en la misma transacción. El gestor de correo se despierta después del commit.
@@ -85,6 +85,7 @@ Resumen procesable de la cobertura: [p3/cobertura-organizacion-summary.json](p3/
 2. Suspender un operador pendiente fallaba con 503 por el CHECK de `usuarios`. Se resolvió con la decisión descrita arriba.
 3. La primera versión web usaba estilos en línea; `estatico.test.ts` lo detectó porque la CSP los bloquea, y se pasaron a clases.
 4. La primera captura mostraba una composición distinta de la referencia (todo en un panel y etiquetas que desalineaban el formulario). Se reestructuró para reproducir la página del origen.
+5. La primera CI del PR falló en `esquema.test.ts`: la prueba exigía el código `23001`, propio de PostgreSQL 18, y la CI usa PostgreSQL 17, que devuelve `23503` para la misma violación de `RESTRICT`. Ahora acepta ambos códigos y además comprueba que las filas siguen existiendo.
 
 ## Pruebas por grupo
 

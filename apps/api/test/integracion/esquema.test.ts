@@ -373,14 +373,18 @@ describe('organizacion institucional (P3.2)', () => {
     expect(await codigoDeError(bd.query('UPDATE sedes SET activa = FALSE WHERE id = $1', [sede]))).toBe('23514');
   });
 
-  it('coberturas y competencias solo con distritos y categorias del catalogo; no se borra una categoria ni una sede referenciadas (RESTRICT 23001)', async () => {
+  it('coberturas y competencias solo con distritos y categorias del catalogo; no se borra una categoria ni una sede referenciadas (RESTRICT: 23001 en PG18, 23503 en PG17)', async () => {
     const admin = await crearCuenta('a3@ejemplo.com', 'administrador');
     const sede = await crearSede(admin);
     expect(await codigoDeError(bd.query(`INSERT INTO coberturas_sede VALUES ($1, 'DIS-09')`, [sede]))).toBe('23503');
     expect(await codigoDeError(bd.query(`INSERT INTO coberturas_sede VALUES ($1, 'DIS-01')`, [sede]))).toBeUndefined();
     expect(await codigoDeError(bd.query(`INSERT INTO competencias_sede VALUES ($1, 'inventada')`, [sede]))).toBe('23503');
     expect(await codigoDeError(bd.query(`INSERT INTO competencias_sede VALUES ($1, 'robo')`, [sede]))).toBeUndefined();
-    expect(await codigoDeError(bd.query(`DELETE FROM categorias WHERE id = 'robo'`))).toBe('23001');
-    expect(await codigoDeError(bd.query('DELETE FROM sedes WHERE id = $1', [sede]))).toBe('23001');
+    // PostgreSQL 18 informa RESTRICT como 23001 (restrict_violation); 17 (CI) como 23503. Ambos rechazan el borrado.
+    const RECHAZO_FK = ['23001', '23503'];
+    expect(RECHAZO_FK).toContain(await codigoDeError(bd.query(`DELETE FROM categorias WHERE id = 'robo'`)));
+    expect(RECHAZO_FK).toContain(await codigoDeError(bd.query('DELETE FROM sedes WHERE id = $1', [sede])));
+    expect((await bd.query(`SELECT count(*)::int AS n FROM categorias WHERE id = 'robo'`)).rows[0].n).toBe(1);
+    expect((await bd.query('SELECT count(*)::int AS n FROM sedes WHERE id = $1', [sede])).rows[0].n).toBe(1);
   });
 });
