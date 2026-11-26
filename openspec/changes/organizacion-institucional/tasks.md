@@ -1,6 +1,6 @@
 # Tasks
 
-Estado: planificación creada el 25/11/2026 sobre `0f2366a`. Implementación y validación local completadas el 25/11/2026 sobre b2a15f4; CI remoto pendiente de publicación. Proposal y specs definen alcance; design documenta decisiones técnicas. Evidencia en `docs/validacion/p3-organizacion.md`, que se crea en 1.1 y se completa en cada grupo. Las casillas se marcan solo con código y evidencia ejecutada.
+Estado: planificación creada el 25/11/2026 sobre `0f2366a`. Implementación y validación local completadas el 25/11/2026 sobre b2a15f4; CI aprobado sobre `3844a8e` (PR #3, run 45848328438: API, Flutter, web y escaneo de secretos). Proposal y specs definen alcance; design documenta decisiones técnicas. Evidencia en `docs/validacion/p3-organizacion.md`, que se crea en 1.1 y se completa en cada grupo. Las casillas se marcan solo con código y evidencia ejecutada.
 
 ## 1. Procedencia y catálogo de categorías (Reportes)
 
