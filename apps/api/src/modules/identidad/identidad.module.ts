@@ -4,6 +4,7 @@ import type { Entorno } from '../../config/entorno';
 import { ActualizarPerfilUseCase, ConsultarPerfilUseCase } from './aplicacion/perfil.use-case';
 import { CerrarSesionUseCase } from './aplicacion/cerrar-sesion.use-case';
 import { ConsultarSesionUseCase } from './aplicacion/consultar-sesion.use-case';
+import { IdentificarSolicitanteUseCase, type CredencialesSolicitud, type Solicitante } from './aplicacion/identificar-solicitante.use-case';
 import { ConsultarTokenUseCase } from './aplicacion/consultar-token.use-case';
 import { ConsumirTokenCuentaUseCase } from './aplicacion/consumir-token.use-case';
 import { EmitirTokenCuentaUseCase } from './aplicacion/emitir-token-cuenta.use-case';
@@ -50,7 +51,7 @@ import { RedactorCorreoTextoPlano } from './infraestructura/redactor-correo-text
 import { RelojSistemaAdapter } from './infraestructura/reloj-sistema.adapter';
 import { TokenOpacoAdapter } from './infraestructura/token-opaco.adapter';
 import { crearRutasAuth } from './presentacion/auth.routes';
-import { configurarCookie } from './presentacion/cookies';
+import { configurarCookie, leerCookie } from './presentacion/cookies';
 import { crearRutasCuenta, type ConfigAndroid } from './presentacion/cuenta.routes';
 
 /** Puertos que el modulo necesita. Los adaptadores concretos se inyectan desde fuera. */
@@ -104,6 +105,13 @@ export interface ModuloIdentidad {
   readonly invitarCuenta: InvitarCuentaUseCase;
   /** Contrato interno de ambito del operador (institucion, sede, distritos, categorias) para P4/P6. */
   readonly consultarAmbitoOperador: ConsultarAmbitoOperadorUseCase;
+  /**
+   * Identifica al solicitante a partir de las cabeceras crudas Authorization y Cookie (P4.1), sin
+   * exponer Express ni los internos de la sesion a otros modulos.
+   */
+  readonly identificarSolicitante: (cabeceras: { readonly authorization?: string; readonly cookie?: string }) => Promise<Solicitante>;
+  /** Limitador persistente de intentos (HMAC del identificador) para otros modulos (P4.1). */
+  readonly limitador: LimitadorPort;
 }
 
 /**
@@ -193,6 +201,21 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
     { origenWeb: deps.web.origen, cookie: configurarCookie(deps.web.origen) },
     () => deps.reloj.ahora(),
   );
+  const cookie = configurarCookie(deps.web.origen);
+  const identificar = new IdentificarSolicitanteUseCase(
+    new ConsultarSesionUseCase(deps.sesiones, deps.tokens, deps.reloj),
+    new ConsultarSesionInstitucionalUseCase(deps.sesiones, deps.tokens, deps.reloj),
+  );
+  const identificarSolicitante = (cabeceras: { readonly authorization?: string; readonly cookie?: string }): Promise<Solicitante> => {
+    const credenciales: CredencialesSolicitud = {
+      ...(cabeceras.authorization !== undefined ? { authorization: cabeceras.authorization } : {}),
+      ...(() => {
+        const valor = leerCookie(cabeceras.cookie, cookie.nombre);
+        return valor !== undefined ? { cookieInstitucional: valor } : {};
+      })(),
+    };
+    return identificar.ejecutar(credenciales);
+  };
   return {
     router,
     routerPublico: crearRutasCuenta(deps.android),
@@ -202,6 +225,8 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
     gestorEnvios,
     invitarCuenta,
     consultarAmbitoOperador,
+    identificarSolicitante,
+    limitador: deps.limitador,
   };
 }
 

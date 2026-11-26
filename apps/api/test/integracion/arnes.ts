@@ -4,6 +4,10 @@ import type { Express } from 'express';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultasConPrisma, idsDistritosPiloto } from '../../src/modules/consultas';
 import { crearModuloReportesConPrisma, type ModuloReportes } from '../../src/modules/reportes';
+import { crearModuloOperacionesConPrisma, type ModuloOperaciones } from '../../src/modules/operaciones';
+import { dependenciasRegistro, opcionesSeguimiento } from '../../src/composicion';
+import type { ConsumidorEventos } from '../../src/compartido/eventos/eventos';
+import { ProcesadorEntregas } from '../../src/compartido/eventos/procesador-entregas';
 import { PrismaOrganizacionAdapter } from '../../src/modules/identidad/infraestructura/prisma-organizacion.adapter';
 import type { EventoLog, Logger } from '../../src/compartido/logger';
 import type { PoliticaLimites } from '../../src/modules/identidad/aplicacion/politica-limites';
@@ -31,6 +35,7 @@ import { PrismaTokensCuentaAdapter } from '../../src/modules/identidad/infraestr
 import { TokenOpacoAdapter } from '../../src/modules/identidad/infraestructura/token-opaco.adapter';
 
 export const SECRETO_PRUEBA = 'secreto-de-prueba-para-hmac-de-al-menos-32-caracteres';
+export const SECRETO_SEGUIMIENTO_PRUEBA = 'secreto-de-seguimiento-de-prueba-de-al-menos-32-caracteres';
 export const HUELLA_PRUEBA = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0').toUpperCase()).join(':');
 export const URL_PUBLICA_PRUEBA = 'https://api.ayinisafe.test';
 export const ORIGEN_WEB_PRUEBA = 'https://web.ayinisafe.test';
@@ -80,6 +85,15 @@ export interface OpcionesArnes {
   readonly reloj?: RelojControlable;
   readonly prisma?: PrismaClient;
   readonly sobrescribir?: Partial<DependenciasIdentidad>;
+  /** Consumidores de eventos del procesador del arnes (P4.1). Por defecto, ninguno. */
+  readonly consumidores?: readonly ConsumidorEventos[];
+  /** Limite de envios de invitado (P4.1). Por defecto, holgado. */
+  readonly limiteInvitado?: { readonly maximo: number; readonly ventanaMs: number };
+  /** Limites de la consulta por codigo (P4.1). Por defecto, los del servicio. */
+  readonly limitesSeguimiento?: {
+    readonly porReferencia: { readonly maximo: number; readonly ventanaMs: number };
+    readonly porOrigen: { readonly maximo: number; readonly ventanaMs: number };
+  };
 }
 
 export interface Arnes {
@@ -89,6 +103,8 @@ export interface Arnes {
   readonly logger: LoggerCapturado;
   readonly modulo: ModuloIdentidad;
   readonly reportes: ModuloReportes;
+  readonly operaciones: ModuloOperaciones;
+  readonly procesador: ProcesadorEntregas;
   readonly deps: DependenciasIdentidad;
   /** Adaptador de correo en memoria (salvo que se sobrescriba): no valida el proveedor real. */
   readonly correo: CorreoPruebaAdapter;
@@ -102,10 +118,12 @@ export function urlPruebas(): string {
 
 const modulosCreados = new Set<ModuloIdentidad>();
 const clientesCreados = new Set<PrismaClient>();
+const procesadoresCreados = new Set<ProcesadorEntregas>();
 afterAll(async () => {
   // Las rutas de recuperacion despiertan consumidores asincronos. Primero detenerlos
   // y esperar su pasada; desconectar Prisma antes permite trabajo tras el teardown VM.
   await Promise.all([...modulosCreados].map((m) => m.gestorEnvios.detener()));
+  await Promise.all([...procesadoresCreados].map((p) => p.detener()));
   await Promise.all([...clientesCreados].map((p) => p.$disconnect()));
 });
 
@@ -115,7 +133,8 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   const reloj = opciones.reloj ?? new RelojControlable();
   const logger = new LoggerCapturado();
   const correo = new CorreoPruebaAdapter();
-  const reportes = crearModuloReportesConPrisma(prisma);
+  // El catalogo de categorias se lee al usarse: Reportes se compone despues porque depende de Identidad.
+  let reportes: ModuloReportes | undefined;
   const deps: DependenciasIdentidad = {
     cuentas: new PrismaCuentasAdapter(prisma),
     sesiones: new PrismaSesionesAdapter(prisma),
@@ -140,22 +159,35 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     logger,
     organizacion: new PrismaOrganizacionAdapter(prisma),
     catalogoDistritos: { idsValidos: async () => idsDistritosPiloto() },
-    catalogoCategorias: { idsValidos: () => reportes.categorias.idsActivos() },
+    catalogoCategorias: { idsValidos: () => reportes!.categorias.idsActivos() },
     ...opciones.sobrescribir,
   };
   const modulo = crearModuloIdentidad(deps);
+  const operaciones = crearModuloOperacionesConPrisma(prisma);
   modulosCreados.add(modulo);
   clientesCreados.add(prisma);
+  const consultas = crearModuloConsultasConPrisma(prisma, SECRETO_PRUEBA, {
+    ...opcionesSeguimiento({ identidad: modulo, operaciones }, () => reportes!, logger),
+    ...(opciones.limitesSeguimiento ? { limites: opciones.limitesSeguimiento } : {}),
+  });
+  const procesador = new ProcesadorEntregas(prisma, opciones.consumidores ?? [], logger);
+  procesadoresCreados.add(procesador);
+  reportes = crearModuloReportesConPrisma(prisma, {
+    ...dependenciasRegistro(prisma, { identidad: modulo, consultas, operaciones }, () => procesador.despertar(), logger),
+    secretoSeguimiento: SECRETO_SEGUIMIENTO_PRUEBA,
+    limiteInvitado: opciones.limiteInvitado ?? { maximo: 100000, ventanaMs: 60 * 60 * 1000 },
+  });
   const app = crearApp({
     saltosProxyConfianza: opciones.saltosProxy ?? 0,
     identidad: modulo,
-    consultas: crearModuloConsultasConPrisma(prisma, SECRETO_PRUEBA),
+    consultas,
     reportes,
   });
-  return { app, prisma, reloj, logger, modulo, reportes, deps, correo };
+  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, deps, correo };
 }
 
 export async function limpiarBd(prisma: PrismaClient): Promise<void> {
+  await prisma.$executeRawUnsafe('TRUNCATE entregas_evento, eventos, solicitudes_envio, envios_incidente, incidentes CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE envios_correo, tokens_cuenta, sesiones, usuarios, ventanas_intentos CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE estado_territorial, geometrias_distritales, versiones_territoriales CASCADE');
   await prisma.$executeRaw`INSERT INTO estado_territorial(ambito) VALUES ('ayacucho-metropolitano')`;

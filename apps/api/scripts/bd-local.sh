@@ -16,6 +16,7 @@ case "${1:-}" in
     [ -f .env ] && { echo "Ya existe .env; no se sobrescribe."; exit 1; }
     PW="$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")"
     HMAC="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+    SEGUIMIENTO="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
     PWF="$(mktemp)"; printf '%s' "$PW" > "$PWF"
     initdb -D .pgdata -U ayni --auth=scram-sha-256 --pwfile="$PWF" -E UTF8 --locale=C > /dev/null
     rm -f "$PWF"
@@ -31,6 +32,7 @@ NODE_ENV=development
 PORT=3000
 TRUST_PROXY_HOPS=0
 RATE_LIMIT_HMAC_SECRET=${HMAC}
+TRACKING_CODE_HMAC_SECRET=${SEGUIMIENTO}
 DATABASE_URL=postgresql://ayni:${PW}@127.0.0.1:${PUERTO}/ayni_safe_dev
 TEST_DATABASE_URL=postgresql://ayni:${PW}@127.0.0.1:${PUERTO}/ayni_safe_test
 ENV

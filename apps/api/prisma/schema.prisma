@@ -250,3 +250,78 @@ model CompetenciaSede {
   @@index([categoriaId])
   @@map("competencias_sede")
 }
+
+/// Evento de negocio persistido en la transaccion del hecho (P4.1, ADR-004). Carga sin datos personales.
+model Evento {
+  id          String   @id @db.Uuid
+  tipo        String
+  version     Int      @db.SmallInt
+  agregadoId  String   @map("agregado_id") @db.Uuid
+  carga       Json
+  ocurridoEn  DateTime @default(now()) @map("ocurrido_en") @db.Timestamptz(3)
+  entregas    EntregaEvento[]
+  @@index([tipo, ocurridoEn], map: "eventos_tipo_ocurrido_en_idx")
+  @@map("eventos")
+}
+
+/// Entrega de un evento a un consumidor, con reintentos y bloqueo (CHECK en la migracion).
+model EntregaEvento {
+  eventoId         String    @map("evento_id") @db.Uuid
+  consumidor       String
+  estado           String    @default("pendiente")
+  intentos         Int       @default(0)
+  proximoIntentoEn DateTime  @default(now()) @map("proximo_intento_en") @db.Timestamptz(3)
+  bloqueadoHasta   DateTime? @map("bloqueado_hasta") @db.Timestamptz(3)
+  ultimoError      String?   @map("ultimo_error")
+  creadaEn         DateTime  @default(now()) @map("creada_en") @db.Timestamptz(3)
+  procesadaEn      DateTime? @map("procesada_en") @db.Timestamptz(3)
+  evento           Evento    @relation(fields: [eventoId], references: [id], onDelete: Restrict)
+  @@id([eventoId, consumidor])
+  @@map("entregas_evento")
+}
+
+/// Incidente unico (modulo Operaciones, P4.1). Estados y formato de referencia con CHECK en la migracion.
+model Incidente {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referencia   String   @unique
+  estado       String   @default("REGISTRADO")
+  registradoEn DateTime @default(now()) @map("registrado_en") @db.Timestamptz(3)
+  @@map("incidentes")
+}
+
+/// Originales del envio ciudadano (modulo Reportes, P4.1). Coherencia de modalidad y territorio con CHECK en la migracion.
+model EnvioIncidente {
+  incidenteId        String    @id @map("incidente_id") @db.Uuid
+  modalidad          String
+  autorUsuarioId     String?   @map("autor_usuario_id") @db.Uuid
+  telefonoContacto   String?   @map("telefono_contacto")
+  codigoHuella       String?   @map("codigo_huella")
+  codigoEmitidoEn    DateTime? @map("codigo_emitido_en") @db.Timestamptz(3)
+  categoriaId        String    @map("categoria_id")
+  descripcion        String
+  ocurrenciaModo     String    @map("ocurrencia_modo")
+  ocurridoEn         DateTime  @map("ocurrido_en") @db.Timestamptz(3)
+  latitud            Float
+  longitud           Float
+  origenPunto        String    @map("origen_punto")
+  precisionM         Float?    @map("precision_m")
+  distritoId         String?   @map("distrito_id")
+  estadoTerritorial  String    @map("estado_territorial")
+  motivoTerritorial  String?   @map("motivo_territorial")
+  versionTerritorial String?   @map("version_territorial")
+  heridos            String?
+  atencionMedica     String?   @map("atencion_medica")
+  recibidoEn         DateTime  @map("recibido_en") @db.Timestamptz(3)
+  @@map("envios_incidente")
+}
+
+/// Claves de idempotencia por ambito (cuenta:<uuid> o invitado) y huella HMAC del contenido.
+model SolicitudEnvio {
+  ambito          String
+  clave           String   @db.Uuid
+  huellaContenido String   @map("huella_contenido")
+  incidenteId     String   @unique @map("incidente_id") @db.Uuid
+  creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+  @@id([ambito, clave])
+  @@map("solicitudes_envio")
+}
