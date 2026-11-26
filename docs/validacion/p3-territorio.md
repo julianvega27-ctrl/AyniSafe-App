@@ -1,6 +1,6 @@
 # P3.1 — Territorio versionado
 
-Fecha: 25/11/2026. Cambio `territorio-versionado`, base destino `dbacb27797ef16958734f2f0f0bf3d762834dccb`. Antes de aplicar solo había artefactos locales no versionados de este cambio; no se eliminan ni se presentan como commit. Implementación y validación local completadas; CI remoto pendiente de publicación. No se hizo commit, despliegue, sincronización ni archivo de este cambio.
+Fecha: 25/11/2026. Cambio `territorio-versionado`, base destino `dbacb27797ef16958734f2f0f0bf3d762834dccb`. Antes de aplicar solo había artefactos locales no versionados de este cambio; no se eliminan ni se presentan como commit. Implementación y validación local completadas; CI aprobado sobre 0f2366a (ver al final).
 
 ## Procedencia
 
@@ -51,7 +51,7 @@ La validación del paquete en Jest pasó de unos 61 s a unos 4,2 s tras capturar
 | Repetición, rollback, activación concurrente y restauración | RF31; integridad de versiones | Integración PostgreSQL con fixtures, incluyendo fallo real antes del commit |
 | Privacidad, versiones/errores y cuota | RF31; HU03/05/15 | Contrato HTTP real/OpenAPI; cuerpo y cuota; mismos DTO públicos con los tres roles |
 
-La integración no acredita el formulario GPS/manual, mapas, asignación territorial de operadores ni atención real. P3.2 debe implementar las asociaciones/coberturas de RF28/29/30 y validar EQ-09/12; territorio no sustituye esos permisos. CI de este diff local pendiente; no se publicó ni se archivó el cambio.
+La integración no acredita el formulario GPS/manual, mapas, asignación territorial de operadores ni atención real. P3.2 debe implementar las asociaciones/coberturas de RF28/29/30 y validar EQ-09/12; territorio no sustituye esos permisos. CI registrado al final del informe.
 
 ## Paquete real y medición local
 
@@ -94,3 +94,9 @@ Para reproducir en este entorno Windows, iniciar el clúster temporal con `pg_ct
 No se modificaron clientes ni se repitieron Flutter/web como evidencia de esta capacidad de backend. Siguiente incremento: P3.2, con instituciones/sedes/coberturas, alta atómica del operador inicial e invitación, autorización por ámbito y sus pruebas. La dirección visual P2 y los tres roles se conservan.
 
 El clúster temporal se detuvo limpiamente al terminar. Sus archivos permanecen en `.cache` para reproducibilidad local; no se cambió la configuración ni se migró la base anterior de desarrollo.
+
+## CI remoto
+
+PR #2 (`feat/p3-territorio`), fusionado en `main`. GitHub Actions, run
+[45729215123](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45729215123) sobre `0f2366a`:
+API (tipos, arquitectura, contrato y Jest con cobertura), Flutter, web y escaneo de secretos aprobados.
