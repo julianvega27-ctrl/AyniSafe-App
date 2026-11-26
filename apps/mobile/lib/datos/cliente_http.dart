@@ -32,9 +32,11 @@ class ClienteHttp {
     String ruta, {
     Map<String, Object?>? cuerpo,
     String? token,
+    Map<String, String> cabeceras = const {},
   }) async {
     final solicitud = http.Request(metodo, _uri(ruta));
     solicitud.headers['Accept'] = 'application/json';
+    solicitud.headers.addAll(cabeceras);
     if (cuerpo != null) {
       solicitud.headers['Content-Type'] = 'application/json';
       solicitud.body = jsonEncode(cuerpo);

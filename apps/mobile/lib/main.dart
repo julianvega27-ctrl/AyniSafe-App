@@ -5,7 +5,9 @@ import 'aplicacion/sesion_controlador.dart';
 import 'datos/almacenamiento_sesion.dart';
 import 'datos/auth_repositorio.dart';
 import 'datos/cliente_http.dart';
+import 'datos/consultas_guardadas.dart';
 import 'datos/contenido_repositorio.dart';
+import 'datos/incidentes_repositorio.dart';
 import 'datos/perfil_repositorio.dart';
 import 'datos/enlaces_cuenta.dart';
 
@@ -25,6 +27,8 @@ void main() {
       sesion: sesion,
       contenido: ContenidoRepositorio(http),
       perfil: PerfilRepositorio(http),
+      incidentes: IncidentesRepositorio(http),
+      consultasGuardadas: ConsultasGuardadasSeguras(),
       enlaces: FuenteDeEnlacesAppLinks(),
     ),
   );

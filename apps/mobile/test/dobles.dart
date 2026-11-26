@@ -8,6 +8,9 @@ import 'package:ayni_safe/datos/auth_repositorio.dart';
 import 'package:ayni_safe/datos/enlaces_cuenta.dart';
 import 'package:ayni_safe/datos/cliente_http.dart';
 import 'package:ayni_safe/datos/contenido_repositorio.dart';
+import 'package:ayni_safe/datos/incidentes_repositorio.dart';
+import 'package:ayni_safe/datos/consultas_guardadas.dart';
+import 'package:ayni_safe/datos/ubicacion.dart';
 import 'package:ayni_safe/datos/perfil_repositorio.dart';
 import 'package:ayni_safe/presentacion/pantallas/acceso_pantalla.dart';
 import 'package:ayni_safe/presentacion/servicios.dart';
@@ -94,6 +97,7 @@ class ApiFalsa {
     repositorio = AuthRepositorio(cliente);
     contenido = ContenidoRepositorio(cliente);
     perfil = PerfilRepositorio(cliente);
+    incidentes = IncidentesRepositorio(cliente);
   }
 
   final List<SolicitudRegistrada> solicitudes = [];
@@ -101,6 +105,7 @@ class ApiFalsa {
   late final AuthRepositorio repositorio;
   late final ContenidoRepositorio contenido;
   late final PerfilRepositorio perfil;
+  late final IncidentesRepositorio incidentes;
 
   Future<http.Response> Function(http.Request) manejador = (_) async =>
       respuestaJson(500, null);
@@ -181,6 +186,8 @@ Widget appDePrueba(
   SesionControlador sesion, {
   LanzadorMarcador? marcador,
   FuenteDeEnlaces? enlaces,
+  UbicacionPuerto? ubicacion,
+  ConsultasGuardadas? consultas,
 }) => AyniSafeApp(
   repositorio: api.repositorio,
   sesion: sesion,
@@ -189,7 +196,18 @@ Widget appDePrueba(
   marcador: marcador ?? MarcadorFalso(),
   ahora: () => ahoraFijo,
   enlaces: enlaces,
+  incidentes: api.incidentes,
+  ubicacion: ubicacion ?? const UbicacionSinPermiso(),
+  consultasGuardadas: consultas ?? ConsultasGuardadasEnMemoria(),
+  mostrarTeselas: false,
 );
+
+/// Ubicación de pruebas: siempre denegada, sin tocar el sensor.
+class UbicacionSinPermiso implements UbicacionPuerto {
+  const UbicacionSinPermiso();
+  @override
+  Future<ResultadoUbicacion> obtener() async => const UbicacionDenegada(permanente: false);
+}
 
 /// Monta solo un widget bajo el tema de la app.
 Widget conTema(Widget hijo) => MaterialApp(theme: crearTema(), home: hijo);
@@ -277,8 +295,21 @@ class ServidorPerfil {
   Map<String, Object?> perfil = perfilJson();
   Completer<void>? retenerPatch;
 
+  /// Historial propio que devuelve `/ciudadano/incidentes` (P4.1). Vacío por defecto.
+  List<Map<String, Object?>> incidentes = [];
+
   Future<http.Response> responder(http.Request req) async {
     final ruta = req.url.path;
+    if (ruta.endsWith('/ciudadano/incidentes')) {
+      return respuestaJson(200, {'elementos': incidentes, 'siguiente': null});
+    }
+    if (ruta.endsWith('/publico/categorias')) {
+      return respuestaJson(200, {
+        'categorias': [
+          {'id': 'robo', 'nombre': 'Robo', 'orden': 14, 'activa': true},
+        ],
+      });
+    }
     if (ruta.endsWith('/auth/sesion')) {
       return req.method == 'DELETE'
           ? respuestaJson(204, null)

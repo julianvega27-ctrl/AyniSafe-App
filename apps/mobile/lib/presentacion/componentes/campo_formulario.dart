@@ -20,6 +20,8 @@ class CampoFormulario extends StatelessWidget {
     this.habilitado = true,
     this.alCambiar,
     this.alEnviar,
+    this.lineas = 1,
+    this.largoMaximo,
   });
 
   final String etiqueta;
@@ -35,6 +37,12 @@ class CampoFormulario extends StatelessWidget {
   final bool habilitado;
   final ValueChanged<String>? alCambiar;
   final ValueChanged<String>? alEnviar;
+
+  /// Líneas visibles (texto de varias líneas, como la descripción del reporte).
+  final int lineas;
+
+  /// Contador y límite de caracteres, si corresponde.
+  final int? largoMaximo;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +60,9 @@ class CampoFormulario extends StatelessWidget {
       enableInteractiveSelection: true,
       onChanged: alCambiar,
       onSubmitted: alEnviar,
+      minLines: lineas,
+      maxLines: ocultarTexto ? 1 : (lineas > 1 ? null : 1),
+      maxLength: largoMaximo,
       decoration: InputDecoration(
         labelText: etiqueta,
         helperText: ayuda,

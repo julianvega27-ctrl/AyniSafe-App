@@ -2,21 +2,34 @@ import 'package:flutter/material.dart';
 
 import '../../aplicacion/aviso.dart';
 import '../../datos/auth_repositorio.dart';
+import '../../datos/incidentes_repositorio.dart';
 import '../componentes/mensaje_accesible.dart';
 import '../componentes/tarjeta_mensaje.dart';
 import '../navegacion/destinos.dart';
+import '../servicios.dart';
+import 'seguimiento_pantallas.dart';
 import '../tema.dart';
 
 /// Inicio con la composición de `screens/home.dart` del origen: lema, título, bloque destacado para
 /// reportar y accesos rápidos. Contenido AyniSafe: sin datos DEMO, cifras ni capacidades simuladas.
-/// El reporte aún no existe: el bloque lleva al destino Reportar, que explica que está pendiente.
+/// Con cuenta muestra hasta tres de los últimos reportes propios obtenidos del servidor.
 class InicioPantalla extends StatelessWidget {
   const InicioPantalla({
     super.key,
     required this.usuario,
     required this.alNavegar,
     this.aviso,
+    this.obtenerToken,
+    this.cuandoSesionInvalida,
+    this.visitas = 0,
   });
+
+  /// Aumenta cada vez que se vuelve a Inicio: los últimos reportes se releen del servidor.
+  final int visitas;
+
+  /// Token de la cuenta para los últimos reportes; null sin sesión.
+  final String? Function()? obtenerToken;
+  final VoidCallback? cuandoSesionInvalida;
 
   /// Persona con sesión verificada, o null en la navegación pública.
   final UsuarioSesion? usuario;
@@ -87,8 +100,8 @@ class InicioPantalla extends StatelessWidget {
           const SizedBox(height: Espaciado.s1),
           Text(
             usuario == null
-                ? 'Consulta los contactos de emergencia y la información pública sin crear una cuenta.'
-                : 'Tu cuenta está lista. Los reportes llegarán en una próxima entrega.',
+                ? 'Reporta un incidente sin crear una cuenta y consulta los contactos de emergencia.'
+                : 'Reporta un incidente y sigue el estado de tus reportes.',
           ),
           const SizedBox(height: 22),
           _BloqueReportar(alPulsar: () => alNavegar(Destino.reportar)),
@@ -129,10 +142,23 @@ class InicioPantalla extends StatelessWidget {
               child: Text('Mis últimos reportes', style: tema.titleMedium),
             ),
             const SizedBox(height: Espaciado.s1),
-            const MensajeAccesible(
-              aviso: Aviso(
-                TipoAviso.info,
-                'Aún no disponible: tus reportes aparecerán aquí cuando puedas enviarlos.',
+            _UltimosReportes(
+              visitas: visitas,
+              obtenerToken: obtenerToken ?? () => null,
+              cuandoSesionInvalida: cuandoSesionInvalida ?? () {},
+              alVerTodos: () => alNavegar(Destino.misReportes),
+            ),
+          ] else ...[
+            const SizedBox(height: 20),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.manage_search),
+                title: const Text('Consultar con código'),
+                subtitle: const Text(
+                  'Si reportaste sin cuenta, revisa el estado con tu referencia y código.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => alNavegar(Destino.consultarCodigo),
               ),
             ),
           ],
@@ -238,23 +264,12 @@ class _BloqueReportar extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ExcludeSemantics(
-                  child: Icon(Icons.schedule, color: Colors.white, size: 20),
-                ),
-                SizedBox(width: Espaciado.s1),
-                Expanded(
-                  child: Text(
-                    'Disponible próximamente',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+            const Text(
+              'Elige la categoría, describe lo que pasa y marca el punto. Reportar no reemplaza una llamada de emergencia.',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 18),
             FilledButton.icon(
@@ -326,5 +341,102 @@ class _AccesoRapido extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Hasta tres reportes propios del servidor, o su estado vacío o de error. Sin datos de ejemplo.
+class _UltimosReportes extends StatefulWidget {
+  const _UltimosReportes({
+    required this.obtenerToken,
+    required this.cuandoSesionInvalida,
+    required this.alVerTodos,
+    required this.visitas,
+  });
+  final int visitas;
+  final String? Function() obtenerToken;
+  final VoidCallback cuandoSesionInvalida;
+  final VoidCallback alVerTodos;
+
+  @override
+  State<_UltimosReportes> createState() => _UltimosReportesState();
+}
+
+class _UltimosReportesState extends State<_UltimosReportes> {
+  Consulta<PaginaHistorial>? _r;
+  bool _iniciado = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_iniciado) {
+      _iniciado = true;
+      _cargar();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_UltimosReportes anterior) {
+    super.didUpdateWidget(anterior);
+    if (anterior.visitas != widget.visitas) _cargar();
+  }
+
+  Future<void> _cargar() async {
+    final token = widget.obtenerToken();
+    if (token == null) return;
+    setState(() => _r = null);
+    final r = await Servicios.of(context).incidentes.misIncidentes(token);
+    if (!mounted) return;
+    if (r is ConsultaSesionInvalida<PaginaHistorial>) {
+      widget.cuandoSesionInvalida();
+      return;
+    }
+    setState(() => _r = r);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (_r) {
+      null => const Center(
+        child: CircularProgressIndicator(
+          semanticsLabel: 'Cargando tus últimos reportes',
+        ),
+      ),
+      ConsultaObtenida(:final valor) when valor.elementos.isEmpty =>
+        const MensajeAccesible(
+          aviso: Aviso(
+            TipoAviso.info,
+            'Aún no tienes reportes. Cuando envíes uno, aparecerá aquí.',
+          ),
+        ),
+      ConsultaObtenida(:final valor) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final e in valor.elementos.take(3))
+            Card(
+              child: ListTile(
+                title: Text(e.referencia),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [Text(e.categoria), EtiquetaEstado(e.estado)],
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: widget.alVerTodos,
+              ),
+            ),
+          TextButton(
+            onPressed: widget.alVerTodos,
+            child: const Text('Ver todos mis reportes'),
+          ),
+        ],
+      ),
+      _ => MensajeAccesible(
+        aviso: const Aviso(
+          TipoAviso.error,
+          'No se pudieron cargar tus últimos reportes.',
+        ),
+        etiquetaAccion: 'Reintentar',
+        alAccionar: _cargar,
+      ),
+    };
   }
 }
