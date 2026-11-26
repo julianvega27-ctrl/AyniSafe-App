@@ -498,4 +498,30 @@ El camino «permiso concedido → punto GPS» no pudo verificarse en el emulador
 - EQ-02 con 50 por minuto y la carga de 2.000 VU (P9);
 - cola de envíos entre reinicios de la app;
 - sesiones de usabilidad de EQ-08 y TalkBack;
-- CI remoto: no se ha publicado ninguna revisión de este cambio.
+
+## CI remoto
+
+- **PR:** [#5](https://github.com/julianvega27-ctrl/AyniSafe-App/pull/5), rama `feat/p4-registro`, revisión `a790120c2fbdcbe76838c29ecba230a3288e82f2`.
+- **Relación entre commits:**
+  - especificación: `12d6dcc`;
+  - corrección UTC: `b4d2340`;
+  - API: `99f4bc1`;
+  - móvil: `3e1e226`;
+  - evidencia: `a790120`.
+
+**GitHub Actions, ejecución [45903117097](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45903117097)** (`pull_request`, 26/11/2026): aprobada.
+
+| Job | Resultado | Duración |
+|---|---|---|
+| API (tipos, arquitectura, contrato y Jest con cobertura) | Aprobado | 2 min 5 s |
+| Flutter (análisis y pruebas) | Aprobado | 1 min 26 s |
+| Web (lint, tipos, compilación y pruebas) | Aprobado | 30 s |
+| Escaneo de secretos del repositorio | Aprobado | 8 s |
+
+Con los archivos ya versionados, el escaneo de secretos cubre también los archivos nuevos de P4.1. Esto cierra la limitación anotada en el grupo 9.
+
+**Fusión:** el PR #5 se fusionó en `main` el 26/11/2026 como `7129ef38e7b3d7cbcc2c2be1389110fffd5f34cd`. La ejecución [45903499282](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45903499282) (`push` a `main`) también fue aprobada.
+
+**Pendiente:**
+- configurar `TRACKING_CODE_HMAC_SECRET` en Render antes de desplegar;
+- sincronizar y archivar `registro-incidentes` cuando el responsable lo pida.

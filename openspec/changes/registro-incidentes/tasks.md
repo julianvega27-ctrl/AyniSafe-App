@@ -1,6 +1,6 @@
 # Tasks
 
-Estado: planificación creada el 26/11/2026 sobre `039e9f4` (`main`), rama `feat/p4-registro`. Implementación y validación local del 26/11/2026: 27 de 27 tareas, sin commit. La 9.3 (GPS con permiso concedido) la verificó el responsable manualmente.
+Estado: planificación creada el 26/11/2026 sobre `039e9f4` (`main`), rama `feat/p4-registro`. Implementación y validación local del 26/11/2026: 27 de 27 tareas. PR #5 fusionado en `7129ef3`; CI aprobado sobre `a790120` (run 45903117097) y sobre `main` tras la fusión (run 45903499282). La 9.3 (GPS con permiso concedido) la verificó el responsable manualmente.
 
 - `proposal.md` y las specs definen el alcance; `design.md` documenta las decisiones técnicas.
 - La evidencia va en `docs/validacion/p4-registro.md`. Se crea en 1.1 y se completa en cada grupo.
