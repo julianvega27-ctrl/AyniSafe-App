@@ -56,9 +56,9 @@ export const contenido = (extra: Partial<ContenidoPublico> = {}): ContenidoPubli
 
 export const SECCIONES_ADMIN = [
   { id: 'inicio', titulo: 'Inicio', disponible: false },
-  { id: 'instituciones-sedes', titulo: 'Instituciones y sedes', disponible: false },
-  { id: 'operadores', titulo: 'Operadores', disponible: false },
-  { id: 'coberturas', titulo: 'Coberturas', disponible: false },
+  { id: 'instituciones-sedes', titulo: 'Instituciones y sedes', disponible: true },
+  { id: 'operadores', titulo: 'Operadores', disponible: true },
+  { id: 'coberturas', titulo: 'Coberturas', disponible: true },
   { id: 'categorias', titulo: 'Categorías', disponible: false },
   { id: 'reglas', titulo: 'Reglas', disponible: false },
   { id: 'contenido-contactos', titulo: 'Contenido y contactos', disponible: false },

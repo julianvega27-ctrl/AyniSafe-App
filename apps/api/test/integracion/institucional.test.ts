@@ -383,7 +383,7 @@ describe('sin recuperacion publica ni altas privilegiadas', () => {
 });
 
 describe('paneles minimos y permisos por rol', () => {
-  it('administrador: 200 en su panel con las secciones no disponibles; 403 en el del operador', async () => {
+  it('administrador: 200 en su panel con solo las secciones de organizacion disponibles; 403 en el del operador', async () => {
     const { cuenta, cookie } = await ingresar('administrador');
     const ok = await request(app).get(RUTA_PANEL_ADMIN).set('Cookie', cookie);
     expect(ok.status).toBe(200);
@@ -404,7 +404,12 @@ describe('paneles minimos y permisos por rol', () => {
       'Contenido y contactos',
       'Historial',
     ]);
-    expect(ok.body.secciones.every((s: { disponible: boolean }) => s.disponible === false)).toBe(true);
+    // P3.2: solo las secciones de organizacion estan construidas; el resto sigue pendiente.
+    expect(ok.body.secciones.filter((s: { disponible: boolean }) => s.disponible).map((s: { id: string }) => s.id)).toEqual([
+      'instituciones-sedes',
+      'operadores',
+      'coberturas',
+    ]);
     const ajeno = await request(app).get(RUTA_PANEL_OPERADOR).set('Cookie', cookie);
     expect(ajeno.status).toBe(403);
     expect(ajeno.body.error.code).toBe('FORBIDDEN');

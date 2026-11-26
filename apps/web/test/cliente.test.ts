@@ -76,3 +76,53 @@ describe('cliente de la API (mismo origen)', () => {
     }
   });
 });
+
+describe('cliente de organizacion (P3.2)', () => {
+  const ID = '11111111-1111-4111-8111-111111111111';
+  it('metodos y rutas del contrato, mismo origen, cuerpos JSON y sin Authorization', async () => {
+    const { llamadas } = instalarApi(() => json(200, {}));
+    await api.instituciones();
+    await api.actualizarInstitucion('samu', { contacto: null });
+    await api.sedes();
+    await api.crearSede({ institucionId: 'pnp', nombre: 'S', operador: { nombre: 'O', correo: 'o@e.pe' } });
+    await api.actualizarSede(ID, { activa: false });
+    await api.guardarCobertura(ID, ['DIS-01']);
+    await api.guardarCompetencias(ID, ['robo']);
+    await api.habilitarSede(ID);
+    await api.deshabilitarSede(ID);
+    await api.operadores(ID);
+    await api.agregarOperador(ID, { nombre: 'A', correo: 'a@e.pe' });
+    await api.cambiarEstadoOperador(ID, 'suspendido');
+    await api.reenviarInvitacion(ID);
+    await api.distritos();
+    await api.categorias();
+    const O = '/api/v1/administrador/organizacion';
+    expect(llamadas.map((l) => `${l.metodo} ${l.ruta}`)).toEqual([
+      `GET ${O}/instituciones`, `PATCH ${O}/instituciones/samu`, `GET ${O}/sedes`, `POST ${O}/sedes`, `PATCH ${O}/sedes/${ID}`,
+      `PUT ${O}/sedes/${ID}/cobertura`, `PUT ${O}/sedes/${ID}/competencias`, `POST ${O}/sedes/${ID}/habilitacion`,
+      `DELETE ${O}/sedes/${ID}/habilitacion`, `GET ${O}/sedes/${ID}/operadores`, `POST ${O}/sedes/${ID}/operadores`,
+      `PATCH ${O}/operadores/${ID}`, `POST ${O}/operadores/${ID}/invitacion`,
+      'GET /api/v1/publico/territorio/distritos', 'GET /api/v1/publico/categorias',
+    ]);
+    expect(llamadas[5]?.cuerpo).toEqual({ distritos: ['DIS-01'] });
+    expect(llamadas[11]?.cuerpo).toEqual({ estado: 'suspendido' });
+    for (const l of llamadas) {
+      expect(l.init.credentials).toBe('same-origin');
+      expect(Object.keys((l.init.headers ?? {}) as Record<string, string>).map((h) => h.toLowerCase())).not.toContain('authorization');
+    }
+  });
+
+  it('traduce 401, 403, 409 con faltantes, 5xx y red sin afirmar exito', async () => {
+    let respuesta: ReturnType<typeof json> | 'red' = json(401, { error: { code: 'UNAUTHENTICATED' } });
+    instalarApi(() => respuesta);
+    expect(await api.sedes()).toMatchObject({ tipo: 'error', estado: 401 });
+    respuesta = json(403, { error: { code: 'FORBIDDEN' } });
+    expect(await api.sedes()).toMatchObject({ tipo: 'error', estado: 403, codigo: 'FORBIDDEN' });
+    respuesta = json(409, { error: { code: 'REQUISITOS_HABILITACION', faltantes: ['cobertura', 'operador_activo'] } });
+    expect(await api.habilitarSede(ID)).toMatchObject({ tipo: 'error', estado: 409, codigo: 'REQUISITOS_HABILITACION', faltantes: ['cobertura', 'operador_activo'] });
+    respuesta = json(503, { error: { code: 'SERVICE_UNAVAILABLE' } });
+    expect(await api.crearSede({ institucionId: 'pnp', nombre: 'S', operador: { nombre: 'O', correo: 'o@e.pe' } })).toEqual({ tipo: 'servicio' });
+    respuesta = 'red';
+    expect(await api.crearSede({ institucionId: 'pnp', nombre: 'S', operador: { nombre: 'O', correo: 'o@e.pe' } })).toEqual({ tipo: 'red' });
+  });
+});

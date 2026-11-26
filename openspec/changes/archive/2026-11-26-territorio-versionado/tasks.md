@@ -1,6 +1,6 @@
 # Tasks
 
-Estado: aplicación P3.1 y validación local completadas el 25/11/2026; evidencia en `docs/validacion/p3-territorio.md`. CI remoto pendiente de publicación. Proposal y spec definen alcance; design documenta decisiones técnicas. P3.2 continúa después con organización. Las casillas corresponden a código y evidencia ejecutada, no a la mera existencia del plan.
+Estado: aplicación P3.1 y validación local completadas el 25/11/2026; evidencia en `docs/validacion/p3-territorio.md`. CI aprobado en GitHub Actions sobre 0f2366a (PR #2, run 45729215123: API, Flutter, web y escaneo de secretos). Proposal y spec definen alcance; design documenta decisiones técnicas. P3.2 continúa después con organización. Las casillas corresponden a código y evidencia ejecutada, no a la mera existencia del plan.
 
 ## 1. Procedencia y datos territoriales
 

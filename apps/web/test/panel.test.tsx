@@ -63,7 +63,7 @@ describe('restauracion de la sesion (refrescar el navegador)', () => {
 });
 
 describe('shell por rol', () => {
-  it('administrador: secciones de administracion, todas «Aún no disponible», sin datos de ejemplo', async () => {
+  it('administrador: secciones de administracion; solo las de organizacion disponibles, sin datos de ejemplo', async () => {
     instalarApi(servidorFalso({ sesion: admin }).manejador);
     renderizarApp('/panel');
     await screen.findByRole('heading', { name: 'Panel del administrador' });
@@ -79,7 +79,11 @@ describe('shell por rol', () => {
       'Contenido y contactos',
       'Historial',
     ]);
-    for (const i of items) expect(i).toHaveTextContent('Aún no disponible');
+    // P3.2: Instituciones y sedes, Operadores y Coberturas estan construidas; el resto sigue pendiente.
+    items.forEach((item, n) => {
+      if ([1, 2, 3].includes(n)) expect(item).not.toHaveTextContent('Aún no disponible');
+      else expect(item).toHaveTextContent('Aún no disponible');
+    });
     // Inicio es el destino activo: explica que esta pendiente, sin cifras ni tablero de ejemplo.
     expect(within(nav).getByRole('link', { name: /^Inicio/ })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('heading', { name: 'Inicio', level: 2 })).toBeInTheDocument();

@@ -15,11 +15,13 @@ import {
   exigirRol,
   leerJson,
 } from './middlewares';
+import { registrarRutasOrganizacion, type CasosDeUsoOrganizacion } from './organizacion.routes';
 
 export interface CasosDeUsoInstitucionales {
   readonly iniciarSesion: IniciarSesionInstitucionalUseCase;
   readonly consultarSesion: ConsultarSesionInstitucionalUseCase;
   readonly cerrarSesion: CerrarSesionUseCase;
+  readonly organizacion: CasosDeUsoOrganizacion;
 }
 
 export interface ConfigInstitucional {
@@ -32,7 +34,8 @@ const sesionDe = (res: Response): SesionInstitucionalActual => res.locals.sesion
 
 /**
  * Acceso institucional y paneles minimos. La sesion viaja solo en una cookie HttpOnly del mismo
- * origen (nunca en el cuerpo). Sin ruta que cree cuentas y sin cabeceras CORS.
+ * origen (nunca en el cuerpo). Sin cabeceras CORS. Los operadores solo se crean por la organizacion
+ * institucional, con sesion de administrador; ninguna ruta crea administradores.
  */
 export function registrarRutasInstitucionales(
   router: Router,
@@ -67,4 +70,6 @@ export function registrarRutasInstitucionales(
   };
   router.get('/administrador/panel', autenticar, exigirRol('administrador'), panel('administrador'));
   router.get('/operador/panel', autenticar, exigirRol('operador'), panel('operador'));
+
+  registrarRutasOrganizacion(router, casos.organizacion, autenticar, origen);
 }

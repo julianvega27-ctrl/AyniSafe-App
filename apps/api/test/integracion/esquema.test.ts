@@ -43,10 +43,16 @@ describe('migracion desde base vacia', () => {
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`,
     );
     expect(tablas.rows.map((t) => t.tablename).sort()).toEqual([
+      'categorias',
+      'coberturas_sede',
+      'competencias_sede',
       'distritos',
       'envios_correo',
       'estado_territorial',
       'geometrias_distritales',
+      'instituciones',
+      'pertenencias_operador',
+      'sedes',
       'sesiones',
       'tokens_cuenta',
       'usuarios',
@@ -66,6 +72,13 @@ describe('migracion desde base vacia', () => {
       'geometrias_distritales_pkey',
       'geometrias_distritales_version_id_ubigeo_key',
       'estado_territorial_pkey',
+      'sedes_nombre_por_institucion',
+      'pertenencias_operador_pkey',
+      'pertenencias_operador_sede_id_idx',
+      'coberturas_sede_pkey',
+      'coberturas_sede_distrito_id_idx',
+      'competencias_sede_pkey',
+      'competencias_sede_categoria_id_idx',
     ]) {
       expect(nombres).toContain(esperado);
     }
@@ -189,9 +202,13 @@ describe('cuentas pendientes de activacion', () => {
     expect(r.rows.map((x) => x.e)).toEqual(['activo', 'suspendido', 'pendiente_activacion']);
   });
 
-  it('rechaza hash nulo en cuentas activas o suspendidas (check 23514)', async () => {
+  it('rechaza hash nulo en cuentas activas (check 23514)', async () => {
     expect(await codigoDeError(insertar('activo', null, 'a@ejemplo.com'))).toBe('23514');
-    expect(await codigoDeError(insertar('suspendido', null, 'b@ejemplo.com'))).toBe('23514');
+  });
+
+  it('admite una suspendida sin hash (invitacion revocada, P3.2) y una suspendida con hash', async () => {
+    expect(await codigoDeError(insertar('suspendido', null, 'b@ejemplo.com'))).toBeUndefined();
+    expect(await codigoDeError(insertar('suspendido', 'hash', 'b2@ejemplo.com'))).toBeUndefined();
   });
 
   it('rechaza un hash presente en una cuenta pendiente (check 23514)', async () => {
@@ -289,5 +306,85 @@ describe('perfil: telefono y autorizacion de compartirlo', () => {
     for (const bueno of ['1234567', '123456789012345', '+51987654321']) {
       expect(await codigoDeError(poner(bueno))).toBeUndefined();
     }
+  });
+});
+
+describe('organizacion institucional (P3.2)', () => {
+  async function crearCuenta(correo: string, rol: 'ciudadano' | 'operador' | 'administrador'): Promise<string> {
+    const r = await bd.query<{ id: string }>(
+      `INSERT INTO usuarios (nombre, correo_normalizado, password_hash, rol, estado, updated_at)
+       VALUES ('Cuenta', $1, 'hash', $2::"RolUsuario", 'activo', now()) RETURNING id`,
+      [correo, rol],
+    );
+    return r.rows[0]!.id;
+  }
+  async function crearSede(creador: string, nombre = 'Sede', institucion = 'pnp'): Promise<string> {
+    const r = await bd.query<{ id: string }>(
+      `INSERT INTO sedes (institucion_id, nombre, nombre_normalizado, creado_por)
+       VALUES ($1, $2, lower($2), $3) RETURNING id`,
+      [institucion, nombre, creador],
+    );
+    return r.rows[0]!.id;
+  }
+
+  it('siembra exactamente las cuatro instituciones y las 16 categorias activas', async () => {
+    const inst = await bd.query<{ id: string; tipo: string; activa: boolean }>('SELECT id, tipo, activa FROM instituciones ORDER BY id');
+    expect(inst.rows).toEqual([
+      { id: 'bomberos', tipo: 'bomberos', activa: true },
+      { id: 'pnp', tipo: 'pnp', activa: true },
+      { id: 'samu', tipo: 'samu', activa: true },
+      { id: 'serenazgo', tipo: 'serenazgo', activa: true },
+    ]);
+    const cat = await bd.query<{ n: number; activas: number }>(
+      'SELECT count(*)::int AS n, count(*) FILTER (WHERE activa)::int AS activas FROM categorias',
+    );
+    expect(cat.rows[0]).toEqual({ n: 16, activas: 16 });
+  });
+
+  it('rechaza instituciones de otro tipo o con id distinto del tipo (23514) y tipos repetidos (23505)', async () => {
+    const q = (id: string, tipo: string) => bd.query(`INSERT INTO instituciones (id, tipo, nombre) VALUES ($1, $2, 'X')`, [id, tipo]);
+    expect(await codigoDeError(q('municipalidad', 'municipalidad'))).toBe('23514');
+    expect(await codigoDeError(q('otra', 'pnp'))).toBe('23514');
+    expect(await codigoDeError(q('pnp', 'pnp'))).toBe('23505');
+  });
+
+  it('solo una cuenta operador puede pertenecer a una sede, y a una sola (trigger 23514, pk 23505)', async () => {
+    const admin = await crearCuenta('admin@ejemplo.com', 'administrador');
+    const sede = await crearSede(admin);
+    const otra = await crearSede(admin, 'Otra');
+    const ciudadano = await crearCuenta('ciu@ejemplo.com', 'ciudadano');
+    const operador = await crearCuenta('op@ejemplo.com', 'operador');
+    const pertenecer = (u: string, s: string) => bd.query('INSERT INTO pertenencias_operador (usuario_id, sede_id) VALUES ($1, $2)', [u, s]);
+    expect(await codigoDeError(pertenecer(ciudadano, sede))).toBe('23514');
+    expect(await codigoDeError(pertenecer(admin, sede))).toBe('23514');
+    expect(await codigoDeError(pertenecer(operador, sede))).toBeUndefined();
+    expect(await codigoDeError(pertenecer(operador, otra))).toBe('23505');
+  });
+
+  it('unicidad del nombre por institucion, verificacion con fuente y habilitacion solo de sedes verificadas', async () => {
+    const admin = await crearCuenta('a2@ejemplo.com', 'administrador');
+    const sede = await crearSede(admin, 'Comisaría');
+    expect(await codigoDeError(crearSede(admin, 'Comisaría'))).toBe('23505');
+    expect(await codigoDeError(crearSede(admin, 'Comisaría', 'samu'))).toBeUndefined();
+    expect(await codigoDeError(bd.query(`UPDATE sedes SET verificacion = 'verificada' WHERE id = $1`, [sede]))).toBe('23514');
+    expect(await codigoDeError(bd.query('UPDATE sedes SET habilitada_atencion = TRUE WHERE id = $1', [sede]))).toBe('23514');
+    await bd.query(`UPDATE sedes SET verificacion = 'verificada', fuente_verificacion = 'Oficio', verificada_en = '2026-11-25' WHERE id = $1`, [sede]);
+    expect(await codigoDeError(bd.query('UPDATE sedes SET habilitada_atencion = TRUE WHERE id = $1', [sede]))).toBeUndefined();
+    expect(await codigoDeError(bd.query('UPDATE sedes SET activa = FALSE WHERE id = $1', [sede]))).toBe('23514');
+  });
+
+  it('coberturas y competencias solo con distritos y categorias del catalogo; no se borra una categoria ni una sede referenciadas (RESTRICT: 23001 en PG18, 23503 en PG17)', async () => {
+    const admin = await crearCuenta('a3@ejemplo.com', 'administrador');
+    const sede = await crearSede(admin);
+    expect(await codigoDeError(bd.query(`INSERT INTO coberturas_sede VALUES ($1, 'DIS-09')`, [sede]))).toBe('23503');
+    expect(await codigoDeError(bd.query(`INSERT INTO coberturas_sede VALUES ($1, 'DIS-01')`, [sede]))).toBeUndefined();
+    expect(await codigoDeError(bd.query(`INSERT INTO competencias_sede VALUES ($1, 'inventada')`, [sede]))).toBe('23503');
+    expect(await codigoDeError(bd.query(`INSERT INTO competencias_sede VALUES ($1, 'robo')`, [sede]))).toBeUndefined();
+    // PostgreSQL 18 informa RESTRICT como 23001 (restrict_violation); 17 (CI) como 23503. Ambos rechazan el borrado.
+    const RECHAZO_FK = ['23001', '23503'];
+    expect(RECHAZO_FK).toContain(await codigoDeError(bd.query(`DELETE FROM categorias WHERE id = 'robo'`)));
+    expect(RECHAZO_FK).toContain(await codigoDeError(bd.query('DELETE FROM sedes WHERE id = $1', [sede])));
+    expect((await bd.query(`SELECT count(*)::int AS n FROM categorias WHERE id = 'robo'`)).rows[0].n).toBe(1);
+    expect((await bd.query('SELECT count(*)::int AS n FROM sedes WHERE id = $1', [sede])).rows[0].n).toBe(1);
   });
 });

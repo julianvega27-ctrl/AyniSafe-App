@@ -196,10 +196,10 @@ la configuración y sus pruebas locales no la sustituyen. Evidencia de este incr
 
 No existe alta publica de operadores ni administradores: el registro fija siempre rol `ciudadano` y estado
 `activo`, y rechaza cualquier campo de rol o institucion. Estas instrucciones no siembran cuentas
-privilegiadas ni contrasenas compartidas. La capacidad de invitacion y activacion (ver mas abajo) prepara el alta de
-operadores (Spec 06) pero no los crea: las cuentas invitadas nacen sin contrasena y la definen con un enlace de un
-solo uso. El unico alta privilegiada de esta entrega es el procedimiento del administrador inicial, descrito a
-continuacion; no es una ruta HTTP.
+privilegiadas ni contrasenas compartidas. Los operadores solo los crea un administrador autenticado mediante la
+organizacion institucional (P3.2, ver «Organizacion institucional»): nacen `pendiente_activacion`, sin contrasena, y
+la definen con un enlace de un solo uso. El administrador inicial se crea con el procedimiento descrito a
+continuacion; no existe ruta HTTP que cree administradores.
 
 ## Administrador inicial
 
@@ -256,6 +256,26 @@ renovacion, pero viaja en una cookie `HttpOnly; Secure; SameSite=Strict; Path=/`
 | `DELETE /auth/institucional/sesion` | cookie opcional, exige `Origin` | 204 idempotente y borra la cookie |
 | `GET /administrador/panel` | cookie, administrador | 200; otro rol 403; sin sesion 401 |
 | `GET /operador/panel` | cookie, operador | 200; otro rol 403; sin sesion 401 |
+
+### Organizacion institucional (P3.2)
+
+Rutas bajo `/administrador/organizacion` (cookie de administrador; las modificaciones exigen ademas `Origin`):
+instituciones (`GET`, `PATCH /{id}`), sedes (`GET`, `POST` alta con operador inicial, `PATCH /{id}`), cobertura y
+competencias (`PUT /sedes/{id}/cobertura|competencias`), habilitacion (`POST|DELETE /sedes/{id}/habilitacion`),
+operadores (`GET|POST /sedes/{id}/operadores`, `PATCH /operadores/{id}`) y reenvio de invitacion
+(`POST /operadores/{id}/invitacion`). El operador lee solo su ambito en `GET /operador/ambito`; el catalogo de
+categorias es publico en `GET /publico/categorias`. Detalle de estados en `openapi.yaml`; evidencia en
+`docs/validacion/p3-organizacion.md`.
+
+- Catalogo cerrado de cuatro instituciones (PNP, Bomberos, SAMU, Serenazgo) sembrado por la migracion; sin ruta de alta.
+- La sede, la cuenta del operador inicial, su pertenencia y la invitacion se confirman en una transaccion o no queda
+  nada; el correo sale tras el commit. Reintentos: `409 SEDE_EXISTENTE` o `409 EMAIL_IN_USE`, sin duplicados.
+- Toda sede nace deshabilitada; habilitarla exige sede activa y verificada, distrito, categoria y operador activo
+  (`409 REQUISITOS_HABILITACION` con `faltantes`).
+- Suspender un operador revoca sus sesiones y sus enlaces de activacion sin usar; reactivarlo lo devuelve a activo o,
+  si nunca se activo, a pendiente.
+- Medicion de lectura: `TEST_DATABASE_URL=<base *_test> npm run organizacion:medir -- <salida.json>` (inserta datos de
+  demostracion y los elimina al terminar; rechaza bases cuyo nombre no termina en `_test`).
 
 - **Mismo origen y sin CORS.** Vercel reescribe `/api/*` hacia esta API, de modo que el navegador solo habla con el
   origen de la web y la cookie no es de terceros. La API **no emite** cabeceras `Access-Control-*` (una prueba lo
@@ -460,11 +480,11 @@ dominio esta verificado (`assetlinks.json` con `ANDROID_PACKAGE` y las huellas d
 retira el fragmento de la direccion; el codigo tambien se pega en «Tengo un codigo» dentro de la app. Las paginas llevan
 CSP por hash (sin `unsafe-inline`), `no-store` y `Referrer-Policy: no-referrer`, y no reflejan ningun parametro.
 
-### Invitacion de cuentas (capacidad para Spec 06)
+### Invitacion de cuentas
 
 `modulo.invitarCuenta.ejecutar(usuarioId, tx)` encola el correo de activacion **dentro de la transaccion de quien
-llama**: si esta se revierte no queda ni cuenta ni envio. **No crea cuentas, operadores ni sedes**, y esta entrega no
-expone ninguna ruta que lo haga. Tras el commit, el llamador debe invocar `modulo.gestorEnvios.despertar()`. La cuenta
+llama**: si esta se revierte no queda ni cuenta ni envio. **No crea cuentas, operadores ni sedes**: la consume la
+organizacion institucional (P3.2), que crea la cuenta del operador en la misma transaccion. Tras el commit, el llamador debe invocar `modulo.gestorEnvios.despertar()`. La cuenta
 invitada queda `pendiente_activacion` con `password_hash` nulo (restriccion `CHECK`); no puede iniciar sesion ni
 recuperarse hasta activarse.
 

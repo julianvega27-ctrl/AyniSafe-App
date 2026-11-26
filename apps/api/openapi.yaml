@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
-  title: AyniSafe API - Identidad, contenido público y territorio
-  version: 0.5.0
+  title: AyniSafe API - Identidad, organización, contenido público, territorio y categorías
+  version: 0.6.0
   description: |
     Contrato del modulo Identidad: registro, inicio de sesion, consulta y cierre de sesion del
     ciudadano (entrega `registro-login-ciudadano`), mas recuperacion de contrasena y activacion de
@@ -40,8 +40,14 @@ info:
       (403 `FORBIDDEN_ORIGIN`). Los paneles aceptan solo la cookie (ignoran `Authorization`) y las rutas
       ciudadanas solo Bearer: ninguna sesion vale en el otro canal. Un rol distinto del requerido recibe 403
       `FORBIDDEN`. Limites propios: 30 por IP y 5 por correo+IP en 15 min (`login_inst_*`).
-    - No hay endpoints para crear operadores, administradores ni sedes en este contrato. La capacidad
-      de invitacion es interna (se invoca dentro de la transaccion de quien crea la cuenta).
+    - Organizacion P3.2 (`/administrador/organizacion/*`): solo administradores activos (cookie); las
+      modificaciones exigen ademas el origen web. Catalogo cerrado de cuatro instituciones sin ruta de alta.
+      Los operadores solo se crean junto con su sede (alta atomica con invitacion) o agregados a una sede
+      existente; ninguna ruta crea administradores. Administrar no concede lectura de incidentes ni permisos
+      de atencion. Metodos no declarados reciben 405 con `Allow`. El operador lee solo su propio ambito
+      (`/operador/ambito`). Sin cache de aplicacion: cada lectura refleja el ultimo cambio confirmado.
+    - Catalogo de categorias (`/publico/categorias`): 16 categorias con identificadores estables, publico y
+      de solo lectura.
     - Territorio P3.1: catálogo y límites públicos, resolución de puntos sin sesión ni persistencia de
       coordenadas. Resolver solo por POST JSON (4 KiB), sin coordenadas en query, cuota de 60/IP/minuto
       por instancia. Todas sus respuestas no-store. Cambiar filtros/versiones no concede permisos.
@@ -59,6 +65,8 @@ tags:
   - name: Acceso institucional
   - name: Paneles
   - name: Territorio
+  - name: Organizacion
+  - name: Categorias
 paths:
   /auth/ciudadanos/registro:
     post:
@@ -406,7 +414,8 @@ paths:
       description: |
         Solo administradores activos. Devuelve la identidad y las secciones del panel segun la guia de UI
         (Inicio, Instituciones y sedes, Operadores, Coberturas, Categorias, Reglas, Contenido y contactos,
-        Historial), todas `disponible: false` mientras no existan. Sin datos operativos ni metricas.
+        Historial). Solo Instituciones y sedes, Operadores y Coberturas son `disponible: true` (P3.2); las demas
+        siguen en false mientras no existan. Sin datos operativos ni metricas.
       security:
         - cookieAuth: []
       responses:
@@ -439,6 +448,421 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PanelRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/RolNoPermitido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/instituciones:
+    get:
+      tags: [Organizacion]
+      operationId: listarInstituciones
+      summary: Listar las cuatro instituciones
+      description: |
+        Catalogo cerrado: PNP, Bomberos, SAMU y Serenazgo (una por tipo, sembradas por la migracion). No existe
+        ruta para crear instituciones; otros metodos reciben 405 con `Allow`. Solo administradores activos.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Instituciones.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InstitucionesRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/RolNoPermitido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/instituciones/{id}:
+    patch:
+      tags: [Organizacion]
+      operationId: actualizarInstitucion
+      summary: Editar nombre visible, contacto o estado
+      description: |
+        Nunca cambia el tipo ni el identificador. Desactivar una institucion con sedes habilitadas responde 409
+        `SEDE_HABILITADA`. Un identificador fuera de los cuatro tipos responde 404.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Tipo de la institucion (pnp, bomberos, samu o serenazgo).', schema: { type: string } }
+        - $ref: '#/components/parameters/OrigenWeb'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InstitucionCambios' }
+      responses:
+        '200':
+          description: Institucion actualizada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InstitucionRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoOrganizacion' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/sedes:
+    get:
+      tags: [Organizacion]
+      operationId: listarSedes
+      summary: Listar sedes con cobertura y competencias
+      description: |
+        Todas las sedes, con verificacion documental, habilitacion para atencion, estado, marca de demostracion,
+        distritos de cobertura y categorias de competencia. La ubicacion no implica cobertura.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Sedes.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SedesRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/RolNoPermitido' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+    post:
+      tags: [Organizacion]
+      operationId: crearSedeConOperador
+      summary: Crear sede con su operador inicial (alta atomica)
+      description: |
+        Sede, cuenta operador `pendiente_activacion` sin contrasena, pertenencia e invitacion se confirman en una
+        sola transaccion o no queda nada (RF29, EQ-12). El correo de activacion se entrega despues del commit. La
+        sede nace deshabilitada para atencion. Reintentar una alta ya confirmada responde 409 `SEDE_EXISTENTE`
+        (nombre normalizado unico por institucion) o `EMAIL_IN_USE`, sin duplicar filas ni invitaciones.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SedeAlta' }
+      responses:
+        '201':
+          description: Sede y operador inicial creados.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SedeCreadaRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '409': { $ref: '#/components/responses/ConflictoOrganizacion' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/sedes/{id}:
+    patch:
+      tags: [Organizacion]
+      operationId: actualizarSede
+      summary: Editar datos, verificacion documental o estado de una sede
+      description: |
+        Verificar exige fuente y fecha y no habilita la sede. Quitar la verificacion de una sede habilitada responde
+        409 `SEDE_HABILITADA`. Desactivar la sede la deshabilita para atencion; no borra filas.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Identificador (UUID) de la sede. Un valor que no es UUID o no existe responde 404.', schema: { type: string } }
+        - $ref: '#/components/parameters/OrigenWeb'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SedeCambios' }
+      responses:
+        '200':
+          description: Sede actualizada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SedeRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoOrganizacion' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/sedes/{id}/cobertura:
+    put:
+      tags: [Organizacion]
+      operationId: reemplazarCobertura
+      summary: Reemplazar los distritos de cobertura
+      description: |
+        Conjunto completo de identificadores del catalogo territorial (DIS-01..DIS-05). Un distrito desconocido
+        responde 400 sin cambios. Vaciarlo en una sede habilitada responde 409 `SEDE_HABILITADA`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Identificador (UUID) de la sede. Un valor que no es UUID o no existe responde 404.', schema: { type: string } }
+        - $ref: '#/components/parameters/OrigenWeb'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConjuntoDistritos' }
+      responses:
+        '200':
+          description: Cobertura reemplazada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SedeRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoOrganizacion' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/sedes/{id}/competencias:
+    put:
+      tags: [Organizacion]
+      operationId: reemplazarCompetencias
+      summary: Reemplazar las categorias de competencia
+      description: |
+        Conjunto completo de categorias activas del catalogo. Una categoria desconocida responde 400 sin cambios.
+        Vaciarlo en una sede habilitada responde 409 `SEDE_HABILITADA`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Identificador (UUID) de la sede. Un valor que no es UUID o no existe responde 404.', schema: { type: string } }
+        - $ref: '#/components/parameters/OrigenWeb'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConjuntoCategorias' }
+      responses:
+        '200':
+          description: Competencias reemplazadas.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SedeRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoOrganizacion' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/sedes/{id}/habilitacion:
+    post:
+      tags: [Organizacion]
+      operationId: habilitarSede
+      summary: Habilitar la sede para atencion
+      description: |
+        Exige institucion activa, sede activa y verificada, al menos un distrito, una categoria y un operador
+        activo. Si falta alguno responde 409 `REQUISITOS_HABILITACION` con la lista `faltantes`. Sin cuerpo.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Identificador (UUID) de la sede. Un valor que no es UUID o no existe responde 404.', schema: { type: string } }
+        - $ref: '#/components/parameters/OrigenWeb'
+      responses:
+        '200':
+          description: Sede habilitada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SedeRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoOrganizacion' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+    delete:
+      tags: [Organizacion]
+      operationId: deshabilitarSede
+      summary: Deshabilitar la sede para atencion
+      description: |
+        Idempotente. No borra la sede, sus operadores ni su configuracion.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Identificador (UUID) de la sede. Un valor que no es UUID o no existe responde 404.', schema: { type: string } }
+        - $ref: '#/components/parameters/OrigenWeb'
+      responses:
+        '200':
+          description: Sede deshabilitada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SedeRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/sedes/{id}/operadores:
+    get:
+      tags: [Organizacion]
+      operationId: listarOperadoresSede
+      summary: Listar los operadores de una sede
+      description: |
+        Nombre, correo, estado (pendiente_activacion, activo o suspendido) y marca de demostracion.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Identificador (UUID) de la sede. Un valor que no es UUID o no existe responde 404.', schema: { type: string } }
+      responses:
+        '200':
+          description: Operadores de la sede.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OperadoresRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/RolNoPermitido' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+    post:
+      tags: [Organizacion]
+      operationId: agregarOperador
+      summary: Agregar un operador a una sede
+      description: |
+        Crea la cuenta pendiente de activacion, su pertenencia a esta unica sede y la invitacion en la misma
+        transaccion. Sin contrasena: el titular la elige con el enlace de activacion.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Identificador (UUID) de la sede. Un valor que no es UUID o no existe responde 404.', schema: { type: string } }
+        - $ref: '#/components/parameters/OrigenWeb'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperadorAlta' }
+      responses:
+        '201':
+          description: Operador creado e invitado.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OperadorRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoOrganizacion' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/operadores/{id}:
+    patch:
+      tags: [Organizacion]
+      operationId: cambiarEstadoOperador
+      summary: Suspender o reactivar un operador
+      description: |
+        Suspender revoca sus sesiones y sus enlaces de activacion sin usar en la misma transaccion; dejar sin
+        operador activo una sede habilitada responde 409 `ULTIMO_OPERADOR_ACTIVO`. Reactivar devuelve la cuenta a
+        activa o, si nunca se activo, a pendiente (hace falta reenviar la invitacion). No borra filas.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Identificador (UUID) del operador. Una cuenta que no es operador con sede responde 404.', schema: { type: string } }
+        - $ref: '#/components/parameters/OrigenWeb'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperadorCambio' }
+      responses:
+        '200':
+          description: Estado del operador.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OperadorRespuesta' }
+        '400': { $ref: '#/components/responses/ValidacionInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoOrganizacion' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /administrador/organizacion/operadores/{id}/invitacion:
+    post:
+      tags: [Organizacion]
+      operationId: reenviarInvitacion
+      summary: Reenviar la invitacion de un operador pendiente
+      description: |
+        Invalida los enlaces de activacion anteriores sin usar y encola un correo nuevo (sin duplicar un envio
+        activo). Una cuenta activa o suspendida responde 409 `INVITACION_NO_APLICABLE`. Nunca devuelve el enlace.
+      security:
+        - cookieAuth: []
+      parameters:
+        - { name: id, in: path, required: true, description: 'Identificador (UUID) del operador. Una cuenta que no es operador con sede responde 404.', schema: { type: string } }
+        - $ref: '#/components/parameters/OrigenWeb'
+      responses:
+        '202':
+          description: Invitacion encolada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitacionRespuesta' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoOrganizacion' }
+        '404': { $ref: '#/components/responses/RecursoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoOrganizacion' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '500': { $ref: '#/components/responses/ErrorInterno' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/ambito:
+    get:
+      tags: [Paneles]
+      operationId: consultarAmbitoOperador
+      summary: Ambito del propio operador
+      description: |
+        Institucion, sede, distritos de cobertura, categorias y habilitacion de la sede del titular de la sesion.
+        `ambito: null` si la sede o la institucion no estan activas. Sin datos de otras sedes ni operadores.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Ambito vigente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AmbitoRespuesta' }
         '401': { $ref: '#/components/responses/NoAutenticado' }
         '403': { $ref: '#/components/responses/RolNoPermitido' }
         '500': { $ref: '#/components/responses/ErrorInterno' }
@@ -543,6 +967,25 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorTerritorialRespuesta' }
         '503': { $ref: '#/components/responses/ErrorConsultaTerritorial' }
+  /publico/categorias:
+    get:
+      tags: [Categorias]
+      operationId: listarCategorias
+      summary: Catalogo de las 16 categorias (sin sesion)
+      description: |
+        Mismo cuerpo para anonimos y para los tres roles. Solo identificador estable, nombre, orden y estado
+        activo; sin prioridades, reglas ni destinatarios. Sin parametros. Otros metodos reciben 405 con `Allow`.
+      security: []
+      responses:
+        '200':
+          description: Catalogo vigente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogoCategorias' }
+        '400': { $ref: '#/components/responses/ErrorCatalogo' }
+        '503': { $ref: '#/components/responses/ErrorCatalogo' }
 components:
   securitySchemes:
     bearerAuth:
@@ -826,6 +1269,238 @@ components:
         secciones:
           type: array
           items: { $ref: '#/components/schemas/SeccionPanel' }
+    TipoInstitucion:
+      type: string
+      enum: [pnp, bomberos, samu, serenazgo]
+    Institucion:
+      type: object
+      additionalProperties: false
+      required: [id, tipo, nombre, contacto, activa]
+      properties:
+        id: { $ref: '#/components/schemas/TipoInstitucion' }
+        tipo: { $ref: '#/components/schemas/TipoInstitucion' }
+        nombre: { type: string }
+        contacto: { type: [string, 'null'] }
+        activa: { type: boolean }
+    InstitucionCambios:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        nombre: { type: string, minLength: 1, maxLength: 120 }
+        contacto: { type: [string, 'null'], maxLength: 40, description: 'Vacio o null lo borra.' }
+        activa: { type: boolean }
+    InstitucionesRespuesta:
+      type: object
+      additionalProperties: false
+      required: [instituciones]
+      properties:
+        instituciones: { type: array, items: { $ref: '#/components/schemas/Institucion' } }
+    InstitucionRespuesta:
+      type: object
+      additionalProperties: false
+      required: [institucion]
+      properties:
+        institucion: { $ref: '#/components/schemas/Institucion' }
+    Sede:
+      type: object
+      additionalProperties: false
+      required: [id, institucionId, nombre, distritoUbicacionId, direccion, contacto, verificacion, habilitadaAtencion, activa, esDemostracion, distritos, categorias]
+      properties:
+        id: { type: string, format: uuid }
+        institucionId: { $ref: '#/components/schemas/TipoInstitucion' }
+        nombre: { type: string }
+        distritoUbicacionId: { type: [string, 'null'], description: 'Ubicacion; no implica cobertura.' }
+        direccion: { type: [string, 'null'] }
+        contacto: { type: [string, 'null'] }
+        verificacion:
+          type: object
+          additionalProperties: false
+          required: [estado, fuente, fecha]
+          properties:
+            estado: { type: string, enum: [sin_verificar, verificada] }
+            fuente: { type: [string, 'null'] }
+            fecha: { type: [string, 'null'], format: date }
+        habilitadaAtencion: { type: boolean, description: 'Nace en false; separado de la verificacion documental.' }
+        activa: { type: boolean }
+        esDemostracion: { type: boolean }
+        distritos: { type: array, items: { type: string } }
+        categorias: { type: array, items: { type: string } }
+    OperadorNuevo:
+      type: object
+      additionalProperties: false
+      required: [nombre, correo]
+      properties:
+        nombre: { type: string, minLength: 1, maxLength: 100 }
+        correo: { type: string, maxLength: 254 }
+    SedeAlta:
+      type: object
+      additionalProperties: false
+      required: [institucionId, nombre, operador]
+      example: { institucionId: pnp, nombre: "Comisaría PNP Ayacucho «A»", distritoUbicacionId: DIS-01, operador: { nombre: "Rosa Quispe", correo: "rosa@ejemplo.com" } }
+      properties:
+        institucionId: { $ref: '#/components/schemas/TipoInstitucion' }
+        nombre: { type: string, minLength: 1, maxLength: 150 }
+        distritoUbicacionId: { type: [string, 'null'] }
+        direccion: { type: [string, 'null'], maxLength: 200 }
+        contacto: { type: [string, 'null'], maxLength: 40 }
+        esDemostracion: { type: boolean, default: false }
+        operador: { $ref: '#/components/schemas/OperadorNuevo' }
+    SedeCambios:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        nombre: { type: string, minLength: 1, maxLength: 150 }
+        distritoUbicacionId: { type: [string, 'null'] }
+        direccion: { type: [string, 'null'], maxLength: 200 }
+        contacto: { type: [string, 'null'], maxLength: 40 }
+        activa: { type: boolean }
+        verificacion:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [estado]
+              properties:
+                estado: { const: sin_verificar }
+            - type: object
+              additionalProperties: false
+              required: [estado, fuente, fecha]
+              properties:
+                estado: { const: verificada }
+                fuente: { type: string, minLength: 1, maxLength: 300 }
+                fecha: { type: string, format: date }
+    ConjuntoDistritos:
+      type: object
+      additionalProperties: false
+      required: [distritos]
+      properties:
+        distritos: { type: array, maxItems: 32, uniqueItems: true, items: { type: string, pattern: '^[A-Z]{3}-[0-9]{2}$' } }
+    ConjuntoCategorias:
+      type: object
+      additionalProperties: false
+      required: [categorias]
+      properties:
+        categorias: { type: array, maxItems: 32, uniqueItems: true, items: { type: string, pattern: '^[a-z]+(-[a-z]+)*$' } }
+    SedesRespuesta:
+      type: object
+      additionalProperties: false
+      required: [sedes]
+      properties:
+        sedes: { type: array, items: { $ref: '#/components/schemas/Sede' } }
+    SedeRespuesta:
+      type: object
+      additionalProperties: false
+      required: [sede]
+      properties:
+        sede: { $ref: '#/components/schemas/Sede' }
+    OperadorSede:
+      type: object
+      additionalProperties: false
+      required: [id, nombre, correo, estado, sedeId, esDemostracion]
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string }
+        correo: { type: string }
+        estado: { type: string, enum: [pendiente_activacion, activo, suspendido] }
+        sedeId: { type: string, format: uuid }
+        esDemostracion: { type: boolean }
+    SedeCreadaRespuesta:
+      type: object
+      additionalProperties: false
+      required: [sede, operador]
+      properties:
+        sede: { $ref: '#/components/schemas/Sede' }
+        operador: { $ref: '#/components/schemas/OperadorSede' }
+    OperadorAlta:
+      type: object
+      additionalProperties: false
+      required: [nombre, correo]
+      properties:
+        nombre: { type: string, minLength: 1, maxLength: 100 }
+        correo: { type: string, maxLength: 254 }
+        esDemostracion: { type: boolean, default: false }
+    OperadorCambio:
+      type: object
+      additionalProperties: false
+      required: [estado]
+      properties:
+        estado: { type: string, enum: [activo, suspendido] }
+    OperadoresRespuesta:
+      type: object
+      additionalProperties: false
+      required: [operadores]
+      properties:
+        operadores: { type: array, items: { $ref: '#/components/schemas/OperadorSede' } }
+    OperadorRespuesta:
+      type: object
+      additionalProperties: false
+      required: [operador]
+      properties:
+        operador: { $ref: '#/components/schemas/OperadorSede' }
+    InvitacionRespuesta:
+      type: object
+      additionalProperties: false
+      required: [estado]
+      properties:
+        estado: { const: invitacion_encolada }
+    AmbitoRespuesta:
+      type: object
+      additionalProperties: false
+      required: [ambito]
+      properties:
+        ambito:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [institucion, sede, distritos, categorias, habilitadaAtencion]
+              properties:
+                institucion:
+                  type: object
+                  additionalProperties: false
+                  required: [id, nombre]
+                  properties:
+                    id: { $ref: '#/components/schemas/TipoInstitucion' }
+                    nombre: { type: string }
+                sede:
+                  type: object
+                  additionalProperties: false
+                  required: [id, nombre]
+                  properties:
+                    id: { type: string, format: uuid }
+                    nombre: { type: string }
+                distritos: { type: array, items: { type: string } }
+                categorias: { type: array, items: { type: string } }
+                habilitadaAtencion: { type: boolean }
+    Categoria:
+      type: object
+      additionalProperties: false
+      required: [id, nombre, orden, activa]
+      properties:
+        id: { type: string, pattern: '^[a-z]+(-[a-z]+)*$' }
+        nombre: { type: string }
+        orden: { type: integer, minimum: 1, maximum: 16 }
+        activa: { type: boolean }
+    CatalogoCategorias:
+      type: object
+      additionalProperties: false
+      required: [categorias]
+      properties:
+        categorias: { type: array, items: { $ref: '#/components/schemas/Categoria' } }
+    ErrorCatalogoRespuesta:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId]
+          properties:
+            code: { enum: [VALIDATION_ERROR, SERVICE_UNAVAILABLE, METHOD_NOT_ALLOWED] }
+            message: { type: string }
+            requestId: { type: string, format: uuid }
     RecuperacionSolicitud:
       type: object
       additionalProperties: false
@@ -1008,7 +1683,18 @@ components:
                 - RATE_LIMITED
                 - SERVICE_UNAVAILABLE
                 - INTERNAL_ERROR
+                - NOT_FOUND
+                - METHOD_NOT_ALLOWED
+                - SEDE_EXISTENTE
+                - REQUISITOS_HABILITACION
+                - ULTIMO_OPERADOR_ACTIVO
+                - SEDE_HABILITADA
+                - INVITACION_NO_APLICABLE
             message: { type: string }
+            faltantes:
+              type: array
+              description: Solo en REQUISITOS_HABILITACION. Requisitos incumplidos, en orden estable.
+              items: { type: string, enum: [institucion_activa, sede_activa, sede_verificada, cobertura, competencias, operador_activo] }
             fields:
               type: object
               description: Mensaje por campo. Nunca contiene el valor enviado.
@@ -1017,6 +1703,41 @@ components:
               type: string
               description: Identificador aleatorio de la solicitud; no contiene datos de cuenta.
   responses:
+    RecursoNoEncontrado:
+      description: La institucion, sede u operador no existe (o el identificador no tiene el formato esperado).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: NOT_FOUND, message: "El recurso no existe.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    ConflictoOrganizacion:
+      description: |
+        La operacion romperia una invariante: `SEDE_EXISTENTE`, `EMAIL_IN_USE`, `REQUISITOS_HABILITACION`
+        (con `faltantes`), `SEDE_HABILITADA`, `ULTIMO_OPERADOR_ACTIVO` o `INVITACION_NO_APLICABLE`. No hay
+        cambios parciales y no se revelan datos de otras cuentas.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: REQUISITOS_HABILITACION, message: "La sede no cumple los requisitos para habilitarse.", faltantes: [cobertura, operador_activo], requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    ProhibidoOrganizacion:
+      description: |
+        `FORBIDDEN` si la sesion es de otro rol (un operador no administra la organizacion, ni siquiera de su
+        sede) o `FORBIDDEN_ORIGIN` si la modificacion no viene del origen web configurado.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ErrorCatalogo:
+      description: Parametros no admitidos (400) o catalogo no disponible (503), sin detalles internos.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorCatalogoRespuesta' }
     ErrorConsultaTerritorial:
       description: Error territorial de validación, disponibilidad, versión o formato; sin ubicación ni detalles internos. Los métodos no admitidos reciben 405 con Allow y este mismo esquema.
       headers:

@@ -1,6 +1,8 @@
 import { cargarEntorno } from '../config/entorno';
 import { LoggerConsola } from '../compartido/logger';
+import { idsDistritosPiloto } from '../modules/consultas';
 import { crearModuloIdentidadConPrisma } from '../modules/identidad';
+import { crearModuloReportesConPrisma } from '../modules/reportes';
 import {
   AprovisionamientoAdministrador,
   AprovisionamientoRechazadoError,
@@ -83,7 +85,11 @@ export async function ejecutarCli(e: EntradaCli): Promise<number> {
 
   const entorno = cargarEntorno(e.env);
   const prisma = crearPrismaClient(entorno.urlBaseDeDatos);
-  const modulo = crearModuloIdentidadConPrisma(entorno, prisma, new LoggerConsola());
+  const reportes = crearModuloReportesConPrisma(prisma);
+  const modulo = crearModuloIdentidadConPrisma(entorno, prisma, new LoggerConsola(), {
+    distritos: { idsValidos: async () => idsDistritosPiloto() },
+    categorias: { idsValidos: () => reportes.categorias.idsActivos() },
+  });
   const servicio = new AprovisionamientoAdministrador(
     prisma,
     modulo.invitarCuenta,

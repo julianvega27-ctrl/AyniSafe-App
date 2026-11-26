@@ -1,0 +1,188 @@
+{
+  "fecha": "2026-11-26T01:44:33.759Z",
+  "destino": "http://127.0.0.1:5174",
+  "origen": "http://127.0.0.1:5175",
+  "navegador": "chrome.exe",
+  "comprobaciones": 21,
+  "recorridoTeclado": [
+    {
+      "etiqueta": "Institución",
+      "tag": "SELECT",
+      "contorno": true
+    },
+    {
+      "etiqueta": "Nombre de sede",
+      "tag": "INPUT",
+      "contorno": true
+    },
+    {
+      "etiqueta": "Distrito (opcional)",
+      "tag": "SELECT",
+      "contorno": true
+    },
+    {
+      "etiqueta": "Nombre del operador",
+      "tag": "INPUT",
+      "contorno": true
+    },
+    {
+      "etiqueta": "Correo del operador",
+      "tag": "INPUT",
+      "contorno": true
+    },
+    {
+      "etiqueta": "Datos de demostración",
+      "tag": "INPUT",
+      "contorno": true
+    },
+    {
+      "etiqueta": "Crear sede e invitar",
+      "tag": "BUTTON",
+      "contorno": true
+    }
+  ],
+  "fichas": [
+    {
+      "lado": "origen",
+      "nombre": "instituciones-sedes",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "archivo": "organizacion-origen-instituciones-sedes-1440.png",
+      "anchoDocumento": 1440,
+      "anchoVentana": 1440
+    },
+    {
+      "lado": "destino",
+      "nombre": "instituciones-sedes",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "archivo": "organizacion-destino-instituciones-sedes-1440.png",
+      "anchoDocumento": 1440,
+      "anchoVentana": 1440,
+      "violacionesAxe": []
+    },
+    {
+      "lado": "destino",
+      "nombre": "operadores",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "archivo": "organizacion-destino-operadores-1440.png",
+      "anchoDocumento": 1440,
+      "anchoVentana": 1440,
+      "violacionesAxe": []
+    },
+    {
+      "lado": "destino",
+      "nombre": "coberturas",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "archivo": "organizacion-destino-coberturas-1440.png",
+      "anchoDocumento": 1440,
+      "anchoVentana": 1440,
+      "violacionesAxe": []
+    },
+    {
+      "lado": "origen",
+      "nombre": "instituciones-sedes",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "archivo": "organizacion-origen-instituciones-sedes-900.png",
+      "anchoDocumento": 900,
+      "anchoVentana": 900
+    },
+    {
+      "lado": "destino",
+      "nombre": "instituciones-sedes",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "archivo": "organizacion-destino-instituciones-sedes-900.png",
+      "anchoDocumento": 900,
+      "anchoVentana": 900,
+      "violacionesAxe": []
+    },
+    {
+      "lado": "destino",
+      "nombre": "operadores",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "archivo": "organizacion-destino-operadores-900.png",
+      "anchoDocumento": 900,
+      "anchoVentana": 900,
+      "violacionesAxe": []
+    },
+    {
+      "lado": "destino",
+      "nombre": "coberturas",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "archivo": "organizacion-destino-coberturas-900.png",
+      "anchoDocumento": 900,
+      "anchoVentana": 900,
+      "violacionesAxe": []
+    },
+    {
+      "lado": "origen",
+      "nombre": "instituciones-sedes",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "archivo": "organizacion-origen-instituciones-sedes-360.png",
+      "anchoDocumento": 360,
+      "anchoVentana": 360
+    },
+    {
+      "lado": "destino",
+      "nombre": "instituciones-sedes",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "archivo": "organizacion-destino-instituciones-sedes-360.png",
+      "anchoDocumento": 360,
+      "anchoVentana": 360,
+      "violacionesAxe": []
+    },
+    {
+      "lado": "destino",
+      "nombre": "operadores",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "archivo": "organizacion-destino-operadores-360.png",
+      "anchoDocumento": 360,
+      "anchoVentana": 360,
+      "violacionesAxe": []
+    },
+    {
+      "lado": "destino",
+      "nombre": "coberturas",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "archivo": "organizacion-destino-coberturas-360.png",
+      "anchoDocumento": 360,
+      "anchoVentana": 360,
+      "violacionesAxe": []
+    }
+  ],
+  "limites": "API interceptada con datos de demostración; jsdom no interviene. axe sin reglas desactivadas en navegador real. La comparación con el origen es visual (capturas lado a lado), sin diferencia de píxeles automatizada."
+}

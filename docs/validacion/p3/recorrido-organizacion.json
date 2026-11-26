@@ -1,0 +1,118 @@
+{
+  "fecha": "2026-11-25",
+  "proceso": "node dist/main.js (build local), NODE_ENV=development, BD aislada ayni_p32_test en 127.0.0.1:55433, EMAIL_ADAPTER=archivo en directorio temporal borrado al terminar",
+  "administrador": "creado con npm run admin:bootstrap (invitacion encolada; enlace leido del correo en archivo)",
+  "limites": "Recorrido HTTP por script, sin navegador; correo en archivo, no proveedor real. No se imprimen tokens ni cookies.",
+  "disponibles": [
+    "instituciones-sedes",
+    "operadores",
+    "coberturas"
+  ],
+  "habilitada": true,
+  "ambito": {
+    "institucion": {
+      "id": "serenazgo",
+      "nombre": "Serenazgo"
+    },
+    "sede": {
+      "id": "c924b5b9-15e1-4b5d-9a1a-e0279b9096b1",
+      "nombre": "Base de Serenazgo de demostración"
+    },
+    "distritos": [
+      "DIS-01",
+      "DIS-02"
+    ],
+    "categorias": [
+      "actividad-sospechosa",
+      "otra-emergencia",
+      "vandalismo"
+    ],
+    "habilitadaAtencion": true
+  },
+  "pasos": [
+    {
+      "paso": "activar administrador (enlace del correo)",
+      "estado": 204,
+      "esperado": 204,
+      "ok": true
+    },
+    {
+      "paso": "login administrador",
+      "estado": 200,
+      "esperado": 200,
+      "ok": true
+    },
+    {
+      "paso": "panel administrador",
+      "estado": 200,
+      "esperado": 200,
+      "ok": true
+    },
+    {
+      "paso": "alta de sede con operador inicial",
+      "estado": 201,
+      "esperado": 201,
+      "ok": true
+    },
+    {
+      "paso": "reintento de la misma alta",
+      "estado": 409,
+      "esperado": 409,
+      "ok": true
+    },
+    {
+      "paso": "activar operador (enlace del correo)",
+      "estado": 204,
+      "esperado": 204,
+      "ok": true
+    },
+    {
+      "paso": "verificar sede",
+      "estado": 200,
+      "esperado": 200,
+      "ok": true
+    },
+    {
+      "paso": "cobertura",
+      "estado": 200,
+      "esperado": 200,
+      "ok": true
+    },
+    {
+      "paso": "competencias",
+      "estado": 200,
+      "esperado": 200,
+      "ok": true
+    },
+    {
+      "paso": "habilitar atención",
+      "estado": 200,
+      "esperado": 200,
+      "ok": true
+    },
+    {
+      "paso": "login operador",
+      "estado": 200,
+      "esperado": 200,
+      "ok": true
+    },
+    {
+      "paso": "ámbito del operador",
+      "estado": 200,
+      "esperado": 200,
+      "ok": true
+    },
+    {
+      "paso": "operador en rutas de organización",
+      "estado": 403,
+      "esperado": 403,
+      "ok": true
+    },
+    {
+      "paso": "categorías públicas sin sesión",
+      "estado": 200,
+      "esperado": 200,
+      "ok": true
+    }
+  ]
+}
