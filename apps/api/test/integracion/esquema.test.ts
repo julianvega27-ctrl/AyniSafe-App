@@ -43,11 +43,15 @@ describe('migracion desde base vacia', () => {
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`,
     );
     expect(tablas.rows.map((t) => t.tablename).sort()).toEqual([
+      'distritos',
       'envios_correo',
+      'estado_territorial',
+      'geometrias_distritales',
       'sesiones',
       'tokens_cuenta',
       'usuarios',
       'ventanas_intentos',
+      'versiones_territoriales',
     ]);
 
     const indices = await bd.query<{ indexname: string }>(
@@ -59,6 +63,9 @@ describe('migracion desde base vacia', () => {
       'sesiones_token_hash_key',
       'sesiones_expires_at_idx',
       'ventanas_intentos_ventana_inicio_idx',
+      'geometrias_distritales_pkey',
+      'geometrias_distritales_version_id_ubigeo_key',
+      'estado_territorial_pkey',
     ]) {
       expect(nombres).toContain(esperado);
     }

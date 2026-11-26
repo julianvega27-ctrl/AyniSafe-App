@@ -1,11 +1,31 @@
 # AyniSafe API
 
 API REST (Node.js, Express, TypeScript) del monolito modular de AyniSafe. Este directorio contiene
-por ahora el modulo **Identidad** (acceso ciudadano). Referencia de diseno:
-`openspec/changes/registro-login-ciudadano/`.
+los módulos **Identidad** y **Consultas** (contenido público y territorio). Contrato completo: `openapi.yaml`.
+Las notas de entregas previas se conservan abajo; la evidencia P3.1 está en
+[`docs/validacion/p3-territorio.md`](../../docs/validacion/p3-territorio.md).
 
-> Estado: los cuatro endpoints de acceso ciudadano estan implementados y probados en local. Nada de esto
-> esta desplegado ni expuesto a un entorno compartido.
+## Territorio P3.1
+
+Tres rutas públicas bajo `/api/v1/publico/territorio`: `GET /distritos`, `GET /limites?version=…`
+y `POST /resolver` con `{latitud,longitud,version?}`. Sin versión explícita usan la activa;
+sin cartografía responden catálogo pendiente o 503, según la operación. El punto no se guarda.
+La resolución exige JSON de hasta 4 KiB y limita 60 solicitudes/IP/minuto por instancia.
+No registra incidentes, activa instituciones ni concede permisos territoriales.
+
+Aplicar primero las migraciones contra la base prevista. Validación, simulación, importación y
+restauración: [data/README.md](data/README.md). La CLI solo importa el paquete contrastado y conserva
+versiones anteriores. Para medir una base de prueba con ese paquete activo:
+
+```sh
+npm run territorio:medir -- ../../docs/validacion/p3/medicion-local.json
+```
+
+El ensayo es serial, sin escrituras de negocio, e incluye planes PostgreSQL y cinco puntos contrastados
+con un oráculo geométrico nativo. No equivale a carga ni a validación jurídica de límites.
+
+> Nota histórica de la entrega inicial: los cuatro endpoints de acceso ciudadano se validaron en local.
+> El estado de cada incremento posterior se acredita en su informe, no con esta nota inicial.
 
 ## Requisitos
 

@@ -1,0 +1,99 @@
+{
+  "fecha": "2026-11-25",
+  "archivo": "https://ide.inei.gob.pe/files/Distrito.rar",
+  "rarSha256": "ae22428029000d801b3d68afd0914ba94ca40a789a9b56231f6131a75abb9654",
+  "geopackageSha256": "b4b6485e4161ce4413bf118f39411071f7627d979a4c271acb35103f1d3e2756",
+  "geojsonDonanteSha256": "d070ef33e3aa6dcb53c4bec8731ddde641195389b6b6750273e29e2e6d16d938",
+  "featuresIdenticas": true,
+  "crs": [
+    {
+      "srs_id": -1,
+      "organization": "NONE",
+      "organization_coordsys_id": -1
+    },
+    {
+      "srs_id": 0,
+      "organization": "NONE",
+      "organization_coordsys_id": 0
+    },
+    {
+      "srs_id": 4326,
+      "organization": "EPSG",
+      "organization_coordsys_id": 4326
+    }
+  ],
+  "geometria": [
+    {
+      "table_name": "DISTRITO",
+      "geometry_type_name": "MULTIPOLYGON",
+      "srs_id": 4326
+    }
+  ],
+  "distritos": [
+    {
+      "code": "050101",
+      "name": "Ayacucho",
+      "sourceName": "AYACUCHO",
+      "source": "V Censo Nacional Economico",
+      "bbox": [
+        -74.28939179599996,
+        -13.205488947999982,
+        -74.21119698399997,
+        -13.069600327999979
+      ]
+    },
+    {
+      "code": "050104",
+      "name": "Carmen Alto",
+      "sourceName": "CARMEN ALTO",
+      "source": "V Censo Nacional Economico",
+      "bbox": [
+        -74.26091089199997,
+        -13.241340212999944,
+        -74.20989991299996,
+        -13.168823939999982
+      ]
+    },
+    {
+      "code": "050110",
+      "name": "San Juan Bautista",
+      "sourceName": "SAN JUAN BAUTISTA",
+      "source": "V Censo Nacional Economico",
+      "bbox": [
+        -74.24150761599998,
+        -13.241723652999951,
+        -74.19050961999994,
+        -13.163975304999951
+      ]
+    },
+    {
+      "code": "050115",
+      "name": "Jesús Nazareno",
+      "sourceName": "JESUS NAZARENO",
+      "source": "V Censo Nacional Economico",
+      "bbox": [
+        -74.23179418099994,
+        -13.161804644999961,
+        -74.18436998399994,
+        -13.084449980999977
+      ]
+    },
+    {
+      "code": "050116",
+      "name": "Andrés Avelino Cáceres Dorregaray",
+      "sourceName": "ANDRES AVELINO CACERES DORREGARAY",
+      "source": "V Censo Nacional Economico",
+      "bbox": [
+        -74.21961616699997,
+        -13.174885228999926,
+        -74.18665998899996,
+        -13.133608519999939
+      ]
+    }
+  ],
+  "condiciones": {
+    "portal": "https://ide.inei.gob.pe/",
+    "uso": "El portal ofrece acceso gratuito y descarga vectorial. No se identificó licencia específica en la página; se conserva atribución y condición referencial.",
+    "referenceOnly": true
+  }
+}

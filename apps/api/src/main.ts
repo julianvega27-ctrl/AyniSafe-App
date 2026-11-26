@@ -1,7 +1,7 @@
 import { crearApp } from './app';
 import { LoggerConsola } from './compartido/logger';
 import { cargarEntorno } from './config/entorno';
-import { crearModuloConsultas } from './modules/consultas';
+import { crearModuloConsultasConPrisma } from './modules/consultas';
 import { crearModuloIdentidadConPrisma } from './modules/identidad';
 import { crearPrismaClient } from './modules/identidad/infraestructura/prisma-cliente';
 
@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   const prisma = crearPrismaClient(entorno.urlBaseDeDatos);
   const identidad = crearModuloIdentidadConPrisma(entorno, prisma, logger);
   // Si la fuente de contenido publico no cumple el esquema, el arranque falla aqui.
-  const consultas = crearModuloConsultas();
+  const consultas = crearModuloConsultasConPrisma(prisma, entorno.secretoLimitador);
   const app = crearApp({ saltosProxyConfianza: entorno.saltosProxyConfianza, identidad, consultas });
 
   const servidor = app.listen(entorno.puerto, () => {

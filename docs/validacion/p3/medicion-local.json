@@ -1,0 +1,415 @@
+{
+  "fecha": "2026-11-25",
+  "ejecutadoEn": "2026-11-25T22:32:17.820Z",
+  "revision": "estado local sin commit P3.1",
+  "ambiente": {
+    "node": "v24.21.0",
+    "plataforma": "win32",
+    "arquitectura": "x64",
+    "cpu": "Intel(R) Core(TM) i7-14650HX",
+    "postgres": {
+      "server_version": "18.1"
+    },
+    "prisma": "7.10.1",
+    "red": "loopback, PostgreSQL aislado puerto 55433",
+    "concurrencia": 1
+  },
+  "version": "5cb61fbee9a0e8b24fc33c3ddc346864479b9b01d685901c36dafca130fe8067",
+  "sha256Geojson": "d070ef33e3aa6dcb53c4bec8731ddde641195389b6b6750273e29e2e6d16d938",
+  "volumen": {
+    "geometrias": 5,
+    "bytes_geometrias": 85096
+  },
+  "primeraLecturaMs": 166.382,
+  "lecturaSnapshot": {
+    "muestras": 30,
+    "minimoMs": 3.5218999999999596,
+    "p50Ms": 4.606600000000071,
+    "p95Ms": 9.747600000000034,
+    "maximoMs": 9.920399999999972
+  },
+  "resolucionConLectura": {
+    "muestras": 30,
+    "minimoMs": 3.4671999999999343,
+    "p50Ms": 4.529099999999971,
+    "p95Ms": 6.515800000000013,
+    "maximoMs": 9.416299999999978
+  },
+  "puntos": [
+    {
+      "fuente": "docs/validacion/p3/contraste-inei.json",
+      "oraculo": "PostgreSQL point <@ polygon sobre GeoJSON INEI contrastado",
+      "ubigeoEsperado": "050101",
+      "latitud": -13.13754463799998,
+      "longitud": -74.25029438999997,
+      "resultado": {
+        "estado": "resuelto",
+        "distrito": {
+          "id": "DIS-01",
+          "nombre": "Ayacucho",
+          "ubigeo": "050101"
+        },
+        "motivo": null,
+        "version": "5cb61fbee9a0e8b24fc33c3ddc346864479b9b01d685901c36dafca130fe8067"
+      }
+    },
+    {
+      "fuente": "docs/validacion/p3/contraste-inei.json",
+      "oraculo": "PostgreSQL point <@ polygon sobre GeoJSON INEI contrastado",
+      "ubigeoEsperado": "050104",
+      "latitud": -13.205082076499963,
+      "longitud": -74.23540540249996,
+      "resultado": {
+        "estado": "resuelto",
+        "distrito": {
+          "id": "DIS-03",
+          "nombre": "Carmen Alto",
+          "ubigeo": "050104"
+        },
+        "motivo": null,
+        "version": "5cb61fbee9a0e8b24fc33c3ddc346864479b9b01d685901c36dafca130fe8067"
+      }
+    },
+    {
+      "fuente": "docs/validacion/p3/contraste-inei.json",
+      "oraculo": "PostgreSQL point <@ polygon sobre GeoJSON INEI contrastado",
+      "ubigeoEsperado": "050110",
+      "latitud": -13.202849478999951,
+      "longitud": -74.21600861799996,
+      "resultado": {
+        "estado": "resuelto",
+        "distrito": {
+          "id": "DIS-02",
+          "nombre": "San Juan Bautista",
+          "ubigeo": "050110"
+        },
+        "motivo": null,
+        "version": "5cb61fbee9a0e8b24fc33c3ddc346864479b9b01d685901c36dafca130fe8067"
+      }
+    },
+    {
+      "fuente": "docs/validacion/p3/contraste-inei.json",
+      "oraculo": "PostgreSQL point <@ polygon sobre GeoJSON INEI contrastado",
+      "ubigeoEsperado": "050115",
+      "latitud": -13.12312731299997,
+      "longitud": -74.20808208249994,
+      "resultado": {
+        "estado": "resuelto",
+        "distrito": {
+          "id": "DIS-04",
+          "nombre": "Jesús Nazareno",
+          "ubigeo": "050115"
+        },
+        "motivo": null,
+        "version": "5cb61fbee9a0e8b24fc33c3ddc346864479b9b01d685901c36dafca130fe8067"
+      }
+    },
+    {
+      "fuente": "docs/validacion/p3/contraste-inei.json",
+      "oraculo": "PostgreSQL point <@ polygon sobre GeoJSON INEI contrastado",
+      "ubigeoEsperado": "050116",
+      "latitud": -13.154246874499933,
+      "longitud": -74.20313807799997,
+      "resultado": {
+        "estado": "resuelto",
+        "distrito": {
+          "id": "DIS-05",
+          "nombre": "Andrés Avelino Cáceres Dorregaray",
+          "ubigeo": "050116"
+        },
+        "motivo": null,
+        "version": "5cb61fbee9a0e8b24fc33c3ddc346864479b9b01d685901c36dafca130fe8067"
+      }
+    }
+  ],
+  "planes": [
+    {
+      "nombre": "puntero_activo",
+      "sql": "SELECT version_id FROM estado_territorial WHERE ambito=$1",
+      "plan": [
+        {
+          "QUERY PLAN": [
+            {
+              "Plan": {
+                "Node Type": "Seq Scan",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Relation Name": "estado_territorial",
+                "Alias": "estado_territorial",
+                "Startup Cost": 0,
+                "Total Cost": 1.01,
+                "Plan Rows": 1,
+                "Plan Width": 65,
+                "Actual Startup Time": 0.015,
+                "Actual Total Time": 0.015,
+                "Actual Rows": 1,
+                "Actual Loops": 1,
+                "Disabled": false,
+                "Filter": "(ambito = 'ayacucho-metropolitano'::text)",
+                "Rows Removed by Filter": 0,
+                "Shared Hit Blocks": 1,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              "Planning": {
+                "Shared Hit Blocks": 25,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              "Planning Time": 0.845,
+              "Triggers": [],
+              "Execution Time": 0.029
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "nombre": "version",
+      "sql": "SELECT id,metadatos FROM versiones_territoriales WHERE id=$1",
+      "plan": [
+        {
+          "QUERY PLAN": [
+            {
+              "Plan": {
+                "Node Type": "Seq Scan",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Relation Name": "versiones_territoriales",
+                "Alias": "versiones_territoriales",
+                "Startup Cost": 0,
+                "Total Cost": 1.02,
+                "Plan Rows": 1,
+                "Plan Width": 582,
+                "Actual Startup Time": 0.006,
+                "Actual Total Time": 0.007,
+                "Actual Rows": 1,
+                "Actual Loops": 1,
+                "Disabled": false,
+                "Filter": "(id = '5cb61fbee9a0e8b24fc33c3ddc346864479b9b01d685901c36dafca130fe8067'::text)",
+                "Rows Removed by Filter": 1,
+                "Shared Hit Blocks": 1,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              "Planning": {
+                "Shared Hit Blocks": 17,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              "Planning Time": 0.803,
+              "Triggers": [],
+              "Execution Time": 0.012
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "nombre": "geometrias_y_distritos",
+      "sql": "SELECT g.*,d.nombre FROM geometrias_distritales g JOIN distritos d ON d.id=g.distrito_id WHERE g.version_id=$1 ORDER BY g.distrito_id",
+      "plan": [
+        {
+          "QUERY PLAN": [
+            {
+              "Plan": {
+                "Node Type": "Sort",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 2.32,
+                "Total Cost": 2.33,
+                "Plan Rows": 5,
+                "Plan Width": 309,
+                "Actual Startup Time": 0.056,
+                "Actual Total Time": 0.057,
+                "Actual Rows": 5,
+                "Actual Loops": 1,
+                "Disabled": false,
+                "Sort Key": [
+                  "g.distrito_id"
+                ],
+                "Sort Method": "quicksort",
+                "Sort Space Used": 25,
+                "Sort Space Type": "Memory",
+                "Shared Hit Blocks": 2,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Hash Join",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Join Type": "Inner",
+                    "Startup Cost": 1.11,
+                    "Total Cost": 2.26,
+                    "Plan Rows": 5,
+                    "Plan Width": 309,
+                    "Actual Startup Time": 0.038,
+                    "Actual Total Time": 0.04,
+                    "Actual Rows": 5,
+                    "Actual Loops": 1,
+                    "Disabled": false,
+                    "Inner Unique": true,
+                    "Hash Cond": "(g.distrito_id = d.id)",
+                    "Shared Hit Blocks": 2,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Seq Scan",
+                        "Parent Relationship": "Outer",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Relation Name": "geometrias_distritales",
+                        "Alias": "g",
+                        "Startup Cost": 0,
+                        "Total Cost": 1.12,
+                        "Plan Rows": 5,
+                        "Plan Width": 291,
+                        "Actual Startup Time": 0.012,
+                        "Actual Total Time": 0.012,
+                        "Actual Rows": 5,
+                        "Actual Loops": 1,
+                        "Disabled": false,
+                        "Filter": "(version_id = '5cb61fbee9a0e8b24fc33c3ddc346864479b9b01d685901c36dafca130fe8067'::text)",
+                        "Rows Removed by Filter": 5,
+                        "Shared Hit Blocks": 1,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Local Hit Blocks": 0,
+                        "Local Read Blocks": 0,
+                        "Local Dirtied Blocks": 0,
+                        "Local Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0
+                      },
+                      {
+                        "Node Type": "Hash",
+                        "Parent Relationship": "Inner",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Startup Cost": 1.05,
+                        "Total Cost": 1.05,
+                        "Plan Rows": 5,
+                        "Plan Width": 25,
+                        "Actual Startup Time": 0.009,
+                        "Actual Total Time": 0.009,
+                        "Actual Rows": 5,
+                        "Actual Loops": 1,
+                        "Disabled": false,
+                        "Hash Buckets": 1024,
+                        "Original Hash Buckets": 1024,
+                        "Hash Batches": 1,
+                        "Original Hash Batches": 1,
+                        "Peak Memory Usage": 9,
+                        "Shared Hit Blocks": 1,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Local Hit Blocks": 0,
+                        "Local Read Blocks": 0,
+                        "Local Dirtied Blocks": 0,
+                        "Local Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Seq Scan",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Relation Name": "distritos",
+                            "Alias": "d",
+                            "Startup Cost": 0,
+                            "Total Cost": 1.05,
+                            "Plan Rows": 5,
+                            "Plan Width": 25,
+                            "Actual Startup Time": 0.004,
+                            "Actual Total Time": 0.005,
+                            "Actual Rows": 5,
+                            "Actual Loops": 1,
+                            "Disabled": false,
+                            "Shared Hit Blocks": 1,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Local Hit Blocks": 0,
+                            "Local Read Blocks": 0,
+                            "Local Dirtied Blocks": 0,
+                            "Local Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "Planning": {
+                "Shared Hit Blocks": 86,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0
+              },
+              "Planning Time": 2.515,
+              "Triggers": [],
+              "Execution Time": 0.083
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limites": "30 muestras seriales con páginas calientes y sin caché de aplicación. Primera lectura incluye apertura del pool, no arranque del servicio. Oráculo nativo usa el mismo contorno de fuente; no es levantamiento en campo ni validación legal. No mide incidentes, clientes ni carga concurrente."
+}

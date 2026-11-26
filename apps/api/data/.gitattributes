@@ -1,0 +1,2 @@
+# El contraste usa SHA-256 de los bytes originales; no convertir LF/CRLF.
+*.geojson -text

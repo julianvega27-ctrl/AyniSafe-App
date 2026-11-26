@@ -4,6 +4,10 @@ import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { resolve } from 'node:path';
 import request, { type Response } from 'supertest';
+import { PrismaTerritorioAdapter } from '../../src/modules/consultas/infraestructura/prisma-territorio.adapter';
+import { paqueteSintetico } from '../fixtures/territorio';
+import { crearApp } from '../../src/app';
+import { crearModuloConsultas } from '../../src/modules/consultas';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import type { CuentasPort } from '../../src/modules/identidad/aplicacion/puertos/cuentas.port';
 import type { SesionesPort } from '../../src/modules/identidad/aplicacion/puertos/sesiones.port';
@@ -331,6 +335,72 @@ describe('respuestas reales conforme a openapi.yaml', () => {
       expect(rd.status).toBe(estado);
       verificar(ISES, 'delete', rd);
     }
+  });
+
+  it('territorio: respuestas reales cubren el contrato, versiones y errores sin permisos ni persistencia de puntos', async () => {
+    const arnes = crearArnes({ prisma, saltosProxy: 1 });
+    const app = arnes.app;
+    const repo = new PrismaTerritorioAdapter(prisma);
+    const C = '/publico/territorio/distritos', L = '/publico/territorio/limites', P = '/publico/territorio/resolver';
+    const url = (ruta: string) => `/api/v1${ruta}`;
+    verificar(C, 'get', await request(app).get(url(C))); // 200 sin activa
+    verificar(C, 'get', await request(app).get(url(C)).query({ inventado: 'x' })); // 422
+    verificar(L, 'get', await request(app).get(url(L))); // 503
+    verificar(P, 'post', await request(app).post(url(P)).send({ latitud: 1, longitud: 1 })); // 503
+    await repo.importar(paqueteSintetico().preparado, true);
+    const limites = await request(app).get(url(L));
+    verificar(L, 'get', limites); // 200 Polygon
+    verificar(L, 'get', await request(app).get(url(L)).query({ version: 'f'.repeat(64) })); // 404
+    verificar(L, 'get', await request(app).get(url(L)).query({ version: ['a', 'b'] })); // 422
+    verificar(L, 'get', await request(app).get(url(L)).query({ extra: 1 }));
+    verificar(P, 'post', await request(app).post(url(P)).send({ latitud: 1, longitud: 1, version: 'f'.repeat(64) })); // 404
+    verificar(P, 'post', await request(app).post(url(P)).send({ latitud: '1', longitud: 1 })); // 422
+    verificar(P, 'post', await request(app).post(url(P)).query({ latitud: 1 }).send({ latitud: 1, longitud: 1 }));
+    verificar(P, 'post', await request(app).post(url(P)).set('Content-Type', 'application/json').send('{')); // 400
+    verificar(P, 'post', await request(app).post(url(P)).send({ extra: 'x'.repeat(4097) })); // 413
+    verificar(P, 'post', await request(app).post(url(P)).set('Content-Type', 'text/plain').send('texto')); // 415
+    const resuelto = await request(app).post(url(P)).send({ latitud: 1, longitud: 1 });
+    verificar(P, 'post', resuelto);
+    expect(resuelto.body.estado).toBe('resuelto');
+    for (const [latitud, longitud, motivo] of [[0, 0, 'frontera'], [40, 40, 'fuera_area']] as const) {
+      const r = await request(app).post(url(P)).send({ latitud, longitud });
+      verificar(P, 'post', r); expect(r.body.motivo).toBe(motivo);
+    }
+    const anonimo = (await request(app).get(url(C))).body;
+    for (const rol of ['ciudadano', 'administrador', 'operador'] as const) {
+      const cuenta = await crearCuentaDePrueba(prisma, { rol });
+      const sesion = rol === 'ciudadano'
+        ? await request(app).post('/api/v1/auth/ciudadanos/sesiones').send({ correo: cuenta.correo, contrasena: CLAVE })
+        : await request(app).post('/api/v1/auth/institucional/sesiones').set('Origin', ORIGEN_WEB_PRUEBA).send({ correo: cuenta.correo, contrasena: CLAVE });
+      expect(sesion.status).toBe(200);
+      const cabecera = rol === 'ciudadano' ? { Authorization: `Bearer ${sesion.body.token}` } : { Cookie: cookieDe(sesion) };
+      expect((await request(app).get(url(C)).set(cabecera)).body).toEqual(anonimo);
+      expect((await request(app).get(url(L)).set(cabecera)).body).toEqual(limites.body);
+      expect((await request(app).post(url(P)).set(cabecera).send({ latitud: 1, longitud: 1 })).body).toEqual(resuelto.body);
+    }
+    const cuentas = await prisma.usuario.count(), sesiones = await prisma.sesion.count();
+    for (const ruta of [C, L, P]) {
+      const r = ruta === P ? await request(app).get(url(ruta)) : await request(app).post(url(ruta));
+      expect(r.status).toBe(405); expect(r.headers.allow).toBe(ruta === P ? 'POST' : 'GET, HEAD');
+      const componentes = api as unknown as { components: { schemas: Record<string, Esquema> } };
+      expect(ajv.validate(componentes.components.schemas.ErrorTerritorialRespuesta!, r.body)).toBe(true);
+    }
+    expect((await request(app).head(url(L))).text).toBeUndefined();
+    for (let i = 0; i < 60; i++) await request(app).post(url(P)).set('X-Forwarded-For', '192.0.2.31').send({ latitud: 1, longitud: 1 });
+    const cuota = await request(app).post(url(P)).set('X-Forwarded-For', '192.0.2.31').send({ latitud: 1, longitud: 1 });
+    expect(cuota.status).toBe(429); verificar(P, 'post', cuota);
+    const otraIp = await request(app).post(url(P)).set('X-Forwarded-For', '192.0.2.32').send({ latitud: 1, longitud: 1 });
+    expect(otraIp.status).toBe(200);
+    const rota = crearApp({ saltosProxyConfianza: 0, identidad: arnes.modulo,
+      consultas: crearModuloConsultas(undefined, { repositorio: { leer: async () => { throw new Error('secreto SQL'); } }, secretoLimitador: 'solo-pruebas' }) });
+    for (const ruta of [C, L]) {
+      const r = await request(rota).get(url(ruta)); verificar(ruta, 'get', r);
+      expect(r.text).not.toContain('secreto');
+    }
+    verificar(P, 'post', await request(rota).post(url(P)).send({ latitud: 1, longitud: 1 }));
+    expect(await prisma.usuario.count()).toBe(cuentas); expect(await prisma.sesion.count()).toBe(sesiones);
+    expect(await prisma.geometriaDistrital.count()).toBe(5);
+    expect(arnes.logger.texto()).not.toMatch(/latitud|longitud|secreto SQL/);
   });
 
   it('todos los estados documentados fueron ejercitados y ninguna respuesta real quedo sin documentar', () => {
