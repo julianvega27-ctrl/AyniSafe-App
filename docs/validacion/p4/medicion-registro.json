@@ -1,0 +1,134 @@
+{
+  "fecha": "2026-11-26",
+  "ejecutadoEn": "2026-11-26T19:58:33.852Z",
+  "revision": "estado local sin commit P4.1 sobre 039e9f4",
+  "ambiente": {
+    "node": "v24.21.0",
+    "plataforma": "win32",
+    "arquitectura": "x64",
+    "cpu": "Intel(R) Core(TM) i7-14650HX",
+    "postgres": {
+      "server_version": "18.1"
+    },
+    "prisma": "7.10.1",
+    "red": "loopback, PostgreSQL local puerto 5433, base *_test",
+    "http": "supertest en proceso (sin red TCP externa)",
+    "concurrencia": 1
+  },
+  "escenario": {
+    "registros": {
+      "cuenta": 100,
+      "invitado": 100
+    },
+    "consumidorBloqueadoMs": 30000,
+    "cartografia": "sin version territorial activa (todos los envios quedan pendientes sin_cartografia)"
+  },
+  "duracionTotalMs": 1374.1476999999998,
+  "primeraEntregaTomadaTrasInicioMs": 53.58789999999999,
+  "registroConCuenta": {
+    "muestras": 100,
+    "minimoMs": 5.2327999999999975,
+    "p50Ms": 6.336000000000013,
+    "p95Ms": 8.922800000000052,
+    "maximoMs": 46.48309999999992
+  },
+  "registroInvitado": {
+    "muestras": 100,
+    "minimoMs": 5.236499999999978,
+    "p50Ms": 6.008199999999761,
+    "p95Ms": 7.637199999999666,
+    "maximoMs": 9.022800000000188
+  },
+  "conteosAlTerminar": {
+    "incidentes": 200,
+    "envios": 200,
+    "eventos": 200,
+    "entregas_procesadas": 0,
+    "entregas_pendientes": 1
+  },
+  "historialAutor": {
+    "sql": "SELECT incidente_id, categoria_id, recibido_en, estado_territorial, distrito_id, motivo_territorial\n                         FROM envios_incidente WHERE autor_usuario_id = $1::uuid\n                        ORDER BY recibido_en DESC, incidente_id DESC LIMIT 21",
+    "plan": [
+      {
+        "QUERY PLAN": [
+          {
+            "Plan": {
+              "Node Type": "Limit",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 0.14,
+              "Total Cost": 5.1,
+              "Plan Rows": 21,
+              "Plan Width": 92,
+              "Actual Startup Time": 0.009,
+              "Actual Total Time": 0.014,
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Disabled": false,
+              "Shared Hit Blocks": 3,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "envios_incidente_autor_idx",
+                  "Relation Name": "envios_incidente",
+                  "Alias": "envios_incidente",
+                  "Startup Cost": 0.14,
+                  "Total Cost": 23.77,
+                  "Plan Rows": 100,
+                  "Plan Width": 92,
+                  "Actual Startup Time": 0.009,
+                  "Actual Total Time": 0.012,
+                  "Actual Rows": 21,
+                  "Actual Loops": 1,
+                  "Disabled": false,
+                  "Index Cond": "(autor_usuario_id = 'b5cc3868-3711-444d-8f8d-b5ca80a1187a'::uuid)",
+                  "Rows Removed by Index Recheck": 0,
+                  "Index Searches": 1,
+                  "Shared Hit Blocks": 3,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 65,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 1.717,
+            "Triggers": [],
+            "Execution Time": 0.028
+          }
+        ]
+      }
+    ]
+  },
+  "limites": "Muestras seriales por HTTP en proceso sobre PostgreSQL local, sin red real, TLS ni arranque en frio. El consumidor bloqueado demuestra que la confirmacion no espera el procesamiento posterior; no reproduce la carga de 50/min durante 10 min de EQ-02 ni el perfil de 2.000 VU. Sin cartografia activa no se mide la resolucion territorial con geometrias reales."
+}
