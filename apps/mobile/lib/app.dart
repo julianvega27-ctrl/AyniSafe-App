@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 
 import 'aplicacion/sesion_controlador.dart';
 import 'datos/auth_repositorio.dart';
+import 'datos/cliente_http.dart';
+import 'datos/consultas_guardadas.dart';
 import 'datos/contenido_repositorio.dart';
+import 'datos/incidentes_repositorio.dart';
+import 'datos/ubicacion.dart';
 import 'datos/perfil_repositorio.dart';
 import 'datos/enlaces_cuenta.dart';
 import 'presentacion/flujo_recuperacion.dart';
@@ -26,7 +30,19 @@ class AyniSafeApp extends StatefulWidget {
     this.marcador = const LanzadorMarcadorSistema(),
     this.ahora,
     this.enlaces,
+    this.incidentes,
+    this.ubicacion = const UbicacionGeolocator(),
+    this.consultasGuardadas,
+    this.mostrarTeselas = true,
   });
+
+  /// Registro y seguimiento (P4.1). Sin valor, se usa la API configurada al compilar.
+  final IncidentesRepositorio? incidentes;
+  final UbicacionPuerto ubicacion;
+
+  /// Sin valor, el almacén seguro del sistema.
+  final ConsultasGuardadas? consultasGuardadas;
+  final bool mostrarTeselas;
 
   final AuthRepositorio repositorio;
   final SesionControlador sesion;
@@ -54,6 +70,11 @@ class _AyniSafeAppState extends State<AyniSafeApp> {
   String? _tokenPendiente;
   String? _ultimoToken;
   DateTime? _ultimoMomento;
+
+  late final IncidentesRepositorio _incidentes =
+      widget.incidentes ?? IncidentesRepositorio(ClienteHttp());
+  late final ConsultasGuardadas _consultas =
+      widget.consultasGuardadas ?? ConsultasGuardadasSeguras();
 
   late final FlujoRecuperacion _flujo = FlujoRecuperacion(
     repositorio: widget.repositorio,
@@ -161,6 +182,10 @@ class _AyniSafeAppState extends State<AyniSafeApp> {
       contenido: widget.contenido,
       perfil: widget.perfil,
       marcador: widget.marcador,
+      incidentes: _incidentes,
+      ubicacion: widget.ubicacion,
+      consultasGuardadas: _consultas,
+      mostrarTeselas: widget.mostrarTeselas,
       child: MaterialApp(
         title: 'AyniSafe',
         debugShowCheckedModeBanner: false,

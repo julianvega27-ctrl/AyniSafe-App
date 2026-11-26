@@ -1,4 +1,4 @@
-import { DISTRITOS_PILOTO, ErrorTerritorial, validarPunto, validarVersion, type SnapshotTerritorial } from '../dominio/territorio';
+import { DISTRITOS_PILOTO, ErrorTerritorial, validarPunto, validarVersion, type ResultadoTerritorial, type SnapshotTerritorial } from '../dominio/territorio';
 import { resolverPunto } from '../dominio/geometria';
 
 export interface TerritorioRepositorio {
@@ -30,5 +30,15 @@ export class ConsultarTerritorio {
   async resolver(entrada: unknown) {
     const punto = validarPunto(entrada);
     return resolverPunto(punto, await this.snapshot(punto.version));
+  }
+  /**
+   * Resolucion para el registro de incidentes (P4.1) con la version activa. Devuelve null si no hay
+   * cartografia activa, para registrar con distrito pendiente; un fallo de lectura se propaga (503)
+   * en lugar de confundirse con la ausencia de cartografia.
+   */
+  async resolverParaRegistro(latitud: number, longitud: number): Promise<ResultadoTerritorial | null> {
+    const punto = validarPunto({ latitud, longitud });
+    const snapshot = await this.repositorio.leer();
+    return snapshot ? resolverPunto(punto, snapshot) : null;
   }
 }

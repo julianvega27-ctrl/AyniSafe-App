@@ -120,8 +120,9 @@ void main() {
           almacen.guardada?.expiresAt,
           ahoraFijo.add(const Duration(hours: 24)),
         );
-        // El destino autenticado declara honestamente lo que aún no existe.
-        expect(find.text('Disponible próximamente'), findsOneWidget);
+        // Inicio con cuenta ofrece el reporte y la sección de últimos reportes propios (P4.1).
+        expect(find.text('Disponible próximamente'), findsNothing);
+        expect(find.text('Mis últimos reportes'), findsOneWidget);
         for (final destino in ['Inicio', 'Reportar', 'Mapa', 'Contactos']) {
           expect(
             find.widgetWithText(NavigationDestination, destino),

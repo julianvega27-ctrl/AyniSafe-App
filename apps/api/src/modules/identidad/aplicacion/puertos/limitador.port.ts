@@ -8,7 +8,11 @@ export type TipoLimite =
   | 'recuperacion_correo_ip'
   | 'recuperacion_correo'
   | 'token_ip'
-  | 'correo_dia';
+  | 'correo_dia'
+  // P4.1: limites de otros modulos que usan este limitador por la fachada de Identidad.
+  | 'incidente_invitado_ip'
+  | 'seguimiento_ref'
+  | 'seguimiento_ip';
 
 export interface ConsumoLimite {
   readonly tipo: TipoLimite;

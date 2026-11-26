@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../aplicacion/perfil_controlador.dart';
+import '../../aplicacion/reporte_controlador.dart';
 import '../../aplicacion/sesion_controlador.dart';
 import '../../datos/auth_repositorio.dart';
 import '../componentes/bloque_contactos.dart';
@@ -10,6 +12,8 @@ import '../pantallas/acceso_pantalla.dart';
 import '../pantallas/contenido_publico_pantalla.dart';
 import '../pantallas/inicio_pantalla.dart';
 import '../pantallas/perfil_pantalla.dart';
+import '../pantallas/reporte_pantalla.dart';
+import '../pantallas/seguimiento_pantallas.dart';
 import '../servicios.dart';
 import '../tema.dart';
 import 'destinos.dart';
@@ -51,6 +55,13 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
   final Set<Destino> _visitados = {};
   PerfilControlador? _perfil;
 
+  /// Formulario de reporte: vive con el shell, de modo que cambiar de destino no pierde lo escrito.
+  /// Con sesión envía con la cuenta; sin sesión, como invitado.
+  ReporteControlador? _reporte;
+
+  /// Cambia al volver a Inicio: los últimos reportes se vuelven a leer sin perder el estado de Inicio.
+  int _visitasInicio = 0;
+
   UsuarioSesion? get _usuario => switch (widget.estado) {
     SesionAutenticada(:final usuario) => usuario,
     _ => null,
@@ -83,9 +94,20 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
     }
   }
 
+  ReporteControlador _controladorReporte() => _reporte ??= ReporteControlador(
+    repositorio: Servicios.of(context).incidentes,
+    ubicacion: Servicios.of(context).ubicacion,
+    guardadas: Servicios.of(context).consultasGuardadas,
+    obtenerToken: () => _usuario == null ? null : widget.sesion.token,
+    nuevaClave: () => const Uuid().v4(),
+    cuandoSesionInvalida: widget.sesion.alSesionInvalida,
+    ahora: widget.ahora,
+  );
+
   @override
   void dispose() {
     _perfil?.dispose();
+    _reporte?.dispose();
     super.dispose();
   }
 
@@ -99,6 +121,8 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
       return;
     }
     setState(() {
+      // Volver a Inicio vuelve a leer los últimos reportes (p. ej., tras enviar uno).
+      if (destino == Destino.inicio && _actual != Destino.inicio) _visitasInicio += 1;
       _actual = destino;
       _visitados.add(destino);
     });
@@ -123,6 +147,7 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
     Destino.informacion,
     Destino.cuenta,
     if (_usuario != null) Destino.misReportes,
+    Destino.consultarCodigo,
   ];
 
   String _tituloMenu(Destino d) => d == Destino.cuenta
@@ -131,17 +156,22 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
 
   Widget _pagina(Destino destino) => switch (destino) {
     Destino.inicio => InicioPantalla(
+      visitas: _visitasInicio,
       usuario: _usuario,
       alNavegar: _navegar,
+      obtenerToken: () => _usuario == null ? null : widget.sesion.token,
+      cuandoSesionInvalida: widget.sesion.alSesionInvalida,
       aviso: switch (widget.estado) {
         SesionAnonima(:final aviso, porCierre: true) => aviso,
         _ => null,
       },
     ),
-    Destino.reportar => const DestinoPendiente(
-      titulo: 'Reportar',
-      icono: Icons.add_location_alt_outlined,
-      explicacion: 'Aquí podrás informar un incidente y marcar el lugar. Todavía no se envían datos ni se pide tu ubicación.',
+    Destino.reportar => ReportePantalla(
+      controlador: _controladorReporte(),
+      cargarContornos: Servicios.of(context).incidentes.contornos,
+      mostrarTeselas: Servicios.of(context).mostrarTeselas,
+      alVerMisReportes: () => _navegar(Destino.misReportes),
+      alConsultarCodigo: () => _navegar(Destino.consultarCodigo),
     ),
     Destino.mapa => const DestinoPendiente(
       titulo: 'Mapa',
@@ -165,11 +195,16 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
       },
       ahora: widget.ahora,
     ),
-    Destino.misReportes => const DestinoPendiente(
-      titulo: 'Mis reportes',
-      icono: Icons.history,
-      explicacion:
-          'Aquí verás tus reportes y el seguimiento privado de cada envío.',
+    Destino.misReportes => MisReportesPantalla(
+      repositorio: Servicios.of(context).incidentes,
+      obtenerToken: () => widget.sesion.token,
+      cuandoSesionInvalida: widget.sesion.alSesionInvalida,
+      alReportar: () => _navegar(Destino.reportar),
+    ),
+    Destino.consultarCodigo => ConsultarCodigoPantalla(
+      repositorio: Servicios.of(context).incidentes,
+      guardadas: Servicios.of(context).consultasGuardadas,
+      ahora: widget.ahora,
     ),
   };
 
@@ -179,7 +214,7 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
     return PopScope(
       canPop: _actual == Destino.inicio,
       onPopInvokedWithResult: (volvio, _) {
-        if (!volvio) setState(() => _actual = Destino.inicio);
+        if (!volvio) _navegar(Destino.inicio);
       },
       child: Scaffold(
         appBar: AppBar(

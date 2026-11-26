@@ -218,6 +218,20 @@ export function cargarConfigCorreo(env: NodeJS.ProcessEnv, nodeEnv: Entorno['nod
   };
 }
 
+/**
+ * Secreto HMAC del registro de incidentes (P4): huella del codigo secreto del invitado y del contenido
+ * de cada envio. Obligatorio para el servidor HTTP en todos los entornos; las pruebas generan uno
+ * propio. Se carga aparte de `cargarEntorno` porque las CLI de aprovisionamiento no lo necesitan.
+ * Cambiarlo invalida los codigos ya emitidos.
+ */
+export function cargarSecretoSeguimiento(env: NodeJS.ProcessEnv = process.env): string {
+  const valor = obligatoria('TRACKING_CODE_HMAC_SECRET', env.TRACKING_CODE_HMAC_SECRET);
+  if (valor.length < SECRETO_MIN) {
+    throw new Error(`Configuracion invalida: TRACKING_CODE_HMAC_SECRET debe tener al menos ${SECRETO_MIN} caracteres`);
+  }
+  return valor;
+}
+
 /** Lee y valida la configuracion. Los mensajes de error nunca incluyen valores. */
 export function cargarEntorno(env: NodeJS.ProcessEnv = process.env): Entorno {
   const nodeEnv = env.NODE_ENV ?? 'development';

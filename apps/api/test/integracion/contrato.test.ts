@@ -1,4 +1,5 @@
 import { expectConContexto } from '../expect-contexto';
+import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
@@ -606,6 +607,153 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     const post = await request(app).post(U(CAT));
     expect(post.status).toBe(405);
     expect(post.headers.allow).toBe('GET, HEAD');
+  });
+
+  it('registro de incidentes: cada estado documentado coincide con la respuesta real', async () => {
+    const INC = '/incidentes';
+    const U = `/api/v1${INC}`;
+    const arnes = crearArnes({ prisma, limiteInvitado: { maximo: 1, ventanaMs: 60 * 60 * 1000 } });
+    const { app } = arnes;
+    const datos = (extra: Record<string, unknown> = {}) => ({
+      categoriaId: 'robo',
+      descripcion: 'Me arrebataron el celular',
+      ocurrencia: { modo: 'ahora', instante: new Date(Date.now() - 60_000).toISOString() },
+      punto: { latitud: -13.16, longitud: -74.22, origen: 'manual' },
+      ...extra,
+    });
+    const enviar = (cuerpo: unknown, cab: Record<string, string> = {}, clave: string | null = randomUUID(), tipo = 'application/json') => {
+      let r = request(app).post(U).set('Content-Type', tipo);
+      if (clave) r = r.set('Idempotency-Key', clave);
+      return r.set(cab).send(typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo));
+    };
+    const invitado = datos({ telefonoContacto: '987654321' });
+    const clave = randomUUID();
+    const r201 = await enviar(invitado, {}, clave);
+    expect(r201.status).toBe(201);
+    verificar(INC, 'post', r201);
+    expect(r201.body).not.toHaveProperty('telefonoContacto');
+    const r200 = await enviar(invitado, {}, clave);
+    expect(r200.status).toBe(200);
+    verificar(INC, 'post', r200);
+    verificar(INC, 'post', await enviar(datos({ telefonoContacto: '987654321', descripcion: 'Otro texto' }), {}, clave)); // 409
+    verificar(INC, 'post', await enviar(datos({ telefonoContacto: '987654321' }))); // 429 (limite 1)
+    verificar(INC, 'post', await enviar(invitado, {}, null)); // 400 sin clave
+    verificar(INC, 'post', await enviar({ ...invitado, prioridad: 'Alta' })); // 400 campo reservado
+    verificar(INC, 'post', await enviar(invitado, { Authorization: 'Bearer desconocido' })); // 401
+    verificar(INC, 'post', await enviar('x', {}, randomUUID(), 'text/plain')); // 415
+    verificar(INC, 'post', await enviar({ ...invitado, descripcion: 'x'.repeat(9000) })); // 413
+    const operador = await crearCuentaDePrueba(prisma, { rol: 'operador' });
+    const login = await request(app).post('/api/v1/auth/institucional/sesiones').set('Origin', ORIGEN_WEB_PRUEBA).send({ correo: operador.correo, contrasena: CLAVE });
+    verificar(INC, 'post', await enviar(invitado, { Cookie: `__Host-ayni_inst=${cookieDe(login) as string}` })); // 403
+
+    // Con cuenta: 201 sin codigo de seguimiento.
+    const ciudadano = await crearCuentaDePrueba(prisma, { rol: 'ciudadano' });
+    const token = (await request(app).post(RUTA_LOGIN).send({ correo: ciudadano.correo, contrasena: CLAVE })).body.token as string;
+    const conCuenta = await enviar(datos(), { Authorization: `Bearer ${token}` });
+    expect(conCuenta.status).toBe(201);
+    expect(conCuenta.body).not.toHaveProperty('codigoSeguimiento');
+    verificar(INC, 'post', conCuenta);
+
+    // 503: falla una escritura del registro; no queda nada parcial.
+    await prisma.$executeRawUnsafe(`CREATE FUNCTION fallo_contrato_p4() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'secreto SQL'; END $$`);
+    await prisma.$executeRawUnsafe('CREATE TRIGGER fallo_contrato_p4 BEFORE INSERT ON envios_incidente FOR EACH ROW EXECUTE FUNCTION fallo_contrato_p4()');
+    try {
+      const caido = await enviar(datos(), { Authorization: `Bearer ${token}` });
+      expect(caido.status).toBe(503);
+      expect(caido.text).not.toContain('secreto');
+      verificar(INC, 'post', caido);
+    } finally {
+      await prisma.$executeRawUnsafe('DROP TRIGGER fallo_contrato_p4 ON envios_incidente');
+      await prisma.$executeRawUnsafe('DROP FUNCTION fallo_contrato_p4()');
+    }
+
+    // Sin rutas para cambiar el estado del incidente.
+    for (const metodo of ['patch', 'put', 'delete'] as const) {
+      expect(Object.keys(api.paths).some((p) => p.startsWith('/incidentes') && metodo in (api.paths[p] ?? {}))).toBe(false);
+    }
+    const get = await request(app).get(U);
+    expect(get.status).toBe(405);
+    expect(get.headers.allow).toBe('POST');
+  });
+
+  it('seguimiento ciudadano: cada estado documentado coincide con la respuesta real', async () => {
+    const MIOS = '/ciudadano/incidentes';
+    const DET = '/ciudadano/incidentes/{referencia}';
+    const INV = '/publico/seguimiento';
+    const U = (r: string) => `/api/v1${r}`;
+    const arnes = crearArnes({
+      prisma,
+      limitesSeguimiento: { porReferencia: { maximo: 2, ventanaMs: 15 * 60 * 1000 }, porOrigen: { maximo: 1000, ventanaMs: 60 * 60 * 1000 } },
+    });
+    const { app } = arnes;
+    const datos = (extra: Record<string, unknown> = {}) => ({
+      categoriaId: 'robo',
+      descripcion: 'Me arrebataron el celular',
+      ocurrencia: { modo: 'ahora', instante: new Date(Date.now() - 60_000).toISOString() },
+      punto: { latitud: -13.16, longitud: -74.22, origen: 'manual' },
+      ...extra,
+    });
+    const registrar = (cab: Record<string, string>, cuerpo: unknown) =>
+      request(app).post(U('/incidentes')).set('Content-Type', 'application/json').set('Idempotency-Key', randomUUID()).set(cab).send(JSON.stringify(cuerpo));
+    const ciudadano = await crearCuentaDePrueba(prisma, { rol: 'ciudadano' });
+    const token = (await request(app).post(RUTA_LOGIN).send({ correo: ciudadano.correo, contrasena: CLAVE })).body.token as string;
+    const bearer = { Authorization: `Bearer ${token}` };
+    const propio = (await registrar(bearer, datos())).body as { referencia: string };
+    const invitado = (await registrar({}, datos({ telefonoContacto: '987654321' }))).body as { referencia: string; codigoSeguimiento: string };
+    const operador = await crearCuentaDePrueba(prisma, { rol: 'operador' });
+    const login = await request(app).post('/api/v1/auth/institucional/sesiones').set('Origin', ORIGEN_WEB_PRUEBA).send({ correo: operador.correo, contrasena: CLAVE });
+    const cookieOp = { Cookie: `__Host-ayni_inst=${cookieDe(login) as string}` };
+
+    verificar(MIOS, 'get', await request(app).get(U(MIOS)).set(bearer)); // 200
+    verificar(MIOS, 'get', await request(app).get(U(`${MIOS}?cursor=roto!`)).set(bearer)); // 400
+    verificar(MIOS, 'get', await request(app).get(U(MIOS))); // 401
+    verificar(MIOS, 'get', await request(app).get(U(MIOS)).set(cookieOp)); // 403
+    verificar(DET, 'get', await request(app).get(U(`${MIOS}/${propio.referencia}`)).set(bearer)); // 200
+    verificar(DET, 'get', await request(app).get(U(`${MIOS}/${propio.referencia}?x=1`)).set(bearer)); // 400
+    verificar(DET, 'get', await request(app).get(U(`${MIOS}/${propio.referencia}`))); // 401
+    verificar(DET, 'get', await request(app).get(U(`${MIOS}/${propio.referencia}`)).set(cookieOp)); // 403
+    verificar(DET, 'get', await request(app).get(U(`${MIOS}/${invitado.referencia}`)).set(bearer)); // 404
+
+    const consultar = (cuerpo: unknown, tipo = 'application/json', ruta = INV) =>
+      request(app).post(U(ruta)).set('Content-Type', tipo).send(typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo));
+    verificar(INV, 'post', await consultar({ referencia: invitado.referencia, codigo: invitado.codigoSeguimiento })); // 200
+    verificar(INV, 'post', await consultar({ referencia: invitado.referencia })); // 400
+    verificar(INV, 'post', await consultar({ referencia: invitado.referencia, codigo: 'AAAA-BBBB-CCCC-DDDD' })); // 404
+    verificar(INV, 'post', await consultar({ referencia: invitado.referencia, codigo: invitado.codigoSeguimiento })); // 429 (limite 2)
+    verificar(INV, 'post', await consultar('x', 'text/plain')); // 415
+    verificar(INV, 'post', await consultar({ referencia: 'x'.repeat(3000), codigo: 'y' })); // 413
+
+    // 503: los puertos de seguimiento fallan (Reportes/Operaciones no disponibles).
+    const falla = () => Promise.reject(new Error('secreto SQL'));
+    const caida = crearApp({
+      saltosProxyConfianza: 0,
+      identidad: arnes.modulo,
+      reportes: arnes.reportes,
+      consultas: crearModuloConsultas(undefined, {
+        repositorio: { leer: async () => null },
+        secretoLimitador: 'x'.repeat(40),
+        seguimiento: {
+          envios: { listarDeAutor: falla, detalleDeAutor: falla, verificarCodigo: falla },
+          incidentes: { normalizarReferencia: (t: string) => t, porReferencia: falla, estados: falla },
+          categorias: { nombres: falla },
+          limitador: { consumir: async () => ({ permitido: true, reintentarEnSegundos: 1 }) },
+          identificar: async () => ({ tipo: 'ciudadano' as const, usuarioId: ciudadano.id }),
+          logger: arnes.logger,
+        },
+      }),
+    });
+    for (const [doc, metodo, ruta, cuerpo] of [
+      [MIOS, 'get', MIOS, undefined],
+      [DET, 'get', `${MIOS}/${propio.referencia}`, undefined],
+      [INV, 'post', INV, { referencia: invitado.referencia, codigo: invitado.codigoSeguimiento }],
+    ] as const) {
+      const r = metodo === 'get'
+        ? await request(caida).get(U(ruta))
+        : await request(caida).post(U(ruta)).set('Content-Type', 'application/json').send(JSON.stringify(cuerpo));
+      expect(r.status).toBe(503);
+      expect(r.text).not.toContain('secreto');
+      verificar(doc, metodo, r);
+    }
   });
 
   it('todos los estados documentados fueron ejercitados y ninguna respuesta real quedo sin documentar', () => {

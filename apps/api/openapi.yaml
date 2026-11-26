@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: AyniSafe API - Identidad, organización, contenido público, territorio y categorías
-  version: 0.6.0
+  version: 0.7.0
   description: |
     Contrato del modulo Identidad: registro, inicio de sesion, consulta y cierre de sesion del
     ciudadano (entrega `registro-login-ciudadano`), mas recuperacion de contrasena y activacion de
@@ -48,6 +48,11 @@ info:
       (`/operador/ambito`). Sin cache de aplicacion: cada lectura refleja el ultimo cambio confirmado.
     - Catalogo de categorias (`/publico/categorias`): 16 categorias con identificadores estables, publico y
       de solo lectura.
+    - Registro de incidentes P4.1 (`/incidentes`): invitado (sin Authorization, telefono obligatorio, codigo
+      de seguimiento mostrado una sola vez) o ciudadano con Bearer. `Idempotency-Key` UUID obligatoria. El
+      backend resuelve el distrito y crea el incidente en REGISTRADO; no hay rutas para cambiar su estado.
+    - Seguimiento P4.1: `/ciudadano/incidentes` (Bearer de ciudadano, solo lo propio) y `/publico/seguimiento`
+      (invitado con referencia y codigo en el cuerpo, limites por referencia e IP, 404 uniforme).
     - Territorio P3.1: catálogo y límites públicos, resolución de puntos sin sesión ni persistencia de
       coordenadas. Resolver solo por POST JSON (4 KiB), sin coordenadas en query, cuota de 60/IP/minuto
       por instancia. Todas sus respuestas no-store. Cambiar filtros/versiones no concede permisos.
@@ -67,6 +72,8 @@ tags:
   - name: Territorio
   - name: Organizacion
   - name: Categorias
+  - name: Incidentes
+  - name: Seguimiento
 paths:
   /auth/ciudadanos/registro:
     post:
@@ -986,6 +993,215 @@ paths:
               schema: { $ref: '#/components/schemas/CatalogoCategorias' }
         '400': { $ref: '#/components/responses/ErrorCatalogo' }
         '503': { $ref: '#/components/responses/ErrorCatalogo' }
+  /incidentes:
+    post:
+      tags: [Incidentes]
+      operationId: registrarIncidente
+      summary: Registrar un incidente como invitado o con cuenta ciudadana
+      description: |
+        Cada envio confirmado crea un incidente unico en estado REGISTRADO (P4.1). Sin `Authorization` se
+        registra como invitado: el telefono de contacto es obligatorio y la respuesta incluye una unica vez
+        el codigo secreto de seguimiento (el servidor solo guarda su huella). Con `Authorization: Bearer` de
+        un ciudadano activo, el autor sale de la sesion y no se admite telefono. Un `Authorization` invalido
+        responde 401 (no se degrada a invitado) y una sesion institucional por cookie responde 403.
+
+        El backend resuelve el distrito desde el punto con la version territorial activa; frontera,
+        solapamiento o punto fuera del area quedan pendientes con su motivo, y sin cartografia activa se
+        registra igual con motivo `sin_cartografia`. `Idempotency-Key` (UUID) es obligatoria: repetirla con el
+        mismo contenido devuelve 200 con el mismo incidente (el invitado recibe un codigo nuevo que invalida el
+        anterior); con otro contenido, 409. El registro no espera enrutamiento ni avisos: se publica el evento
+        `IncidenteRegistrado` en la misma transaccion. Invitados: 10 envios por IP y hora (configurable); una
+        repeticion no consume el limite. JSON de hasta 8 KiB; campos no declarados reciben 400.
+      security: [{}, { bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EnvioIncidente' }
+            examples:
+              invitado:
+                value:
+                  categoriaId: pelea
+                  descripcion: Pelea entre varias personas frente al mercado
+                  ocurrencia: { modo: ahora, instante: '2026-11-26T10:00:00-05:00' }
+                  punto: { latitud: -13.1588, longitud: -74.2232, origen: gps, precisionM: 12 }
+                  heridos: no_se
+                  telefonoContacto: '+51987654321'
+      responses:
+        '201':
+          description: Incidente registrado. El codigo de seguimiento solo aparece en envios de invitado.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ComprobanteIncidente' }
+              example:
+                referencia: INC-7K3M9-Q2TXA
+                estado: REGISTRADO
+                recibidoEn: '2026-11-26T15:00:01.123Z'
+                modalidad: invitado
+                territorio: { estado: resuelto, distrito: { id: DIS-01, nombre: Ayacucho } }
+                codigoSeguimiento: 7K3M-9Q2T-XAB4-CD5E
+        '200':
+          description: Repeticion idempotente del mismo envio. Mismo incidente; el invitado recibe un codigo nuevo.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ComprobanteIncidente' }
+        '400':
+          description: |
+            `VALIDATION_ERROR` (campos ausentes, invalidos, reservados o no aplicables a la categoria o modalidad;
+            JSON mal formado) o `IDEMPOTENCY_KEY_REQUIRED` (cabecera ausente o que no es un UUID).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: Sesion institucional (operador o administrador) vigente por cookie. Las cuentas institucionales no registran incidentes.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: IDEMPOTENCY_CONFLICT, la clave ya se uso con otro contenido. No se modifica el incidente existente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '503':
+          description: Base de datos, catalogo o cartografia no legibles. No queda incidente parcial; reintentar con la misma clave no duplica.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /ciudadano/incidentes:
+    get:
+      tags: [Seguimiento]
+      operationId: listarMisIncidentes
+      summary: Historial privado de los incidentes registrados con la propia cuenta
+      description: |
+        Solo los incidentes de modalidad cuenta del titular del Bearer, del mas reciente al mas antiguo
+        (desempate por identificador), en paginas de 20. `siguiente` es un cursor opaco; nulo en la ultima pagina.
+        No incluye envios de invitado ni de otros autores. Unico parametro admitido: `cursor`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, maxLength: 200 }
+      responses:
+        '200':
+          description: Pagina del historial propio (puede estar vacia).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HistorialIncidentes' }
+        '400':
+          description: Cursor manipulado o parametros no admitidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: Sesion institucional por cookie. Solo el ciudadano autor consulta su historial.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /ciudadano/incidentes/{referencia}:
+    get:
+      tags: [Seguimiento]
+      operationId: consultarMiIncidente
+      summary: Detalle privado de un incidente propio
+      description: |
+        Datos originales del autor, estado, territorio y respuestas para SAMU. La institucion responsable y
+        las actuaciones se informan como pendientes hasta el enrutamiento (P4.2) y la atencion (P6). Un
+        incidente ajeno, de invitado o inexistente responde el mismo 404, sin revelar si existe.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: referencia
+          in: path
+          required: true
+          schema: { type: string, maxLength: 40 }
+      responses:
+        '200':
+          description: Detalle del incidente propio.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DetalleIncidenteAutor' }
+        '400':
+          description: Parametros de consulta no admitidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: Sesion institucional por cookie.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/SeguimientoNoEncontrado' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /publico/seguimiento:
+    post:
+      tags: [Seguimiento]
+      operationId: consultarSeguimientoInvitado
+      summary: Vista limitada del invitado con referencia y codigo secreto
+      description: |
+        Sin sesion. Referencia y codigo viajan solo en el cuerpo: una solicitud con parametros en la URL se
+        rechaza sin consultar. Devuelve solo estado y resumen ciudadano; nunca descripcion, punto, distrito,
+        telefono, evidencias ni respuestas sanitarias. Referencia inexistente, codigo incorrecto o reemplazado e
+        incidente de cuenta responden el mismo 404. Limites: 10 intentos por referencia en 15 min y 30 por IP
+        en una hora (configurables), contados antes de verificar el codigo.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsultaSeguimiento' }
+            example: { referencia: INC-7K3M9-Q2TXA, codigo: 7K3M-9Q2T-XAB4-CD5E }
+      responses:
+        '200':
+          description: Estado y resumen ciudadano del incidente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VistaSeguimientoInvitado' }
+        '400':
+          description: Cuerpo invalido o parametros en la URL.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/SeguimientoNoEncontrado' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
 components:
   securitySchemes:
     bearerAuth:
@@ -1000,6 +1216,12 @@ components:
         Sesion institucional (el mismo token opaco). Cookie HttpOnly, Secure, SameSite=Strict, Path=/. Bajo http
         local el nombre es `ayni_inst`, sin prefijo ni Secure. Solo para administradores y operadores.
   parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID generado por el cliente para este envio. Se reutiliza al reintentar el mismo contenido.
+      schema: { type: string, format: uuid }
     OrigenWeb:
       name: Origin
       in: header
@@ -1656,6 +1878,161 @@ components:
                   cobertura: { type: string }
                   fuente: { type: string }
                   verificadoAt: { type: string, format: date }
+    EnvioIncidente:
+      type: object
+      additionalProperties: false
+      required: [categoriaId, descripcion, ocurrencia, punto]
+      description: |
+        Datos originales del envio. No admite institucion, sede, prioridad, estado, distrito, autor ni referencia.
+        `heridos` solo en accidente-transito, agresion, pelea y violencia; `atencionMedica` solo en
+        accidente-transito; omitirlas es sin respuesta, distinto de `no`. `telefonoContacto` es obligatorio
+        como invitado y no se admite con cuenta.
+      properties:
+        categoriaId: { type: string, description: Identificador estable de una categoria activa. }
+        descripcion:
+          type: string
+          description: 5 a 1000 caracteres tras recortar espacios. En otra-emergencia debe precisar el hecho.
+        ocurrencia:
+          type: object
+          additionalProperties: false
+          required: [modo, instante]
+          properties:
+            modo: { type: string, enum: [ahora, antes] }
+            instante:
+              type: string
+              description: ISO 8601 con zona horaria. Hasta 5 minutos en el futuro y no anterior a 30 dias.
+        punto:
+          type: object
+          additionalProperties: false
+          required: [latitud, longitud, origen]
+          properties:
+            latitud: { type: number, minimum: -90, maximum: 90 }
+            longitud: { type: number, minimum: -180, maximum: 180 }
+            origen: { type: string, enum: [gps, manual] }
+            precisionM: { type: [number, 'null'], minimum: 0, maximum: 100000 }
+        heridos: { type: [string, 'null'], enum: [si, no, no_se, null] }
+        atencionMedica: { type: [string, 'null'], enum: [si, no, no_se, null] }
+        telefonoContacto: { type: string, description: "7 a 15 digitos con + opcional; se aceptan espacios, guiones, puntos y parentesis." }
+    ComprobanteIncidente:
+      type: object
+      additionalProperties: false
+      required: [referencia, estado, recibidoEn, modalidad, territorio]
+      description: Sin telefono, coordenadas, autor ni datos de enrutamiento.
+      properties:
+        referencia:
+          type: string
+          pattern: '^INC-[0-9A-HJKMNP-TV-Z]{5}-[0-9A-HJKMNP-TV-Z]{5}$'
+          description: Referencia publica no secuencial. Por si sola no concede acceso.
+        estado: { type: string, enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
+        recibidoEn: { type: string, format: date-time, description: Instante de registro del servidor. }
+        modalidad: { type: string, enum: [invitado, cuenta] }
+        territorio: { $ref: '#/components/schemas/TerritorioIncidente' }
+        codigoSeguimiento:
+          type: string
+          pattern: '^[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4}){3}$'
+          description: Solo invitado. Se muestra una unica vez; el servidor guarda solo su huella.
+    TerritorioIncidente:
+      description: Distrito resuelto por el backend o pendiente con su motivo.
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [estado, distrito]
+          properties:
+            estado: { const: resuelto }
+            distrito:
+              type: object
+              additionalProperties: false
+              required: [id, nombre]
+              properties:
+                id: { type: string }
+                nombre: { type: [string, 'null'] }
+        - type: object
+          additionalProperties: false
+          required: [estado, motivo]
+          properties:
+            estado: { const: pendiente }
+            motivo: { type: string, enum: [frontera, solapamiento, fuera_area, sin_cartografia] }
+    CategoriaVista:
+      type: object
+      additionalProperties: false
+      required: [id, nombre]
+      properties:
+        id: { type: string }
+        nombre: { type: [string, 'null'] }
+    InstitucionPendiente:
+      type: object
+      additionalProperties: false
+      required: [estado]
+      description: Sin enrutamiento (P4.2) la institucion responsable queda pendiente; no se inventa.
+      properties:
+        estado: { const: pendiente }
+    ElementoHistorial:
+      type: object
+      additionalProperties: false
+      required: [referencia, categoria, estado, recibidoEn, territorio]
+      properties:
+        referencia: { type: string }
+        categoria: { $ref: '#/components/schemas/CategoriaVista' }
+        estado: { type: string, enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
+        recibidoEn: { type: string, format: date-time }
+        territorio: { $ref: '#/components/schemas/TerritorioIncidente' }
+    HistorialIncidentes:
+      type: object
+      additionalProperties: false
+      required: [elementos, siguiente]
+      properties:
+        elementos:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/ElementoHistorial' }
+        siguiente: { type: [string, 'null'], description: Cursor opaco de la pagina siguiente. }
+    DetalleIncidenteAutor:
+      type: object
+      additionalProperties: false
+      required: [referencia, categoria, estado, recibidoEn, territorio, descripcion, ocurrencia, respuestas, institucionResponsable, actuaciones]
+      description: Sin coordenadas, telefono, notas internas, operadores ni datos de otros informantes.
+      properties:
+        referencia: { type: string }
+        categoria: { $ref: '#/components/schemas/CategoriaVista' }
+        estado: { type: string, enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
+        recibidoEn: { type: string, format: date-time }
+        territorio: { $ref: '#/components/schemas/TerritorioIncidente' }
+        descripcion: { type: string }
+        ocurrencia:
+          type: object
+          additionalProperties: false
+          required: [modo, instante]
+          properties:
+            modo: { type: string, enum: [ahora, antes] }
+            instante: { type: string, format: date-time }
+        respuestas:
+          type: object
+          additionalProperties: false
+          required: [heridos, atencionMedica]
+          properties:
+            heridos: { type: [string, 'null'], enum: [si, no, no_se, null] }
+            atencionMedica: { type: [string, 'null'], enum: [si, no, no_se, null] }
+        institucionResponsable: { $ref: '#/components/schemas/InstitucionPendiente' }
+        actuaciones: { type: array, maxItems: 0 }
+    ConsultaSeguimiento:
+      type: object
+      additionalProperties: false
+      required: [referencia, codigo]
+      properties:
+        referencia: { type: string, maxLength: 40 }
+        codigo: { type: string, maxLength: 40 }
+    VistaSeguimientoInvitado:
+      type: object
+      additionalProperties: false
+      required: [referencia, categoria, estado, recibidoEn, institucionResponsable, actuaciones]
+      description: Solo estado y resumen ciudadano. Sin descripcion, punto, distrito, telefono ni respuestas sanitarias.
+      properties:
+        referencia: { type: string }
+        categoria: { $ref: '#/components/schemas/CategoriaVista' }
+        estado: { type: string, enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
+        recibidoEn: { type: string, format: date-time }
+        institucionResponsable: { $ref: '#/components/schemas/InstitucionPendiente' }
+        actuaciones: { type: array, maxItems: 0 }
     Error:
       type: object
       additionalProperties: false
@@ -1690,6 +2067,9 @@ components:
                 - ULTIMO_OPERADOR_ACTIVO
                 - SEDE_HABILITADA
                 - INVITACION_NO_APLICABLE
+                - IDEMPOTENCY_KEY_REQUIRED
+                - IDEMPOTENCY_CONFLICT
+                - TRACKING_NOT_FOUND
             message: { type: string }
             faltantes:
               type: array
@@ -1703,6 +2083,14 @@ components:
               type: string
               description: Identificador aleatorio de la solicitud; no contiene datos de cuenta.
   responses:
+    SeguimientoNoEncontrado:
+      description: Referencia inexistente, incidente ajeno o de otra modalidad, o codigo incorrecto. Misma respuesta para todas las causas.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: TRACKING_NOT_FOUND, message: "Referencia o código incorrectos.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
     RecursoNoEncontrado:
       description: La institucion, sede u operador no existe (o el identificador no tiene el formato esperado).
       headers:

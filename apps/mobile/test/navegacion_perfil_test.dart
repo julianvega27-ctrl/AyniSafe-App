@@ -137,21 +137,21 @@ void main() {
       expect(find.byType(InicioPantalla), findsOneWidget);
     });
 
-    testWidgets('con sesión el Drawer agrega Mis reportes y Perfil; Alertas y Mis reportes están pendientes', (tester) async {
+    testWidgets('con sesión el Drawer agrega Mis reportes y Perfil; Mis reportes es operativo y Alertas sigue pendiente', (tester) async {
       final m = await montar(tester);
-      final antes = m.api.solicitudes.length;
       await desdeMenu(tester, 'Mis reportes');
-      expect(find.text('Aún no disponible'), findsOneWidget);
+      expect(find.text('Aún no tienes reportes registrados con tu cuenta.'), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing); // destino del Drawer, como el origen
+      final antes = m.api.solicitudes.length;
       await desdeMenu(tester, 'Alertas');
       expect(find.text('Aún no disponible'), findsOneWidget);
+      expect(m.api.solicitudes.length, antes, reason: 'Alertas no consulta servicios');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byType(InicioPantalla), findsOneWidget);
       await tester.tap(find.byTooltip('Open navigation menu'));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(ListTile, 'Perfil'), findsOneWidget);
-      expect(m.api.solicitudes.length, antes, reason: 'los destinos pendientes no consultan servicios');
     });
 
     testWidgets('acceso desde la navegación pública: cuenta y registro vigentes, sin sesión ficticia', (tester) async {
@@ -183,22 +183,23 @@ void main() {
   });
 
   group('Inicio y destinos pendientes (6.2)', () {
-    testWidgets('«Reportar un incidente» lleva a Reportar, que explica que está pendiente sin enviar nada', (tester) async {
+    testWidgets('«Reportar un incidente» abre el formulario operativo sin pedir permisos ni enviar nada', (tester) async {
       final m = await montar(tester);
       expect(find.text('Hola, Rosa Quispe'), findsOneWidget);
-      expect(find.text('Disponible próximamente'), findsOneWidget);
-      final antes = m.api.solicitudes.length;
+      expect(find.text('Disponible próximamente'), findsNothing);
       await tocar(tester, botonReportar);
       expect(barra(tester).selectedIndex, 1);
-      expect(find.text('Aún no disponible'), findsOneWidget);
-      expect(find.byType(TextField), findsNothing); // sin formulario operativo
-      expect(m.api.solicitudes.length, antes);
+      expect(find.text('Nuevo reporte'), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'Describe lo sucedido'), findsOneWidget);
+      // Con cuenta no se pide teléfono; nada se envía al abrir.
+      expect(find.widgetWithText(TextField, 'Teléfono de contacto'), findsNothing);
+      expect(m.api.contar('POST', '/incidentes'), 0);
     });
 
-    testWidgets('los últimos reportes y el contenido están declarados pendientes, sin datos de ejemplo', (tester) async {
+    testWidgets('Inicio con cuenta muestra la sección de reportes propios en su estado vacío, sin datos de ejemplo', (tester) async {
       await montar(tester);
-      expect(find.textContaining('tus reportes aparecerán aquí cuando puedas enviarlos'), findsOneWidget);
       expect(find.text('Mis últimos reportes'), findsOneWidget);
+      expect(find.textContaining('Aún no tienes reportes'), findsOneWidget);
       expect(find.textContaining(RegExp(r'\d{3,}')), findsNothing);
       await tocar(tester, enBarra('Contactos'));
       expect(find.textContaining('aún no están disponibles'), findsOneWidget);
@@ -206,21 +207,64 @@ void main() {
       expect(find.textContaining(RegExp(r'\d{3,}')), findsNothing);
     });
 
-    testWidgets('Mapa, Mis reportes y Alertas dicen que aún no están disponibles, sin permisos ni datos', (tester) async {
+    testWidgets('Mapa y Alertas siguen sin estar disponibles, sin permisos ni datos', (tester) async {
       final m = await montar(tester);
       final antes = m.api.solicitudes.length;
-      for (final destino in ['Reportar', 'Mapa']) {
-        await tester.tap(enBarra(destino));
-        await tester.pumpAndSettle();
-        expect(find.text('Aún no disponible'), findsOneWidget, reason: destino);
-      }
-      for (final destino in ['Mis reportes', 'Alertas']) {
-        await desdeMenu(tester, destino);
-        expect(find.text('Aún no disponible'), findsOneWidget, reason: destino);
-      }
-      expect(find.textContaining('ubicación'), findsNothing);
+      await tester.tap(enBarra('Mapa'));
+      await tester.pumpAndSettle();
+      expect(find.text('Aún no disponible'), findsOneWidget);
+      await desdeMenu(tester, 'Alertas');
+      expect(find.text('Aún no disponible'), findsOneWidget);
       expect(find.textContaining('notificaciones'), findsNothing);
       expect(m.api.solicitudes.length, antes, reason: 'estos destinos no piden nada al servidor');
+    });
+
+    testWidgets('con reportes propios: Inicio lista tres del servidor y lleva a Mis reportes', (tester) async {
+      final api = ApiFalsa();
+      final servidor = ServidorPerfil()
+        ..incidentes = [
+          for (var i = 1; i <= 4; i++)
+            {
+              'referencia': 'INC-AAAAA-AAAA$i',
+              'categoria': {'id': 'robo', 'nombre': 'Robo'},
+              'estado': 'REGISTRADO',
+              'recibidoEn': '2026-11-2${i}T15:00:00.000Z',
+              'territorio': {'estado': 'pendiente', 'motivo': 'sin_cartografia'},
+            },
+        ];
+      api.manejador = (req) async {
+        if (req.url.path.endsWith('/publico/contenido')) return respuestaJson(200, contenidoJson());
+        return servidor.responder(req);
+      };
+      final almacen = AlmacenamientoEnMemoria(
+        SesionGuardada(token: tokenSesionPrueba, expiresAt: ahoraFijo.add(const Duration(hours: 10))),
+      );
+      final sesion = crearSesion(api, almacen);
+      await sesion.restaurar();
+      addTearDown(sesion.dispose);
+      await tester.pumpWidget(appDePrueba(api, sesion));
+      await tester.pumpAndSettle();
+      for (var i = 1; i <= 3; i++) {
+        expect(find.text('INC-AAAAA-AAAA$i'), findsOneWidget);
+      }
+      expect(find.text('INC-AAAAA-AAAA4'), findsNothing);
+      final consulta = api.solicitudes.where((s) => s.ruta.endsWith('/ciudadano/incidentes')).first;
+      expect(consulta.cabeceras['Authorization'], 'Bearer $tokenSesionPrueba');
+      await tocar(tester, find.text('Ver todos mis reportes'));
+      expect(find.text('Solo ves los incidentes que registraste con tu cuenta.'), findsOneWidget);
+    });
+
+    testWidgets('sin cuenta: Inicio y el Drawer ofrecen «Consultar con código» y Reportar es operativo como invitado', (tester) async {
+      final m = await montar(tester, conSesion: false);
+      await tocar(tester, find.text('Consultar con código'));
+      expect(find.widgetWithText(TextField, 'Código de seguimiento'), findsOneWidget);
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Consultar con código'), findsOneWidget);
+      expect(find.widgetWithText(ListTile, 'Mis reportes'), findsNothing);
+      await tocar(tester, find.widgetWithText(ListTile, 'Reportar'));
+      expect(find.widgetWithText(TextField, 'Teléfono de contacto'), findsOneWidget);
+      expect(m.sesion.estado, isA<SesionAnonima>());
     });
 
     testWidgets('con contactos aprobados: se muestran y «Llamar» abre el marcador sin llamar ni pedir permisos', (tester) async {
@@ -515,7 +559,7 @@ void main() {
         tester.platformDispatcher.clearTextScaleFactorTestValue();
       });
       await montar(tester, conSesion: false);
-      for (final texto in ['Cuidarnos es tarea de todos', '¿Necesitas reportar?', 'Disponible próximamente']) {
+      for (final texto in ['Cuidarnos es tarea de todos', '¿Necesitas reportar?', 'Consultar con código']) {
         final parrafo = tester.renderObject<RenderParagraph>(find.text(texto));
         expect(parrafo.didExceedMaxLines, isFalse, reason: texto);
         // Cabe en su ancho disponible: el recorte del Chip original dejaba texto fuera.
@@ -559,7 +603,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('semántica: perfil, destinos y estado pendiente tienen etiquetas anunciables', (tester) async {
+    testWidgets('semántica: perfil, destinos, últimos reportes y estado pendiente tienen etiquetas anunciables', (tester) async {
       final semantica = tester.ensureSemantics();
       await montar(tester);
       final nodo = tester
@@ -568,7 +612,7 @@ void main() {
       expect('${nodo.label} ${nodo.tooltip}', contains('perfil'));
       expect(nodo.flagsCollection.isButton, isTrue);
       expect(find.bySemanticsLabel(RegExp('Reportar un incidente')), findsWidgets);
-      expect(find.bySemanticsLabel(RegExp('Disponible próximamente')), findsWidgets);
+      expect(find.bySemanticsLabel(RegExp('Mis últimos reportes')), findsWidgets);
       await tester.tap(enBarra('Mapa'));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel(RegExp('Aún no disponible')), findsWidgets);

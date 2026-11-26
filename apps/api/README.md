@@ -69,6 +69,7 @@ Copia `.env.example` como referencia de variables. `.env` y `.pgdata/` **nunca**
 | `DATABASE_URL` | Conexion Prisma a la base de desarrollo. |
 | `TEST_DATABASE_URL` | Base aislada para pruebas de API. |
 | `RATE_LIMIT_HMAC_SECRET` | Obligatoria, minimo 32 caracteres. Deriva con HMAC las claves del limitador. |
+| `TRACKING_CODE_HMAC_SECRET` | Obligatoria para el servidor, minimo 32 caracteres. Huella HMAC del codigo de seguimiento del invitado y del contenido de cada envio. Cambiarla invalida los codigos emitidos. Las CLI de aprovisionamiento no la necesitan. |
 | `RL_REGISTRO_IP_MAX`, `RL_LOGIN_IP_MAX`, `RL_LOGIN_CORREO_IP_MAX` | Umbrales por ventana de 15 min (5, 30 y 5 por defecto). |
 | `HASH_MAX_CONCURRENCIA`, `HASH_MAX_COLA` | Hashes simultaneos y cola maxima antes de responder 503 (4 y 16 por defecto). |
 | `API_PUBLIC_URL`, `EMAIL_ADAPTER`, `GMAIL_*`, `SMTP_*`, `MAIL_REMITENTE_*`, `EMAIL_DIARIO_MAX`, `RL_RECUP_*`, `RL_TOKEN_IP_MAX`, `ANDROID_*` | Recuperacion y activacion por correo: ver la seccion «Recuperacion de contrasena y activacion de cuentas». |

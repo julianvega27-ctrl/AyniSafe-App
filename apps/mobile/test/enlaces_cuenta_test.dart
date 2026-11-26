@@ -178,19 +178,24 @@ void main() {
       expect(gradle, contains('api.ayinisafe.invalid'));
     });
 
-    test('sigue sin pedir permisos nuevos', () {
+    test('solo agrega la ubicación en primer plano del reporte (P4.1), sin otros permisos', () {
       final permisos = RegExp(r'uses-permission[^>]*android:name="([^"]+)"')
           .allMatches(manifiesto)
           .map((m) => m.group(1))
           .toList();
-      expect(permisos, ['android.permission.INTERNET']);
+      expect(permisos, [
+        'android.permission.INTERNET',
+        'android.permission.ACCESS_FINE_LOCATION',
+        'android.permission.ACCESS_COARSE_LOCATION',
+      ]);
     });
 
     test('declara solo la consulta del marcador (tel/DIAL), sin permiso de llamada', () {
       expect(manifiesto, contains('android.intent.action.DIAL'));
       expect(manifiesto, contains('android:scheme="tel"'));
       expect(manifiesto, isNot(contains('CALL_PHONE')));
-      expect(manifiesto, isNot(contains('ACCESS_FINE_LOCATION')));
+      // P4.1 agrega ubicación en primer plano para el reporte; nunca en segundo plano.
+      expect(manifiesto, isNot(contains('ACCESS_BACKGROUND_LOCATION')));
       expect(manifiesto, isNot(contains('POST_NOTIFICATIONS')));
     });
   });

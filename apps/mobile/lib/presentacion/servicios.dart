@@ -1,8 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../datos/consultas_guardadas.dart';
 import '../datos/contenido_repositorio.dart';
+import '../datos/incidentes_repositorio.dart';
 import '../datos/perfil_repositorio.dart';
+import '../datos/ubicacion.dart';
 
 /// Abre el marcador del teléfono con un número. Nunca inicia la llamada por sí solo: solo deja
 /// el número cargado para que la persona decida llamar.
@@ -35,12 +38,26 @@ class Servicios extends InheritedWidget {
     required this.contenido,
     required this.perfil,
     required this.marcador,
+    required this.incidentes,
+    required this.ubicacion,
+    required this.consultasGuardadas,
+    this.mostrarTeselas = true,
     required super.child,
   });
 
   final ContenidoRepositorio contenido;
   final PerfilRepositorio perfil;
   final LanzadorMarcador marcador;
+
+  /// Registro y seguimiento de incidentes (P4.1).
+  final IncidentesRepositorio incidentes;
+  final UbicacionPuerto ubicacion;
+
+  /// Consultas de invitado guardadas en este teléfono (independientes de la sesión).
+  final ConsultasGuardadas consultasGuardadas;
+
+  /// Falso en pruebas: el selector de punto no consulta el proveedor de teselas.
+  final bool mostrarTeselas;
 
   static Servicios of(BuildContext context) {
     final servicios = context.dependOnInheritedWidgetOfExactType<Servicios>();
@@ -52,5 +69,9 @@ class Servicios extends InheritedWidget {
   bool updateShouldNotify(Servicios old) =>
       contenido != old.contenido ||
       perfil != old.perfil ||
-      marcador != old.marcador;
+      marcador != old.marcador ||
+      incidentes != old.incidentes ||
+      ubicacion != old.ubicacion ||
+      consultasGuardadas != old.consultasGuardadas ||
+      mostrarTeselas != old.mostrarTeselas;
 }

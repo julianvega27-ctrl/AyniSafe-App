@@ -72,7 +72,7 @@ void main() {
     );
 
     testWidgets(
-      'el manifiesto de Android solo declara INTERNET: no pide ubicación ni notificaciones',
+      'el manifiesto de Android solo declara INTERNET y ubicación en primer plano: sin segundo plano ni notificaciones',
       (tester) async {
         final principal = File('android/app/src/main/AndroidManifest.xml')
             .readAsStringSync();
@@ -80,8 +80,12 @@ void main() {
             .allMatches(principal)
             .map((m) => m.group(1))
             .toList();
-        expect(permisos, ['android.permission.INTERNET']);
-        expect(principal, isNot(contains('LOCATION')));
+        expect(permisos, [
+          'android.permission.INTERNET',
+          'android.permission.ACCESS_FINE_LOCATION',
+          'android.permission.ACCESS_COARSE_LOCATION',
+        ]);
+        expect(principal, isNot(contains('BACKGROUND_LOCATION')));
         expect(principal, isNot(contains('POST_NOTIFICATIONS')));
       },
     );

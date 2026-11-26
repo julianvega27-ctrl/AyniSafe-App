@@ -14,7 +14,10 @@ enum Destino {
   cuenta('Mi cuenta', Icons.person_outline),
 
   /// Requiere sesión verificada.
-  misReportes('Mis reportes', Icons.history);
+  misReportes('Mis reportes', Icons.history),
+
+  /// Seguimiento de envíos de invitado con referencia y código (sin sesión).
+  consultarCodigo('Consultar con código', Icons.manage_search);
 
   /// El origen usa el mismo icono contorneado seleccionado o no; la selección la marca el indicador.
   const Destino(this.titulo, this.icono);

@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- P4.1: ubicacion solo en primer plano, solicitada al pulsar «Usar mi ubicación» del reporte. Nunca en
+         segundo plano: no se declara ese permiso. Denegarla deja elegir el punto en el mapa. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="ayni_safe"
         android:name="${applicationName}"

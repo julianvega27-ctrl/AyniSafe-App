@@ -47,13 +47,18 @@ describe('migracion desde base vacia', () => {
       'coberturas_sede',
       'competencias_sede',
       'distritos',
+      'entregas_evento',
       'envios_correo',
+      'envios_incidente',
       'estado_territorial',
+      'eventos',
       'geometrias_distritales',
+      'incidentes',
       'instituciones',
       'pertenencias_operador',
       'sedes',
       'sesiones',
+      'solicitudes_envio',
       'tokens_cuenta',
       'usuarios',
       'ventanas_intentos',
@@ -79,6 +84,14 @@ describe('migracion desde base vacia', () => {
       'coberturas_sede_distrito_id_idx',
       'competencias_sede_pkey',
       'competencias_sede_categoria_id_idx',
+      'eventos_tipo_ocurrido_en_idx',
+      'entregas_evento_pkey',
+      'entregas_evento_pendientes_idx',
+      'incidentes_referencia_key',
+      'envios_incidente_pkey',
+      'envios_incidente_autor_idx',
+      'solicitudes_envio_pkey',
+      'solicitudes_envio_incidente_id_key',
     ]) {
       expect(nombres).toContain(esperado);
     }
@@ -386,5 +399,88 @@ describe('organizacion institucional (P3.2)', () => {
     expect(RECHAZO_FK).toContain(await codigoDeError(bd.query('DELETE FROM sedes WHERE id = $1', [sede])));
     expect((await bd.query(`SELECT count(*)::int AS n FROM categorias WHERE id = 'robo'`)).rows[0].n).toBe(1);
     expect((await bd.query('SELECT count(*)::int AS n FROM sedes WHERE id = $1', [sede])).rows[0].n).toBe(1);
+  });
+});
+
+describe('eventos y entregas (P4.1)', () => {
+  beforeEach(async () => {
+    await bd.query('TRUNCATE entregas_evento, eventos CASCADE');
+  });
+  async function crearEvento(): Promise<string> {
+    const r = await bd.query<{ id: string }>(
+      `INSERT INTO eventos (id, tipo, version, agregado_id, carga)
+       VALUES (gen_random_uuid(), 'IncidenteRegistrado', 1, gen_random_uuid(), '{}'::jsonb) RETURNING id`,
+    );
+    return r.rows[0]!.id;
+  }
+
+  it('rechaza tipos, versiones y cargas no validos (23514)', async () => {
+    const insertar = (tipo: string, version: number, carga: string) =>
+      bd.query(
+        `INSERT INTO eventos (id, tipo, version, agregado_id, carga) VALUES (gen_random_uuid(), $1, $2, gen_random_uuid(), $3::jsonb)`,
+        [tipo, version, carga],
+      );
+    expect(await codigoDeError(insertar('incidente registrado', 1, '{}'))).toBe('23514');
+    expect(await codigoDeError(insertar('IncidenteRegistrado', 0, '{}'))).toBe('23514');
+    expect(await codigoDeError(insertar('IncidenteRegistrado', 1, '[]'))).toBe('23514');
+    expect(await codigoDeError(insertar('IncidenteRegistrado', 1, JSON.stringify({ x: 'a'.repeat(3000) })))).toBe('23514');
+  });
+
+  it('rechaza un estado de entrega fuera de la lista y bloqueos o fechas incoherentes (23514)', async () => {
+    const evento = await crearEvento();
+    expect(
+      await codigoDeError(bd.query(`INSERT INTO entregas_evento (evento_id, consumidor, estado) VALUES ($1, 'prueba', 'perdida')`, [evento])),
+    ).toBe('23514');
+    expect(
+      await codigoDeError(bd.query(`INSERT INTO entregas_evento (evento_id, consumidor, estado) VALUES ($1, 'prueba', 'en_proceso')`, [evento])),
+    ).toBe('23514');
+    expect(
+      await codigoDeError(bd.query(`INSERT INTO entregas_evento (evento_id, consumidor, estado) VALUES ($1, 'prueba', 'procesada')`, [evento])),
+    ).toBe('23514');
+    expect(
+      await codigoDeError(bd.query(`INSERT INTO entregas_evento (evento_id, consumidor) VALUES ($1, 'Con Espacios')`, [evento])),
+    ).toBe('23514');
+  });
+
+  it('impide duplicar la entrega de un mismo evento y consumidor (23505) y entregas huerfanas (23503)', async () => {
+    const evento = await crearEvento();
+    await bd.query(`INSERT INTO entregas_evento (evento_id, consumidor) VALUES ($1, 'prueba')`, [evento]);
+    expect(
+      await codigoDeError(bd.query(`INSERT INTO entregas_evento (evento_id, consumidor) VALUES ($1, 'prueba')`, [evento])),
+    ).toBe('23505');
+    await bd.query(`INSERT INTO entregas_evento (evento_id, consumidor) VALUES ($1, 'otro')`, [evento]);
+    expect(
+      await codigoDeError(bd.query(`INSERT INTO entregas_evento (evento_id, consumidor) VALUES (gen_random_uuid(), 'prueba')`)),
+    ).toBe('23503');
+  });
+});
+
+describe('incidentes (P4.1)', () => {
+  beforeEach(async () => {
+    await bd.query('TRUNCATE incidentes CASCADE');
+  });
+
+  it('nace en REGISTRADO con instante del servidor y admite solo los cuatro estados (23514)', async () => {
+    const r = await bd.query<{ estado: string; registrado_en: Date }>(
+      `INSERT INTO incidentes (referencia) VALUES ('INC-7K3M9-Q2TXA') RETURNING estado, registrado_en`,
+    );
+    expect(r.rows[0]!.estado).toBe('REGISTRADO');
+    expect(Math.abs(r.rows[0]!.registrado_en.getTime() - Date.now())).toBeLessThan(60_000);
+    for (const estado of ['ASIGNADO', 'PENDIENTE_ATENCION', 'registrado', 'RESUELTO']) {
+      expect(
+        await codigoDeError(bd.query(`INSERT INTO incidentes (referencia, estado) VALUES ('INC-7K3M9-Q2TXB', $1)`, [estado])),
+      ).toBe('23514');
+    }
+    for (const estado of ['EN_REVISION', 'EN_ATENCION', 'CERRADO']) {
+      await bd.query(`UPDATE incidentes SET estado = $1`, [estado]);
+    }
+  });
+
+  it('rechaza referencias fuera de formato (23514) y repetidas (23505)', async () => {
+    for (const ref of ['INC-00001', 'INC-7K3M9-Q2TXU', 'inc-7k3m9-q2txa', '7K3M9-Q2TXA']) {
+      expect(await codigoDeError(bd.query(`INSERT INTO incidentes (referencia) VALUES ($1)`, [ref]))).toBe('23514');
+    }
+    await bd.query(`INSERT INTO incidentes (referencia) VALUES ('INC-7K3M9-Q2TXA')`);
+    expect(await codigoDeError(bd.query(`INSERT INTO incidentes (referencia) VALUES ('INC-7K3M9-Q2TXA')`))).toBe('23505');
   });
 });
