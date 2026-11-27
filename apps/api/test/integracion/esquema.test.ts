@@ -45,6 +45,7 @@ describe('migracion desde base vacia', () => {
     expect(tablas.rows.map((t) => t.tablename).sort()).toEqual([
       'accesos_evaluacion',
       'accesos_evidencia',
+      'asignaciones_incidente',
       'cambios_enrutamiento',
       'categorias',
       'coberturas_sede',
@@ -59,6 +60,7 @@ describe('migracion desde base vacia', () => {
       'eventos',
       'evidencias_incidente',
       'geometrias_distritales',
+      'historial_incidente',
       'incidentes',
       'instituciones',
       'participaciones_incidente',
@@ -480,9 +482,12 @@ describe('incidentes (P4.1)', () => {
         await codigoDeError(bd.query(`INSERT INTO incidentes (referencia, estado) VALUES ('INC-7K3M9-Q2TXB', $1)`, [estado])),
       ).toBe('23514');
     }
-    for (const estado of ['EN_REVISION', 'EN_ATENCION', 'CERRADO']) {
+    for (const estado of ['EN_REVISION', 'EN_ATENCION']) {
       await bd.query(`UPDATE incidentes SET estado = $1`, [estado]);
     }
+    // P6: CERRADO exige resultado, resumen ciudadano e instante de cierre (23514 sin ellos).
+    expect(await codigoDeError(bd.query(`UPDATE incidentes SET estado = 'CERRADO'`))).toBe('23514');
+    await bd.query(`UPDATE incidentes SET estado = 'CERRADO', resultado = 'DESCARTADO', resumen_ciudadano = 'Cierre de prueba del caso.', cerrado_en = now()`);
   });
 
   it('rechaza referencias fuera de formato (23514) y repetidas (23505)', async () => {
