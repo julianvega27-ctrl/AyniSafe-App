@@ -22,6 +22,7 @@ const resumen = (evidencias: ResumenIncidente['evidencias']): ResumenIncidente =
   verificacion: 'SIN_VERIFICAR',
   resultado: null,
   responsable: { asignado: false, esUsted: false },
+  vinculado: false,
   prioridad: 'SIN_EVALUAR',
   descripcion: 'Me robaron el celular',
   ocurrencia: { modo: 'ahora', instante: '2026-11-26T09:58:00.000Z' },

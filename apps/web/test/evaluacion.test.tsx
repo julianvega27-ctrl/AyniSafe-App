@@ -22,6 +22,7 @@ const resumen = (extra: Partial<ResumenIncidente> = {}): ResumenIncidente => ({
   verificacion: 'SIN_VERIFICAR',
   resultado: null,
   responsable: { asignado: false, esUsted: false },
+  vinculado: false,
   prioridad: 'SIN_EVALUAR',
   descripcion: 'Choque de dos autos en la avenida',
   ocurrencia: { modo: 'ahora', instante: '2026-11-26T09:58:00.000Z' },

@@ -109,12 +109,14 @@ export interface FilaBandeja {
   readonly verificacion: Verificacion;
   readonly resultado: ResultadoCierre | null;
   readonly responsable: { readonly asignado: boolean; readonly esUsted: boolean };
+  /** Duplicado vinculado (P6 grupo B): estado y resultado son los del principal. */
+  readonly vinculado: boolean;
   readonly prioridad: 'SIN_EVALUAR';
 }
 
 export type Verificacion = 'SIN_VERIFICAR' | 'VERIFICADO' | 'NO_VERIFICADO';
 export type ResultadoCierre = 'ATENDIDO' | 'DESCARTADO';
-export type AccionAtencion = 'asumir' | 'iniciar_atencion' | 'cerrar_atendido' | 'descartar' | 'verificar';
+export type AccionAtencion = 'asumir' | 'iniciar_atencion' | 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular';
 
 /** Atencion institucional del resumen (P6). La API decide las acciones permitidas. */
 export interface AtencionOperador {
@@ -488,6 +490,8 @@ export const api = {
       metodo: 'POST',
       cuerpo,
     }),
+  vincularDuplicado: (id: string, referenciaPrincipal: string, motivo: string) =>
+    llamar<{ vinculado: true }>(`/api/v1/operador/incidentes/${enc(id)}/vinculo`, { metodo: 'POST', cuerpo: { referenciaPrincipal, motivo } }),
   asignaciones: (senal?: AbortSignal) => llamar<{ elementos: readonly AsignacionAdmin[] }>(ASI, { senal }),
   candidatosReasignacion: (id: string, senal?: AbortSignal) =>
     llamar<{ elementos: readonly CandidatoReasignacion[] }>(`${ASI}/${enc(id)}/candidatos`, { senal }),

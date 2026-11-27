@@ -26,6 +26,7 @@ const fila = (n: number, extra: Partial<FilaBandeja> = {}): FilaBandeja => ({
   verificacion: 'SIN_VERIFICAR',
   resultado: null,
   responsable: { asignado: false, esUsted: false },
+  vinculado: false,
   prioridad: 'SIN_EVALUAR',
   ...extra,
 });

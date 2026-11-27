@@ -30,6 +30,7 @@ const resumen = (extra: Partial<ResumenIncidente> = {}): ResumenIncidente => ({
   verificacion: 'SIN_VERIFICAR',
   resultado: null,
   responsable: { asignado: false, esUsted: false },
+  vinculado: false,
   prioridad: 'SIN_EVALUAR',
   descripcion: 'Me arrebataron el celular',
   ocurrencia: { modo: 'ahora', instante: '2026-11-26T09:58:00.000Z' },
@@ -122,6 +123,25 @@ describe('atención en el resumen del operador', () => {
     renderizarApp(RUTA);
     expect(await screen.findByText('Otro operador de tu institución es responsable de este caso.')).toBeInTheDocument();
     expect(within(bloque()).queryByRole('button')).not.toBeInTheDocument();
+  });
+});
+
+describe('vinculación de duplicados', () => {
+  it('vincula con referencia y motivo en una sola solicitud y muestra que se atiende desde el principal', async () => {
+    const conVincular = resumen({ ...EN_REVISION, atencion: { ...EN_REVISION.atencion!, accionesPermitidas: ['iniciar_atencion', 'descartar', 'verificar', 'vincular'] } });
+    const vinculado = resumen({ estado: 'EN_REVISION', vinculado: true, atencion: atencion({ accionesPermitidas: [], responsable: EN_REVISION.atencion!.responsable }) });
+    const { llamadas } = montar([conVincular, vinculado], () => json(200, { vinculado: true }));
+    renderizarApp(RUTA);
+    await userEvent.click(await screen.findByRole('button', { name: 'Vincular como duplicado' }));
+    const dialogo = await screen.findByRole('dialog');
+    await userEvent.type(within(dialogo).getByLabelText('Referencia del incidente principal'), 'INC-7K3M9-Q2TXA');
+    await userEvent.type(within(dialogo).getByLabelText('Motivo'), 'Mismo hecho reportado dos veces');
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Vincular' }));
+    expect(await screen.findByText('Incidente vinculado. Se atenderá desde el incidente principal.')).toBeInTheDocument();
+    expect(llamadas.filter((l) => l.metodo === 'POST').map((l) => [l.ruta, l.cuerpo])).toEqual([
+      [`/api/v1/operador/incidentes/${ID}/vinculo`, { referenciaPrincipal: 'INC-7K3M9-Q2TXA', motivo: 'Mismo hecho reportado dos veces' }],
+    ]);
+    expect(await screen.findByText('Vinculado a otro reporte del mismo hecho: se atiende desde el incidente principal.')).toBeInTheDocument();
   });
 });
 

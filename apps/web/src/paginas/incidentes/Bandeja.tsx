@@ -53,6 +53,12 @@ function Etiquetas({ fila }: { fila: FilaBandeja }) {
           <span>Sin responsable en tu institución</span>
         </li>
       ) : null}
+      {fila.vinculado ? (
+        <li className="pill">
+          <Icono nombre="info" />
+          <span>Duplicado vinculado</span>
+        </li>
+      ) : null}
       {fila.condicionMedicaPorConfirmar ? (
         <li className="pill warn">
           <Icono nombre="aviso" />

@@ -16,7 +16,7 @@ import { CONFLICTO_ATENCION, ESTADO, fecha, INSTITUCION, RESULTADO, textoHistori
  * componentes compartidos existentes, sin estilos nuevos.
  */
 
-type Dialogo = 'cerrar_atendido' | 'descartar' | 'verificar' | null;
+type Dialogo = 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular' | null;
 
 const largo = (t: string) => [...t.trim()].length;
 
@@ -114,7 +114,14 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
               Registrar verificación
             </Boton>
           ) : null}
+          {puede('vincular') ? (
+            <Boton variante="secundario" onClick={() => setDialogo('vincular')} disabled={enviando}>
+              Vincular como duplicado
+            </Boton>
+          ) : null}
         </div>
+      ) : resumen.vinculado ? (
+        <p className="nota-panel">Vinculado a otro reporte del mismo hecho: se atiende desde el incidente principal.</p>
       ) : resumen.estado !== 'CERRADO' && a.responsable.asignado && !a.responsable.esUsted ? (
         <p className="nota-panel">Otro operador de tu institución es responsable de este caso.</p>
       ) : null}
@@ -134,6 +141,16 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
       ) : null}
       {dialogo === 'verificar' ? (
         <DialogoVerificacion
+          resumen={resumen}
+          onCerrar={() => setDialogo(null)}
+          onResultado={(aviso) => {
+            setDialogo(null);
+            onActualizado(aviso);
+          }}
+        />
+      ) : null}
+      {dialogo === 'vincular' ? (
+        <DialogoVinculo
           resumen={resumen}
           onCerrar={() => setDialogo(null)}
           onResultado={(aviso) => {
@@ -303,6 +320,81 @@ function DialogoVerificacion({ resumen, onCerrar, onResultado }: { resumen: Resu
         <div className="acciones-tarjeta form-grid__completo">
           <Boton type="submit" cargando={enviando}>
             Registrar verificación
+          </Boton>
+          <Boton variante="secundario" onClick={onCerrar} disabled={enviando}>
+            Cancelar
+          </Boton>
+        </div>
+      </form>
+    </Dialogo>
+  );
+}
+
+function DialogoVinculo({ resumen, onCerrar, onResultado }: { resumen: ResumenIncidente; onCerrar: () => void; onResultado: (aviso: string) => void }) {
+  const { expirar } = useSesion();
+  const idTitulo = useId();
+  const [referencia, setReferencia] = useState('');
+  const [motivo, setMotivo] = useState('');
+  const [errores, setErrores] = useState<Record<string, string>>({});
+  const [enviando, setEnviando] = useState(false);
+  const [fallo, setFallo] = useState<string | null>(null);
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    if (enviando) return;
+    const locales: Record<string, string> = {};
+    if (!referencia.trim()) locales.referenciaPrincipal = 'Escribe la referencia del incidente principal.';
+    if (largo(motivo) < 10 || largo(motivo) > 500) locales.motivo = 'Escribe un motivo de 10 a 500 caracteres.';
+    setErrores(locales);
+    if (Object.keys(locales).length) return;
+    setEnviando(true);
+    setFallo(null);
+    const r = await api.vincularDuplicado(resumen.id, referencia.trim(), motivo.trim());
+    setEnviando(false);
+    if (r.tipo === 'ok') return onResultado('Incidente vinculado. Se atenderá desde el incidente principal.');
+    if (r.tipo === 'error' && r.estado === 401) return expirar();
+    if (r.tipo === 'error' && r.estado === 400) return setErrores(r.campos ?? { motivo: 'Revisa los datos.' });
+    if (r.tipo === 'error' && r.estado === 404) return setFallo('No encontramos ese incidente entre los de tu sede.');
+    if (r.tipo === 'error' && r.codigo === 'VINCULO_NO_PERMITIDO') return setFallo(CONFLICTO_ATENCION.VINCULO_NO_PERMITIDO!);
+    if (r.tipo === 'error' && r.codigo && CONFLICTO_ATENCION[r.codigo]) return onResultado(CONFLICTO_ATENCION[r.codigo]!);
+    setFallo('No pudimos vincular el incidente. Inténtalo de nuevo.');
+  }
+
+  return (
+    <Dialogo tituloId={idTitulo} ocupado={enviando} onCerrar={onCerrar}>
+      <form className="form-grid compact" onSubmit={(e) => void enviar(e)} aria-labelledby={idTitulo} noValidate>
+        <h3 id={idTitulo} className="form-grid__completo">
+          Vincular {resumen.referencia} como duplicado
+        </h3>
+        <p className="form-grid__completo nota-panel">
+          La vinculación coordina la atención del mismo hecho. No descarta el reporte ni comparte datos entre quienes reportaron.
+        </p>
+        {fallo ? (
+          <div className="form-grid__completo" role="status">
+            <Mensaje tipo="error" titulo="No se vinculó el incidente">{fallo}</Mensaje>
+          </div>
+        ) : null}
+        <Campo
+          etiqueta="Referencia del incidente principal"
+          ayuda="Por ejemplo, INC-7K3M9-Q2TXA. Debe estar abierto y en la bandeja de tu sede."
+          value={referencia}
+          maxLength={40}
+          onChange={(e) => setReferencia(e.target.value)}
+          error={errores.referenciaPrincipal}
+          required
+        />
+        <Campo
+          etiqueta="Motivo"
+          ayuda="Entre 10 y 500 caracteres. Queda registrado con tu cuenta."
+          value={motivo}
+          maxLength={500}
+          onChange={(e) => setMotivo(e.target.value)}
+          error={errores.motivo}
+          required
+        />
+        <div className="acciones-tarjeta form-grid__completo">
+          <Boton type="submit" cargando={enviando}>
+            Vincular
           </Boton>
           <Boton variante="secundario" onClick={onCerrar} disabled={enviando}>
             Cancelar

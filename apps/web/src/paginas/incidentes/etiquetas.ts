@@ -58,6 +58,7 @@ export const CONFLICTO_ATENCION: Record<string, string> = {
   NO_PRINCIPAL: 'Solo la institución principal puede realizar esta acción.',
   DESTINO_NO_VALIDO: 'El operador elegido no puede recibir este caso.',
   ASIGNACION_INACTIVA: 'La asignación ya no está activa.',
+  VINCULO_NO_PERMITIDO: 'No se puede vincular a ese incidente: ya es duplicado, tiene duplicados, está cerrado o es el mismo caso.',
 };
 
 /** Texto del historial operativo, sin actores. */
@@ -77,6 +78,8 @@ export function textoHistorial(h: { accion: string; institucion: TipoInstitucion
       return `Administración liberó la asignación de ${inst}`;
     case 'reasignar':
       return `Administración reasignó el caso dentro de ${inst}`;
+    case 'vincular':
+      return `${inst}: vinculado como duplicado de otro reporte del mismo hecho`;
     default:
       return `${inst}: ${h.accion}`;
   }
