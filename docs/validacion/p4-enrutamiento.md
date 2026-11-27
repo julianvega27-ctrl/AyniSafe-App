@@ -272,3 +272,20 @@ Pendientes explícitos: avisos persistentes por usuario, lectura, contador, camp
 ## Estado de cierre local
 
 Las tareas de implementación y validación de P4.2 quedan completas localmente. No se creó commit, PR, despliegue ni archivo OpenSpec. CI y revisión del responsable siguen pendientes; el workflow posterior se ejecuta cuando se solicite. Se conservan todos los cambios previos del árbol de trabajo y el donante permanece limpio.
+
+## Validación en GitHub Actions
+
+- PR: `https://github.com/julianvega27-ctrl/AyniSafe-App/pull/7`.
+- Ejecución de CI: `https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/45926686150`.
+- Fecha: `26/11/2026`.
+- Commit evaluado: `08ca417a8c0eaf205ccae46dc41b849d22fa53ab`.
+
+Resultados comprobados:
+- API: aprobado.
+- Flutter: aprobado.
+- Web: aprobado.
+- Escaneo de secretos: aprobado.
+
+La ejecución terminó correctamente con los cuatro trabajos aprobados.
+La cobertura de la API se conserva en el artefacto de esta ejecución,
+con retención de 14 días.
