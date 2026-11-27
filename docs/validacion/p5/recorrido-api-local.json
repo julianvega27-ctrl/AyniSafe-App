@@ -1,0 +1,147 @@
+{
+  "fecha": "2026-11-27T13:55:35.814Z",
+  "revision": "estado local sin commit sobre 24a33f6",
+  "navegador": "158.0.8127.88",
+  "entorno": "API real (main.ts), PostgreSQL local *_test, Vite y Chrome; correo en memoria, datos y geometrías sintéticos; registro por API con cuenta ciudadana",
+  "pasos": [
+    "Registro con cuenta confirmado (estado 201)",
+    "PNP recibe el accidente como principal con la condición por confirmar",
+    "resumen-pnp-antes 1440: sin desborde de página",
+    "resumen-pnp-antes 1440: axe sin infracciones ([])",
+    "resumen-pnp-antes 360: sin desborde de página",
+    "resumen-pnp-antes 360: axe sin infracciones ([])",
+    "Teclado: Espacio marca «Sí» en el grupo de heridos",
+    "dialogo-precisar 1440: sin desborde de página",
+    "dialogo-precisar 1440: axe sin infracciones ([])",
+    "dialogo-precisar 360: sin desborde de página",
+    "dialogo-precisar 360: axe sin infracciones ([])",
+    "Shift+Tab conserva el foco dentro del diálogo",
+    "La web informa que SAMU fue incorporado",
+    "El resumen PNP muestra su papel actualizado a simultánea",
+    "Persistido: SAMU principal y PNP simultánea",
+    "SAMU ve el accidente como principal en su bandeja",
+    "El autor ve SAMU como institución responsable",
+    "El autor recibe la solicitud de completar sin la precisión ni el motivo",
+    "El autor completa la evaluación (200)",
+    "SAMU ve el historial con tres versiones",
+    "resumen-samu 1440: sin desborde de página",
+    "resumen-samu 1440: axe sin infracciones ([])",
+    "resumen-samu 360: sin desborde de página",
+    "resumen-samu 360: axe sin infracciones ([])",
+    "resumen-samu 1280 texto200: sin desborde de página",
+    "resumen-samu 1280 texto200: axe sin infracciones ([])",
+    "dialogo-aclaracion-samu 1440: sin desborde de página",
+    "dialogo-aclaracion-samu 1440: axe sin infracciones ([])",
+    "SAMU registra la aclaración (versión 4)",
+    "PNP no ve observaciones de la persona principal ni motivos",
+    "PNP no tiene la sección de evaluación",
+    "resumen-pnp-despues 1440: sin desborde de página",
+    "resumen-pnp-despues 1440: axe sin infracciones ([])",
+    "resumen-pnp-despues 360: sin desborde de página",
+    "resumen-pnp-despues 360: axe sin infracciones ([])",
+    "resumen-pnp-despues 1280 texto200: sin desborde de página",
+    "resumen-pnp-despues 1280 texto200: axe sin infracciones ([])",
+    "Versiones persistidas 1 a 4 con su origen"
+  ],
+  "fichas": [
+    {
+      "nombre": "resumen-pnp-antes",
+      "ancho": 1440,
+      "texto200": false,
+      "archivo": "resumen-pnp-antes-1440.png",
+      "documento": 1440,
+      "ventana": 1440,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen-pnp-antes",
+      "ancho": 360,
+      "texto200": false,
+      "archivo": "resumen-pnp-antes-360.png",
+      "documento": 360,
+      "ventana": 360,
+      "violaciones": []
+    },
+    {
+      "nombre": "dialogo-precisar",
+      "ancho": 1440,
+      "texto200": false,
+      "archivo": "dialogo-precisar-1440.png",
+      "documento": 1440,
+      "ventana": 1440,
+      "violaciones": []
+    },
+    {
+      "nombre": "dialogo-precisar",
+      "ancho": 360,
+      "texto200": false,
+      "archivo": "dialogo-precisar-360.png",
+      "documento": 360,
+      "ventana": 360,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen-samu",
+      "ancho": 1440,
+      "texto200": false,
+      "archivo": "resumen-samu-1440.png",
+      "documento": 1440,
+      "ventana": 1440,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen-samu",
+      "ancho": 360,
+      "texto200": false,
+      "archivo": "resumen-samu-360.png",
+      "documento": 360,
+      "ventana": 360,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen-samu",
+      "ancho": 1280,
+      "texto200": true,
+      "archivo": "resumen-samu-1280-texto200.png",
+      "documento": 1280,
+      "ventana": 1280,
+      "violaciones": []
+    },
+    {
+      "nombre": "dialogo-aclaracion-samu",
+      "ancho": 1440,
+      "texto200": false,
+      "archivo": "dialogo-aclaracion-samu-1440.png",
+      "documento": 1440,
+      "ventana": 1440,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen-pnp-despues",
+      "ancho": 1440,
+      "texto200": false,
+      "archivo": "resumen-pnp-despues-1440.png",
+      "documento": 1440,
+      "ventana": 1440,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen-pnp-despues",
+      "ancho": 360,
+      "texto200": false,
+      "archivo": "resumen-pnp-despues-360.png",
+      "documento": 360,
+      "ventana": 360,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen-pnp-despues",
+      "ancho": 1280,
+      "texto200": true,
+      "archivo": "resumen-pnp-despues-1280-texto200.png",
+      "documento": 1280,
+      "ventana": 1280,
+      "violaciones": []
+    }
+  ]
+}
