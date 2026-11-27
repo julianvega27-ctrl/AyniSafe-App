@@ -59,6 +59,10 @@ La migración ahora rechaza ese cierre, como exige la spec. Se corrigieron ambas
 | EQ-21 Cambio de principal | Precisar heridos hace a SAMU principal: el PNP conserva su asignación como apoyo, recibe 403 `NO_PRINCIPAL` y SAMU puede actuar | Aprobado |
 | EQ-04/09 Privacidad | Los hitos y la vista del invitado no incluyen operadores, motivo interno ni verificación. La lista del administrador no incluye datos del caso. El duplicado no revela el principal | Aprobado |
 
+## Incidencia en la prueba manual (27/11/2026)
+
+Los reportes no se veían en la app ni en el panel. La base de desarrollo `ayni_safe_dev` no tenía las tres migraciones de P6; solo se habían aplicado en la base `*_test` de las pruebas. Las consultas de bandeja y seguimiento leen columnas nuevas y respondían 503. Se resolvió con `npm run db:migrar` en `apps/api`. No había entregas de eventos fallidas. Es la misma causa registrada en P5.1 y P5.2: el despliegue debe aplicar las migraciones antes de arrancar esta versión.
+
 ## Pendiente, sin presentarlo como hecho
 
 - **Recorrido en Android real.** Lo verifica el responsable de forma manual; no se ejecutó aquí.
