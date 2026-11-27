@@ -19,6 +19,9 @@ const resumen = (extra: Partial<ResumenIncidente> = {}): ResumenIncidente => ({
   registradoEn: '2026-11-26T10:00:00.000Z',
   papel: 'principal',
   condicionMedicaPorConfirmar: true,
+  verificacion: 'SIN_VERIFICAR',
+  resultado: null,
+  responsable: { asignado: false, esUsted: false },
   prioridad: 'SIN_EVALUAR',
   descripcion: 'Choque de dos autos en la avenida',
   ocurrencia: { modo: 'ahora', instante: '2026-11-26T09:58:00.000Z' },
@@ -38,6 +41,7 @@ const resumen = (extra: Partial<ResumenIncidente> = {}): ResumenIncidente => ({
   accesoSanitario: false,
   otrasInstituciones: [],
   evidencias: [],
+  atencion: null,
   ...extra,
 });
 

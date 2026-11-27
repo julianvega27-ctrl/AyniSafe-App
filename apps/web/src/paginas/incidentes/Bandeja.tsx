@@ -6,6 +6,7 @@ import { FalloDeConexion } from '../../componentes/FalloDeConexion';
 import { Icono } from '../../componentes/iconos';
 import { Mensaje } from '../../componentes/Mensaje';
 import { useSesion } from '../../sesion/SesionContexto';
+import { BloqueAtencion } from './Atencion';
 import { BloqueCondicionMedica, SeccionEvaluacionSamu } from './Evaluacion';
 import { Fotografias } from './Fotografias';
 import { ESTADO, fecha, INSTITUCION, PAPEL, textoTerritorio } from './etiquetas';
@@ -41,6 +42,17 @@ function Etiquetas({ fila }: { fila: FilaBandeja }) {
         <Icono nombre="reloj" />
         <span>Prioridad: Sin evaluar</span>
       </li>
+      {fila.responsable?.asignado ? (
+        <li className="pill">
+          <Icono nombre="info" />
+          <span>{fila.responsable.esUsted ? 'Asumido por ti' : 'Con responsable'}</span>
+        </li>
+      ) : fila.estado !== 'CERRADO' ? (
+        <li className="pill warn">
+          <Icono nombre="aviso" />
+          <span>Sin responsable en tu institución</span>
+        </li>
+      ) : null}
       {fila.condicionMedicaPorConfirmar ? (
         <li className="pill warn">
           <Icono nombre="aviso" />
@@ -210,7 +222,7 @@ type EstadoResumen =
 /**
  * Resumen limitado de un incidente de la bandeja. Ofrece solo las acciones que la API tiene: precisar
  * la condicion medica y, para SAMU participante, la evaluacion rapida (P5.1), y muestra las fotografias
- * del reporte (P5.2). Sin «Asumir caso» (P6).
+ * del reporte (P5.2) y la atencion institucional (P6) con las acciones que la API permite.
  */
 export function ResumenIncidenteVista({ id }: { id: string }) {
   const { expirar } = useSesion();
@@ -287,7 +299,7 @@ export function ResumenIncidenteVista({ id }: { id: string }) {
       {aviso ? (
         <div role="status">
           <Mensaje tipo="exito" titulo={aviso}>
-            El resumen se actualizó con la condición vigente.
+            El resumen se actualizó con los datos vigentes.
           </Mensaje>
         </div>
       ) : null}
@@ -317,6 +329,7 @@ export function ResumenIncidenteVista({ id }: { id: string }) {
           </dl>
           <p className="description">{r.descripcion}</p>
         </section>
+        <BloqueAtencion resumen={r} onActualizado={actualizado} />
         <BloqueCondicionMedica resumen={r} onActualizado={actualizado} />
         {r.accesoSanitario ? <SeccionEvaluacionSamu resumen={r} version={intento} onActualizado={actualizado} /> : null}
         <Fotografias incidenteId={r.id} evidencias={r.evidencias ?? []} />

@@ -1,4 +1,16 @@
-import type { CampoEvaluacion, CantidadHeridos, EstadoIncidente, Faltante, PapelInstitucion, RespuestaCiudadano, SignosVida, TerritorioVista, TipoInstitucion } from '../../api/cliente';
+import type {
+  CampoEvaluacion,
+  CantidadHeridos,
+  EstadoIncidente,
+  Faltante,
+  PapelInstitucion,
+  RespuestaCiudadano,
+  ResultadoCierre,
+  SignosVida,
+  TerritorioVista,
+  TipoInstitucion,
+  Verificacion,
+} from '../../api/cliente';
 
 /** Textos de negocio de AyniSafe para la bandeja y los pendientes (P4.2). Sin valores inventados. */
 
@@ -21,6 +33,54 @@ export const ESTADO: Record<EstadoIncidente, string> = {
   EN_ATENCION: 'En atención',
   CERRADO: 'Cerrado',
 };
+
+// --- Atencion institucional (P6) -------------------------------------------------------------
+
+export const VERIFICACION: Record<Verificacion, string> = {
+  SIN_VERIFICAR: 'Sin verificar',
+  VERIFICADO: 'Verificado',
+  NO_VERIFICADO: 'No verificado',
+};
+
+export const RESULTADO: Record<ResultadoCierre, string> = {
+  ATENDIDO: 'Atendido',
+  DESCARTADO: 'Descartado',
+};
+
+/** Mensajes de los conflictos y permisos de la atencion, sin presentar la accion como hecha. */
+export const CONFLICTO_ATENCION: Record<string, string> = {
+  CASO_ASUMIDO: 'Otro operador de tu institución ya es responsable de este caso.',
+  ESTADO_CAMBIADO: 'El estado del incidente cambió mientras lo revisabas. El resumen se actualizó.',
+  TRANSICION_NO_PERMITIDA: 'Esa acción no corresponde al estado actual del incidente.',
+  INCIDENTE_CERRADO: 'El incidente ya está cerrado.',
+  INCIDENTE_VINCULADO: 'El incidente está vinculado a otro reporte del mismo hecho y se atiende desde ese caso.',
+  ASIGNACION_REQUERIDA: 'Asume el caso antes de realizar esta acción.',
+  NO_PRINCIPAL: 'Solo la institución principal puede realizar esta acción.',
+  DESTINO_NO_VALIDO: 'El operador elegido no puede recibir este caso.',
+  ASIGNACION_INACTIVA: 'La asignación ya no está activa.',
+};
+
+/** Texto del historial operativo, sin actores. */
+export function textoHistorial(h: { accion: string; institucion: TipoInstitucion; valorAnterior: string | null; valorNuevo: string | null }): string {
+  const inst = INSTITUCION[h.institucion];
+  switch (h.accion) {
+    case 'asumir':
+      return `${inst}: un operador asumió el caso`;
+    case 'transicion': {
+      const nuevo = h.valorNuevo ?? '';
+      if (nuevo.startsWith('CERRADO:')) return `${inst}: cerrado como ${(RESULTADO[nuevo.slice(8) as ResultadoCierre] ?? nuevo).toLowerCase()}`;
+      return `${inst}: ${ESTADO[h.valorAnterior as EstadoIncidente] ?? h.valorAnterior} → ${ESTADO[nuevo as EstadoIncidente] ?? nuevo}`;
+    }
+    case 'verificacion':
+      return `${inst}: verificación «${VERIFICACION[h.valorNuevo as Verificacion] ?? h.valorNuevo}»`;
+    case 'liberar':
+      return `Administración liberó la asignación de ${inst}`;
+    case 'reasignar':
+      return `Administración reasignó el caso dentro de ${inst}`;
+    default:
+      return `${inst}: ${h.accion}`;
+  }
+}
 
 export const MOTIVO_FALTANTE: Record<Faltante['motivo'], string> = {
   sin_distrito: 'sin distrito resuelto',
