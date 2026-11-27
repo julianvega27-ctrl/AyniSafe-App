@@ -68,20 +68,20 @@ describe('bandeja FIFO', () => {
     expect((await bandeja(await operadorDe(pnp))).body).toEqual({ elementos: [], siguiente: null });
   });
 
-  it('la fila tiene solo los campos permitidos, con prioridad Sin evaluar', async () => {
+  it('la fila tiene solo los campos permitidos, con la prioridad propuesta por la categoria', async () => {
     await crearSedeDePrueba(prisma, { institucion: 'samu', categorias: ['accidente-transito'] });
     const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['accidente-transito'] });
     const inc = await registrarIncidente(app, prisma, { categoriaId: 'accidente-transito', descripcion: 'Choque de dos autos en la avenida', heridos: 'no_se' });
     await enrutarTodo();
     const fila = (await bandeja(await operadorDe(pnp))).body.elementos[0];
     expect(Object.keys(fila).sort()).toEqual([
-      'categoria', 'condicionMedicaPorConfirmar', 'distrito', 'estado', 'id', 'papel', 'prioridad', 'referencia', 'registradoEn',
+      'categoria', 'condicionMedicaPorConfirmar', 'distrito', 'estado', 'id', 'papel', 'prioridad', 'prioridadOrigen', 'referencia', 'registradoEn',
       'responsable', 'resultado', 'verificacion', 'vinculado',
     ]);
     expect(fila).toMatchObject({
       id: inc.id, referencia: inc.referencia, categoria: { id: 'accidente-transito', nombre: 'Accidente de tránsito' },
       distrito: { id: 'DIS-01', nombre: 'Ayacucho' }, estado: 'REGISTRADO', papel: 'principal',
-      condicionMedicaPorConfirmar: true, prioridad: 'SIN_EVALUAR',
+      condicionMedicaPorConfirmar: true, prioridad: 'ALTA', prioridadOrigen: 'propuesta',
     });
   });
 });
@@ -96,7 +96,7 @@ describe('resumen por identificador', () => {
     expect(r.status).toBe(200);
     expect(Object.keys(r.body).sort()).toEqual([
       'accesoSanitario', 'atencion', 'categoria', 'condicionMedica', 'condicionMedicaPorConfirmar', 'descripcion', 'distrito', 'estado', 'evidencias', 'id', 'ocurrencia', 'otrasInstituciones',
-      'papel', 'prioridad', 'referencia', 'registradoEn', 'responsable', 'respuestasCiudadano', 'resultado', 'territorio', 'verificacion', 'vinculado',
+      'papel', 'prioridad', 'prioridadOrigen', 'referencia', 'registradoEn', 'responsable', 'respuestasCiudadano', 'resultado', 'territorio', 'verificacion', 'vinculado',
     ]);
     expect(r.body).toMatchObject({
       papel: 'simultanea', descripcion: 'Choque de dos autos en la avenida',

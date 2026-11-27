@@ -46,8 +46,8 @@ describe('acciones permitidas', () => {
   });
 
   it('el responsable de la principal en revisión puede iniciar, descartar y verificar, no cerrar atendido', () => {
-    expect(accionesPermitidas({ ...base, estado: 'EN_REVISION' })).toEqual(['iniciar_atencion', 'descartar', 'verificar', 'vincular']);
-    expect(accionesPermitidas({ ...base, estado: 'EN_ATENCION' })).toEqual(['cerrar_atendido', 'verificar', 'vincular']);
+    expect(accionesPermitidas({ ...base, estado: 'EN_REVISION' })).toEqual(['iniciar_atencion', 'descartar', 'verificar', 'vincular', 'priorizar']);
+    expect(accionesPermitidas({ ...base, estado: 'EN_ATENCION' })).toEqual(['cerrar_atendido', 'verificar', 'vincular', 'priorizar']);
   });
 
   it('un apoyo con responsable no cambia el estado', () => {

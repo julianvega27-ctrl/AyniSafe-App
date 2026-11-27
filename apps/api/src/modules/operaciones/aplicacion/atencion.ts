@@ -7,6 +7,7 @@ import {
   esUuid,
   PermisoAtencionError,
   validarMotivoAdmin,
+  validarPrioridad,
   validarTransicion,
   validarVerificacion,
   type Accion,
@@ -38,6 +39,8 @@ export interface EstadoBloqueado {
   readonly verificacion: Verificacion;
   /** Grupo B: incidente principal si esta vinculado como duplicado. */
   readonly principalId?: string | null;
+  /** Grupo C: prioridad vigente. */
+  readonly prioridad?: string;
 }
 
 export type AccionHistorial = 'asumir' | 'transicion' | 'verificacion' | 'liberar' | 'reasignar' | 'vincular' | 'prioridad';
@@ -98,6 +101,8 @@ export interface AtencionRepositorio {
   /** Grupo B: el incidente tiene duplicados vinculados. */
   tieneDuplicados(tx: ContextoTransaccional, incidenteId: string): Promise<boolean>;
   vincular(tx: ContextoTransaccional, duplicadoId: string, principalId: string): Promise<void>;
+  /** Grupo C: revision humana; el origen pasa a `revisada` sin tocar la version de la propuesta. */
+  revisarPrioridad(tx: ContextoTransaccional, incidenteId: string, valor: string): Promise<void>;
   registrar(tx: ContextoTransaccional, entrada: EntradaHistorial): Promise<void>;
   asignacionesActivas(incidenteId: string): Promise<readonly Asignacion[]>;
   historial(incidenteId: string): Promise<readonly FilaHistorial[]>;
@@ -391,6 +396,30 @@ export class ServicioAtencion {
         motivo,
       });
       return { vinculado: true as const };
+    });
+  }
+
+  /**
+   * Revision de la prioridad (RF12): el responsable de la principal confirma, eleva o reduce con motivo.
+   * No modifica la tabla por categoria ni el orden FIFO de la bandeja.
+   */
+  async revisarPrioridad(p: ParticipacionOperador, operadorId: string, entrada: unknown): Promise<{ readonly prioridad: string; readonly origen: 'revisada' }> {
+    const { valor, motivo } = validarPrioridad(entrada);
+    return this.d.unidadDeTrabajo.enTransaccion(async (tx) => {
+      const inc = await this.bloquear(tx, p.incidenteId);
+      await this.autorizarPrincipal(tx, p, operadorId, inc.estado);
+      await this.d.repositorio.revisarPrioridad(tx, p.incidenteId, valor);
+      await this.d.repositorio.registrar(tx, {
+        incidenteId: p.incidenteId,
+        accion: 'prioridad',
+        actorTipo: 'operador',
+        actorUsuarioId: operadorId,
+        institucion: p.institucion,
+        valorAnterior: inc.prioridad ?? 'SIN_EVALUAR',
+        valorNuevo: valor,
+        motivo,
+      });
+      return { prioridad: valor, origen: 'revisada' as const };
     });
   }
 

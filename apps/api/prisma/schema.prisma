@@ -293,6 +293,10 @@ model Incidente {
   cerradoEn        DateTime? @map("cerrado_en") @db.Timestamptz(3)
   /// P6 (grupo B): incidente principal si este es un duplicado vinculado.
   principalId      String?   @map("principal_id") @db.Uuid
+  /// P6 (grupo C): prioridad vigente, su origen (propuesta o revisada) y version de configuracion.
+  prioridad        String    @default("SIN_EVALUAR")
+  prioridadOrigen  String?   @map("prioridad_origen")
+  prioridadVersion String?   @map("prioridad_version")
   enrutamiento EnrutamientoIncidente?
   asignaciones AsignacionIncidente[]
   historial    HistorialIncidente[]

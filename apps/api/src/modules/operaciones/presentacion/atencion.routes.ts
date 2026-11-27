@@ -153,6 +153,12 @@ export function crearRouterAtencion(atencion: ServicioAtencion, enrutamiento: Se
     res.json(r);
   });
 
+  router.post('/operador/incidentes/:id/prioridad', sinCache, rol('operador', true), ...json, participacion, async (req, res) => {
+    const r = await atencion.revisarPrioridad(res.locals.participacion, res.locals.usuarioId as string, req.body);
+    registrar(res, 'prioridad_revisada', { prioridad: r.prioridad });
+    res.json(r);
+  });
+
   router.get('/admin/asignaciones', sinCache, rol('administrador', false), async (req, res) => {
     if (Object.keys(req.query).length) return responderError(res, 400, 'VALIDATION_ERROR', 'Revisa los datos de la consulta.');
     res.json({ elementos: await atencion.listarAsignaciones() });

@@ -1139,6 +1139,15 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opA!, ini)); // 200
     verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opA!, ini)); // 409
 
+    // Prioridad (grupo C).
+    const PRI = '/operador/incidentes/{id}/prioridad';
+    const pri = { valor: 'URGENTE', motivo };
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, opA!, pri)); // 200
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, opA!, { valor: 'BAJA', motivo })); // 400
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, null, pri)); // 401
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, opB!, pri)); // 403
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, opAjeno, pri)); // 404
+
     // Vinculo (grupo B): `tercero` se vincula a `inc`.
     const VIN = '/operador/incidentes/{id}/vinculo';
     const tercero = await registrarIncidente(app, prisma);
@@ -1180,6 +1189,7 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     const deOtro = (await get(ASI, cookieAdmin)).body.elementos.find((e: { referencia: string }) => e.referencia === otro.referencia).id as string;
     await post(`/operador/incidentes/${otro.id}/transiciones`, opA!, { accion: 'cerrar', estadoEsperado: 'EN_REVISION', resultado: 'DESCARTADO', motivo, resumenCiudadano: 'El hecho no pudo confirmarse.' });
     verificar(LIB, 'post', await post(`${ASI}/${deOtro}/liberar`, cookieAdmin, { motivo })); // 409
+    verificar(PRI, 'post', await post(`/operador/incidentes/${otro.id}/prioridad`, opA!, pri)); // 409 (cerrado)
 
     // Seguimiento del invitado con hitos y cierre conforme al esquema.
     verificar('/publico/seguimiento', 'post', await request(app).post(U('/publico/seguimiento')).set('Content-Type', 'application/json')
@@ -1206,6 +1216,8 @@ describe('respuestas reales conforme a openapi.yaml', () => {
         .set('Content-Type', 'application/json').send(JSON.stringify(ini))],
       [VER, 'post', request(caida).post(U(`/operador/incidentes/${inc.id}/verificacion`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
         .set('Content-Type', 'application/json').send(JSON.stringify(v))],
+      [PRI, 'post', request(caida).post(U(`/operador/incidentes/${inc.id}/prioridad`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', 'application/json').send(JSON.stringify(pri))],
       [VIN, 'post', request(caida).post(U(`/operador/incidentes/${otro.id}/vinculo`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
         .set('Content-Type', 'application/json').send(JSON.stringify(vin))],
       [ASI, 'get', request(caida).get(U(ASI)).set('Cookie', cookieAdmin)],

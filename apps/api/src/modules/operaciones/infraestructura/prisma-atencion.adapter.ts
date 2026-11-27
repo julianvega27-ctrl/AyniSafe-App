@@ -46,10 +46,12 @@ export class PrismaAtencionAdapter implements AtencionRepositorio {
   }
 
   async bloquear(tx: ContextoTransaccional, incidenteId: string): Promise<EstadoBloqueado | null> {
-    const filas = await clienteDe(tx).$queryRaw<{ estado: string; verificacion: string; principal_id: string | null }[]>`
-      SELECT estado, verificacion, principal_id::text FROM incidentes WHERE id = ${incidenteId}::uuid FOR UPDATE`;
+    const filas = await clienteDe(tx).$queryRaw<{ estado: string; verificacion: string; principal_id: string | null; prioridad: string }[]>`
+      SELECT estado, verificacion, principal_id::text, prioridad FROM incidentes WHERE id = ${incidenteId}::uuid FOR UPDATE`;
     const f = filas[0];
-    return f ? { estado: f.estado as EstadoIncidente, verificacion: f.verificacion as Verificacion, principalId: f.principal_id } : null;
+    return f
+      ? { estado: f.estado as EstadoIncidente, verificacion: f.verificacion as Verificacion, principalId: f.principal_id, prioridad: f.prioridad }
+      : null;
   }
 
   async papel(tx: ContextoTransaccional, incidenteId: string, institucion: InstitucionDestino): Promise<Papel | null> {
@@ -133,6 +135,11 @@ export class PrismaAtencionAdapter implements AtencionRepositorio {
 
   async vincular(tx: ContextoTransaccional, duplicadoId: string, principalId: string): Promise<void> {
     await clienteDe(tx).$executeRaw`UPDATE incidentes SET principal_id = ${principalId}::uuid WHERE id = ${duplicadoId}::uuid`;
+  }
+
+  async revisarPrioridad(tx: ContextoTransaccional, incidenteId: string, valor: string): Promise<void> {
+    await clienteDe(tx).$executeRaw`
+      UPDATE incidentes SET prioridad = ${valor}, prioridad_origen = 'revisada' WHERE id = ${incidenteId}::uuid`;
   }
 
   async registrar(tx: ContextoTransaccional, e: EntradaHistorial): Promise<void> {

@@ -13,6 +13,7 @@ import {
   type ResultadoEnrutamiento,
   type RespuestaMedica,
 } from '../dominio/matriz';
+import { propuestaPrioridad } from '../dominio/prioridad';
 
 /**
  * Enrutamiento del incidente (P4.2, documento 09 §5 pasos 2, 3 y 5). Operaciones es el unico que
@@ -102,6 +103,9 @@ export interface FilaBandeja {
   readonly responsableId?: string | null;
   /** Grupo B: vinculado como duplicado; el estado es el efectivo del principal. */
   readonly vinculado?: boolean;
+  /** Grupo C: prioridad vigente y su origen. */
+  readonly prioridad?: string;
+  readonly prioridadOrigen?: string | null;
 }
 
 export interface ParticipacionVisible extends FilaBandeja {
@@ -122,6 +126,8 @@ export interface EnrutamientosRepositorio {
   ): Promise<boolean>;
   /** Inserta participaciones ignorando las sedes que ya participan. Devuelve cuantas inserto. */
   insertarParticipaciones(tx: ContextoTransaccional, incidenteId: string, lista: readonly NuevaParticipacion[]): Promise<number>;
+  /** Grupo C: fija la prioridad propuesta solo si el incidente aun no tiene prioridad (no sobrescribe revisiones). */
+  proponerPrioridad(tx: ContextoTransaccional, incidenteId: string, valor: string, version: string): Promise<void>;
   /** Bloquea la fila (FOR UPDATE) y la devuelve; null si no existe. */
   bloquear(tx: ContextoTransaccional, incidenteId: string): Promise<EnrutamientoGuardado | null>;
   actualizarFaltantes(tx: ContextoTransaccional, incidenteId: string, faltantes: readonly Faltante[]): Promise<void>;
@@ -284,6 +290,9 @@ export class ServicioEnrutamiento {
         incidenteId,
         plan.participaciones.map((p) => ({ ...p, origen: 'regla' as const })),
       );
+      // Prioridad inicial por categoria (RF12); sin configuracion valida queda SIN_EVALUAR.
+      const propuesta = propuestaPrioridad(datos.categoriaId);
+      if (propuesta) await this.d.repositorio.proponerPrioridad(tx, incidenteId, propuesta.valor, propuesta.version);
       await this.publicar(tx, incidenteId, plan.resultado, 'regla');
       return true;
     });

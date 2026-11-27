@@ -32,6 +32,8 @@ export interface FilaOperaciones {
   readonly resultadoCierre?: string | null;
   readonly responsableId?: string | null;
   readonly vinculado?: boolean;
+  readonly prioridad?: string;
+  readonly prioridadOrigen?: string | null;
 }
 
 /** Puerto hacia Operaciones: atencion del incidente para el resumen (P6). */
@@ -121,7 +123,7 @@ export interface DependenciasBandeja {
 }
 
 export const PAGINA_BANDEJA = 50;
-/** Sin evaluacion de prioridad (P6), la etiqueta es «Sin evaluar» (RF48). */
+/** Sin propuesta valida ni revision (P6 grupo C), la etiqueta es «Sin evaluar» (RF12). */
 export const PRIORIDAD_SIN_EVALUAR = 'SIN_EVALUAR';
 
 export class SinAmbitoError extends Error {
@@ -169,7 +171,8 @@ export class BandejaInstitucional {
       resultado: f.resultadoCierre ?? null,
       responsable: { asignado: Boolean(f.responsableId), esUsted: f.responsableId === usuarioId },
       vinculado: f.vinculado ?? false,
-      prioridad: PRIORIDAD_SIN_EVALUAR,
+      prioridad: f.prioridad ?? PRIORIDAD_SIN_EVALUAR,
+      prioridadOrigen: f.prioridadOrigen ?? null,
     };
   }
 

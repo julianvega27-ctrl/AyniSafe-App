@@ -1777,6 +1777,59 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}/prioridad:
+    post:
+      tags: [Atencion]
+      operationId: revisarPrioridad
+      summary: Confirmar, elevar o reducir la prioridad con motivo
+      description: |
+        Solo el responsable activo de la principal de un incidente abierto y no vinculado. Registra valor anterior y
+        nuevo, actor, instante y motivo; el origen pasa a `revisada`. No modifica la tabla prioridad-categoria-v1 ni
+        el orden FIFO de la bandeja. No es triaje clinico ni decide despacho.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PrioridadSolicitud' }
+      responses:
+        '200':
+          description: Prioridad revisada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoPrioridad' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN, FORBIDDEN_ORIGIN, SIN_AMBITO, ASIGNACION_REQUERIDA o NO_PRINCIPAL.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '409':
+          description: INCIDENTE_CERRADO o INCIDENTE_VINCULADO.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
   /operador/incidentes/{id}/vinculo:
     post:
       tags: [Atencion]
@@ -2936,7 +2989,7 @@ components:
         nombre: { type: [string, 'null'] }
     CamposFilaBandeja:
       type: object
-      required: [id, referencia, categoria, distrito, estado, registradoEn, papel, condicionMedicaPorConfirmar, verificacion, resultado, responsable, vinculado, prioridad]
+      required: [id, referencia, categoria, distrito, estado, registradoEn, papel, condicionMedicaPorConfirmar, verificacion, resultado, responsable, vinculado, prioridad, prioridadOrigen]
       properties:
         id: { type: string, format: uuid }
         referencia: { type: string }
@@ -2967,7 +3020,12 @@ components:
         vinculado:
           type: boolean
           description: Duplicado vinculado a otro incidente (P6 grupo B); `estado` y `resultado` son los del principal.
-        prioridad: { const: SIN_EVALUAR }
+        prioridad:
+          description: Etiqueta vigente (P6 grupo C). No altera el orden FIFO de la bandeja.
+          enum: [SIN_EVALUAR, NORMAL, ALTA, URGENTE]
+        prioridadOrigen:
+          description: propuesta (tabla prioridad-categoria-v1) o revisada por un operador; null si SIN_EVALUAR.
+          enum: [propuesta, revisada, null]
     FilaBandejaOperador:
       allOf:
         - { $ref: '#/components/schemas/CamposFilaBandeja' }
@@ -3056,7 +3114,7 @@ components:
         accionesPermitidas:
           type: array
           description: Acciones que el operador puede ejecutar ahora; la API autoriza con la misma regla.
-          items: { enum: [asumir, iniciar_atencion, cerrar_atendido, descartar, verificar, vincular] }
+          items: { enum: [asumir, iniciar_atencion, cerrar_atendido, descartar, verificar, vincular, priorizar] }
         historial:
           type: array
           description: Historial operativo sin actores; el motivo solo se muestra a la institucion que lo escribio.
@@ -3222,6 +3280,20 @@ components:
       properties:
         referenciaPrincipal: { type: string, maxLength: 40, description: Referencia publica del incidente principal. }
         motivo: { type: string, minLength: 10, maxLength: 500 }
+    PrioridadSolicitud:
+      type: object
+      additionalProperties: false
+      required: [valor, motivo]
+      properties:
+        valor: { enum: [NORMAL, ALTA, URGENTE] }
+        motivo: { type: string, minLength: 10, maxLength: 500 }
+    ResultadoPrioridad:
+      type: object
+      additionalProperties: false
+      required: [prioridad, origen]
+      properties:
+        prioridad: { enum: [NORMAL, ALTA, URGENTE] }
+        origen: { const: revisada }
     ResultadoVinculo:
       type: object
       additionalProperties: false

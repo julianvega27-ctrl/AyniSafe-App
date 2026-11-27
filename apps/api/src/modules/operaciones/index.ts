@@ -98,6 +98,15 @@ export {
   type Verificacion,
 } from './dominio/atencion';
 export { crearRouterAtencion, type OpcionesRutasAtencion } from './presentacion/atencion.routes';
+export {
+  CONFIGURACION_PRIORIDAD,
+  configuracionValida,
+  PRIORIDADES,
+  propuestaPrioridad,
+  TABLA_PRIORIDAD,
+  VERSION_PRIORIDAD,
+  type Prioridad,
+} from './dominio/prioridad';
 
 /** Atencion institucional sobre PostgreSQL (P6). Los operadores llegan por la fachada de Identidad. */
 export function crearAtencionConPrisma(prisma: PrismaClient, operadores: OperadoresPort): ServicioAtencion {

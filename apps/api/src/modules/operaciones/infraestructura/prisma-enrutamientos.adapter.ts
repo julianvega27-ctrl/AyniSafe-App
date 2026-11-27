@@ -29,6 +29,8 @@ interface FilaBandejaSql {
   readonly resultado_cierre: string | null;
   readonly responsable_id: string | null;
   readonly vinculado: boolean;
+  readonly prioridad: string;
+  readonly prioridad_origen: string | null;
 }
 
 const aFilaBandeja = (f: FilaBandejaSql): FilaBandeja => ({
@@ -46,6 +48,8 @@ const aFilaBandeja = (f: FilaBandejaSql): FilaBandeja => ({
   resultadoCierre: f.resultado_cierre,
   responsableId: f.responsable_id,
   vinculado: f.vinculado,
+  prioridad: f.prioridad,
+  prioridadOrigen: f.prioridad_origen,
 });
 
 // Visibilidad por ambito vigente: $1 sede, $2 distritos, $3 categorias.
@@ -53,7 +57,7 @@ const SELECT_BANDEJA = `
   SELECT p.incidente_id, i.referencia, COALESCE(pr.estado, i.estado) AS estado, e.registrado_en, e.categoria_id, e.distrito_id,
          e.revision_medica_pendiente, p.papel, p.origen, p.institucion,
          i.verificacion, CASE WHEN pr.id IS NULL THEN i.resultado ELSE pr.resultado END AS resultado_cierre,
-         (i.principal_id IS NOT NULL) AS vinculado,
+         (i.principal_id IS NOT NULL) AS vinculado, i.prioridad, i.prioridad_origen,
          (SELECT a.operador_id::text FROM asignaciones_incidente a
            WHERE a.incidente_id = p.incidente_id AND a.institucion = p.institucion AND a.activa) AS responsable_id
     FROM participaciones_incidente p
@@ -112,6 +116,12 @@ export class PrismaEnrutamientosAdapter implements EnrutamientosRepositorio {
       ON CONFLICT DO NOTHING
       RETURNING incidente_id`;
     return filas.length > 0;
+  }
+
+  async proponerPrioridad(tx: ContextoTransaccional, incidenteId: string, valor: string, version: string): Promise<void> {
+    await clienteDe(tx).$executeRaw`
+      UPDATE incidentes SET prioridad = ${valor}, prioridad_origen = 'propuesta', prioridad_version = ${version}
+       WHERE id = ${incidenteId}::uuid AND prioridad_origen IS NULL`;
   }
 
   async insertarParticipaciones(tx: ContextoTransaccional, incidenteId: string, lista: readonly NuevaParticipacion[]): Promise<number> {

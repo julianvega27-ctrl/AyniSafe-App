@@ -16,7 +16,8 @@ export type Accion =
   | 'cerrar_atendido'
   | 'descartar'
   | 'verificar'
-  | 'vincular';
+  | 'vincular'
+  | 'priorizar';
 
 export interface ContextoAcciones {
   readonly estado: EstadoIncidente;
@@ -38,7 +39,7 @@ export function accionesPermitidas(c: ContextoAcciones): readonly Accion[] {
   if (c.estado === 'EN_REVISION') acciones.push('iniciar_atencion');
   if (c.estado === 'EN_ATENCION') acciones.push('cerrar_atendido');
   if (c.estado === 'REGISTRADO' || c.estado === 'EN_REVISION') acciones.push('descartar');
-  acciones.push('verificar', 'vincular');
+  acciones.push('verificar', 'vincular', 'priorizar');
   return acciones;
 }
 
@@ -171,6 +172,16 @@ export function validarVinculo(entrada: unknown): { readonly referenciaPrincipal
   if (!motivo) campos.motivo = MOTIVO;
   if (Object.keys(campos).length) throw new ValidacionAtencionError(campos);
   return { referenciaPrincipal: (e.referenciaPrincipal as string).trim(), motivo: motivo! };
+}
+
+export function validarPrioridad(entrada: unknown): { readonly valor: 'NORMAL' | 'ALTA' | 'URGENTE'; readonly motivo: string } {
+  const campos: Record<string, string> = {};
+  const e = objeto(entrada, ['valor', 'motivo'], campos);
+  if (!['NORMAL', 'ALTA', 'URGENTE'].includes(e.valor as string)) campos.valor = 'Elige Normal, Alta o Urgente.';
+  const motivo = texto(e.motivo, 10, 500);
+  if (!motivo) campos.motivo = MOTIVO;
+  if (Object.keys(campos).length) throw new ValidacionAtencionError(campos);
+  return { valor: e.valor as 'NORMAL' | 'ALTA' | 'URGENTE', motivo: motivo! };
 }
 
 export function validarMotivoAdmin(entrada: unknown, conOperador: boolean): { readonly motivo: string; readonly operadorId?: string } {
