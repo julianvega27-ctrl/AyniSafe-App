@@ -8,7 +8,10 @@ import {
   deduplicar,
   faltantesDesdeJson,
   planificar,
+  planificarCondicionMedica,
   resolverDestinatarios,
+  type InstitucionDestino,
+  type Papel,
   type RespuestaMedica,
 } from '../../src/modules/operaciones';
 
@@ -142,5 +145,47 @@ describe('faltantes y resultado del enrutamiento', () => {
     expect(() => faltantesDesdeJson({})).toThrow();
     expect(() => faltantesDesdeJson([{ institucion: 'x', papel: 'principal', motivo: 'sin_distrito' }])).toThrow();
     expect(() => faltantesDesdeJson([null])).toThrow();
+  });
+});
+
+describe('planificarCondicionMedica', () => {
+  const presentes = (pares: [InstitucionDestino, Papel][]) => new Map(pares);
+
+  it('accidente que pasa a SAMU: incorpora SAMU principal y PNP pasa a simultanea', () => {
+    const plan = planificarCondicionMedica(presentes([['pnp', 'principal']]), resolverDestinatarios('accidente-transito', 'si', null));
+    expect(plan).toEqual({
+      incorporar: [{ institucion: 'samu', papel: 'principal' }],
+      cambiosPapel: [{ institucion: 'pnp', papel: 'simultanea' }],
+    });
+  });
+
+  it('agresion con heridos: SAMU condicionada sin cambiar la principal', () => {
+    expect(planificarCondicionMedica(presentes([['pnp', 'principal']]), resolverDestinatarios('agresion', 'si', null))).toEqual({
+      incorporar: [{ institucion: 'samu', papel: 'condicionada' }],
+      cambiosPapel: [],
+    });
+  });
+
+  it('sin SAMU en el objetivo no cambia nada, aunque SAMU ya participe', () => {
+    const sinCambio = { incorporar: [], cambiosPapel: [] };
+    expect(planificarCondicionMedica(presentes([['pnp', 'principal']]), resolverDestinatarios('accidente-transito', 'no', 'no'))).toEqual(sinCambio);
+    expect(
+      planificarCondicionMedica(
+        presentes([['samu', 'principal'], ['pnp', 'simultanea']]),
+        resolverDestinatarios('accidente-transito', 'no', 'no'),
+      ),
+    ).toEqual(sinCambio);
+  });
+
+  it('SAMU ya presente con el mismo papel: nada que hacer', () => {
+    expect(
+      planificarCondicionMedica(presentes([['samu', 'principal'], ['pnp', 'simultanea']]), resolverDestinatarios('accidente-transito', 'si', 'si')),
+    ).toEqual({ incorporar: [], cambiosPapel: [] });
+  });
+
+  it('SAMU nunca baja de rango', () => {
+    expect(
+      planificarCondicionMedica(presentes([['pnp', 'principal'], ['samu', 'principal']]), resolverDestinatarios('pelea', 'si', null)).cambiosPapel,
+    ).toEqual([]);
   });
 });

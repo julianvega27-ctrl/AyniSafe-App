@@ -25,6 +25,26 @@ export interface FilaOperaciones {
   readonly distritoId: string | null;
   readonly revisionMedicaPendiente: boolean;
   readonly papel: string;
+  /** Institucion de la sede del operador (P5.1). */
+  readonly institucion?: string;
+}
+
+/** Condicion medica vigente (resumen de heridos de Reportes, P5.1), sin observaciones ni motivos. */
+export interface CondicionBandeja {
+  readonly heridos: string | null;
+  readonly atencionMedica: string | null;
+  readonly cantidadHeridos: number | 'no_se' | null;
+  readonly version: number;
+  readonly origen: string;
+  readonly institucion: string | null;
+  readonly informadaEn: Date;
+  readonly observacionesInformadas: boolean;
+}
+
+/** Puerto hacia Reportes: evaluacion. El detalle registra el acceso; Consultas autoriza antes. */
+export interface EvaluacionBandejaPort {
+  condiciones(ids: readonly string[]): Promise<ReadonlyMap<string, CondicionBandeja>>;
+  detalleSanitario(incidenteId: string, usuarioId: string): Promise<unknown | null>;
 }
 
 /** Puerto hacia Identidad: ambito vigente del operador o null si no tiene. */
@@ -61,6 +81,8 @@ export interface DependenciasBandeja {
   readonly participaciones: ParticipacionesBandejaPort;
   readonly originales: OriginalesBandejaPort;
   readonly categorias: { nombres(): Promise<ReadonlyMap<string, string>> };
+  /** Evaluacion rapida (P5.1). Sin ella, el resumen no informa condicion vigente ni acceso sanitario. */
+  readonly evaluacion?: EvaluacionBandejaPort;
 }
 
 export const PAGINA_BANDEJA = 50;
@@ -134,16 +156,48 @@ export class BandejaInstitucional {
     const ambito = await this.ambito(usuarioId);
     const p = await this.d.participaciones.participacionDe(ambito, incidenteId);
     if (!p) throw new IncidenteNoDisponibleError();
-    const [originales, categorias] = await Promise.all([this.d.originales.resumenOperativo([p.incidenteId]), this.d.categorias.nombres()]);
+    const [originales, categorias, condiciones] = await Promise.all([
+      this.d.originales.resumenOperativo([p.incidenteId]),
+      this.d.categorias.nombres(),
+      this.d.evaluacion ? this.d.evaluacion.condiciones([p.incidenteId]) : Promise.resolve(new Map<string, CondicionBandeja>()),
+    ]);
     const o = originales.get(p.incidenteId);
     if (!o) throw new IncidenteNoDisponibleError();
+    const c = condiciones.get(p.incidenteId);
     return {
       ...this.fila(p, categorias),
       descripcion: o.descripcion,
       ocurrencia: { modo: o.ocurrencia.modo, instante: o.ocurrencia.instante.toISOString() },
       territorio: territorioVista(o.territorio),
       respuestasCiudadano: { heridos: o.heridos, atencionMedica: o.atencionMedica },
+      condicionMedica: c
+        ? {
+            heridos: c.heridos,
+            atencionMedica: c.atencionMedica,
+            cantidadHeridos: c.cantidadHeridos,
+            revisionPendiente: p.revisionMedicaPendiente,
+            version: c.version,
+            origen: c.origen,
+            institucion: c.institucion,
+            informadaEn: c.informadaEn.toISOString(),
+            observacionesInformadas: c.observacionesInformadas,
+          }
+        : null,
+      accesoSanitario: c !== undefined && p.institucion === 'samu',
       otrasInstituciones: [...p.otrasInstituciones],
     };
+  }
+
+  /**
+   * Detalle sanitario (P5.1, spec `consultas/detalle-sanitario`): solo un operador de una sede SAMU
+   * que participa dentro de su ambito vigente. Cualquier otro caso es el mismo 404.
+   */
+  async evaluacion(usuarioId: string, incidenteId: string): Promise<unknown> {
+    const ambito = await this.ambito(usuarioId);
+    const p = await this.d.participaciones.participacionDe(ambito, incidenteId);
+    if (!p || p.institucion !== 'samu' || !this.d.evaluacion) throw new IncidenteNoDisponibleError();
+    const detalle = await this.d.evaluacion.detalleSanitario(p.incidenteId, usuarioId);
+    if (!detalle) throw new IncidenteNoDisponibleError();
+    return detalle;
   }
 }

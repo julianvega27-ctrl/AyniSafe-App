@@ -1132,7 +1132,8 @@ paths:
       operationId: consultarMiIncidente
       summary: Detalle privado de un incidente propio
       description: |
-        Datos originales del autor, estado, territorio y respuestas para SAMU. La institucion responsable es
+        Datos originales del autor, estado, territorio, respuestas para SAMU y su evaluacion propia (P5.1, sin
+        cambios ni motivos de operadores). La institucion responsable es
         la principal con participacion (P4.2), sin sede ni operadores, o pendiente si falta; las actuaciones
         se informan pendientes hasta la atencion (P6). Un incidente ajeno, de invitado o inexistente responde
         el mismo 404, sin revelar si existe.
@@ -1167,6 +1168,77 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '404': { $ref: '#/components/responses/SeguimientoNoEncontrado' }
         '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /ciudadano/incidentes/{referencia}/evaluacion:
+    post:
+      tags: [Seguimiento]
+      operationId: aclararMiEvaluacion
+      summary: Completar o corregir la evaluacion rapida propia
+      description: |
+        Solo el autor con cuenta, mientras el incidente no este cerrado (P5.1). Crea una version de origen
+        ciudadano con los campos que cambian; si coinciden con la vigente no crea version (reintento seguro).
+        Si la condicion activa a SAMU, el enrutamiento se recalcula en la misma transaccion. Un incidente ajeno,
+        de invitado, inexistente o sin evaluacion responde el mismo 404. JSON de hasta 8 KiB.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: referencia
+          in: path
+          required: true
+          schema: { type: string, maxLength: 40 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AclaracionEvaluacion' }
+            example: { heridos: si, cantidadHeridos: 2 }
+      responses:
+        '200':
+          description: Respuestas propias vigentes tras la aclaracion.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [evaluacion]
+                properties:
+                  evaluacion: { $ref: '#/components/schemas/VistaEvaluacionAutor' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos, no aplicables o un cuerpo vacio.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: Sesion institucional por cookie.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: NOT_FOUND, uniforme para ajeno, de invitado, inexistente o sin evaluacion.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: EVALUACION_CERRADA, el incidente esta cerrado.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: Almacenamiento o recalculo no disponible; nada se confirmo y reintentar no duplica.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /publico/seguimiento:
     post:
       tags: [Seguimiento]
@@ -1241,8 +1313,9 @@ paths:
       summary: Resumen limitado de un incidente de la bandeja
       description: |
         Campos de la fila mas descripcion, ocurrencia, resultado territorial, respuestas de heridos y atencion
-        medica informadas por el ciudadano y tipos de las demas instituciones participantes. Sin telefono,
-        coordenadas, codigo, autor, evidencias ni detalle de evaluacion SAMU. Un incidente fuera del ambito,
+        medica informadas por el ciudadano, condicion medica vigente (resumen de heridos, P5.1), si el operador
+        tiene acceso al detalle sanitario y tipos de las demas instituciones participantes. Sin telefono,
+        coordenadas, codigo, autor, evidencias ni observaciones de la persona principal. Un incidente fuera del ambito,
         inexistente o con identificador malformado responde el mismo 404.
       security: [{ cookieAuth: [] }]
       parameters:
@@ -1263,6 +1336,97 @@ paths:
         '403': { $ref: '#/components/responses/ProhibidoBandeja' }
         '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
         '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}/evaluacion:
+    get:
+      tags: [Bandeja]
+      operationId: consultarEvaluacionSanitaria
+      summary: Detalle sanitario de la evaluacion para el operador SAMU participante
+      description: |
+        Evaluacion vigente e historial de versiones (P5.1, RF43). Solo si la sede del operador es SAMU y
+        participa en el incidente dentro de su ambito vigente; otra institucion, una sede SAMU sin participacion,
+        un identificador inexistente o malformado y un incidente sin evaluacion responden el mismo 404. Cada
+        lectura autorizada se registra (usuario, incidente, version e instante) sin copiar su contenido.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: Evaluacion vigente e historial.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DetalleSanitario' }
+        '400': { $ref: '#/components/responses/ConsultaBandejaInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoBandeja' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+    post:
+      tags: [Bandeja]
+      operationId: precisarCondicionMedica
+      summary: Precisar la condicion medica o aclarar la evaluacion
+      description: |
+        Un operador cuya sede participa dentro de su ambito vigente precisa heridos, atencion medica y cantidad
+        con un motivo; solo el operador SAMU envia observaciones de la persona principal (P5.1). Crea una version
+        de origen operador; si coincide con la vigente no crea version. Si la condicion activa a SAMU, en la misma
+        transaccion SAMU se incorpora (principal en accidente, con PNP simultanea; condicionada en agresion, pelea
+        o violencia) o queda como faltante. Nunca retira participaciones. Exige el origen web (CSRF). La respuesta
+        solo lleva el resumen de heridos. JSON de hasta 4 KiB.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AclaracionEvaluacionOperador' }
+            example: { heridos: si, motivo: Confirmado por llamada al lugar }
+      responses:
+        '200':
+          description: Version vigente tras la precision.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoAclaracionOperador' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos (incluidas observaciones de una institucion que no es SAMU).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN (no es operador), FORBIDDEN_ORIGIN (origen web no permitido) o SIN_AMBITO.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '409':
+          description: EVALUACION_CERRADA, el incidente esta cerrado.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '503':
+          description: Almacenamiento o recalculo no disponible; nada se confirmo y reintentar no duplica.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /admin/enrutamientos-pendientes:
     get:
       tags: [Enrutamiento]
@@ -2040,9 +2204,12 @@ components:
       required: [categoriaId, descripcion, ocurrencia, punto]
       description: |
         Datos originales del envio. No admite institucion, sede, prioridad, estado, distrito, autor ni referencia.
-        `heridos` solo en accidente-transito, agresion, pelea y violencia; `atencionMedica` solo en
-        accidente-transito; omitirlas es sin respuesta, distinto de `no`. `telefonoContacto` es obligatorio
-        como invitado y no se admite con cuenta.
+        `heridos` solo en accidente-transito, agresion, pelea, violencia y emergencia-medica (P5.1);
+        `atencionMedica` solo en accidente-transito; omitirlas es sin respuesta, distinto de `no`.
+        `evaluacion` solo cuando SAMU interviene segun esas respuestas (emergencia-medica siempre; accidente con
+        heridos o atencion `si`; agresion, pelea o violencia con heridos `si`); en otro caso 400. Registrar una de
+        esas cinco categorias crea la version 1 de la evaluacion en la misma transaccion, aunque sus respuestas
+        sean desconocidas. `telefonoContacto` es obligatorio como invitado y no se admite con cuenta.
       properties:
         categoriaId: { type: string, description: Identificador estable de una categoria activa. }
         descripcion:
@@ -2069,6 +2236,7 @@ components:
         heridos: { type: [string, 'null'], enum: [si, no, no_se, null] }
         atencionMedica: { type: [string, 'null'], enum: [si, no, no_se, null] }
         telefonoContacto: { type: string, description: "7 a 15 digitos con + opcional; se aceptan espacios, guiones, puntos y parentesis." }
+        evaluacion: { $ref: '#/components/schemas/EvaluacionEnvio' }
     ComprobanteIncidente:
       type: object
       additionalProperties: false
@@ -2197,7 +2365,7 @@ components:
         - { $ref: '#/components/schemas/CamposFilaBandeja' }
       type: object
       unevaluatedProperties: false
-      required: [descripcion, ocurrencia, territorio, respuestasCiudadano, otrasInstituciones]
+      required: [descripcion, ocurrencia, territorio, respuestasCiudadano, condicionMedica, accesoSanitario, otrasInstituciones]
       properties:
         descripcion: { type: string }
         ocurrencia:
@@ -2216,6 +2384,14 @@ components:
           properties:
             heridos: { enum: [si, no, no_se, null] }
             atencionMedica: { enum: [si, no, no_se, null] }
+        condicionMedica:
+          description: Condicion vigente (P5.1, resumen de heridos); null si el incidente no tiene evaluacion.
+          oneOf:
+            - { $ref: '#/components/schemas/CondicionMedicaVigente' }
+            - { type: 'null' }
+        accesoSanitario:
+          type: boolean
+          description: La sede del operador es SAMU y participa; solo entonces responde GET .../evaluacion.
         otrasInstituciones:
           type: array
           items: { $ref: '#/components/schemas/TipoInstitucionDestino' }
@@ -2303,7 +2479,7 @@ components:
     DetalleIncidenteAutor:
       type: object
       additionalProperties: false
-      required: [referencia, categoria, estado, recibidoEn, territorio, descripcion, ocurrencia, respuestas, institucionResponsable, actuaciones]
+      required: [referencia, categoria, estado, recibidoEn, territorio, descripcion, ocurrencia, respuestas, evaluacion, institucionResponsable, actuaciones]
       description: Sin coordenadas, telefono, notas internas, operadores ni datos de otros informantes.
       properties:
         referencia: { type: string }
@@ -2326,8 +2502,146 @@ components:
           properties:
             heridos: { type: [string, 'null'], enum: [si, no, no_se, null] }
             atencionMedica: { type: [string, 'null'], enum: [si, no, no_se, null] }
+        evaluacion:
+          description: Respuestas propias del autor (P5.1); null si el incidente no tiene evaluacion.
+          oneOf:
+            - { $ref: '#/components/schemas/VistaEvaluacionAutor' }
+            - { type: 'null' }
         institucionResponsable: { $ref: '#/components/schemas/InstitucionResponsable' }
         actuaciones: { type: array, maxItems: 0 }
+    RespuestaSiNoSe: { enum: [si, no, no_se, null], description: null es sin respuesta, distinto de `no`. }
+    CantidadHeridos:
+      description: Entero de 1 a 999 o `no_se`. Solo con heridos `si`; null en otro caso. Nunca se convierte en cero.
+      oneOf:
+        - { type: integer, minimum: 1, maximum: 999 }
+        - { const: no_se }
+        - { type: 'null' }
+    PersonaPrincipal:
+      type: object
+      additionalProperties: false
+      required: [signosVida, consciente, sangrado]
+      description: Observaciones de una sola persona principal; null es sin respuesta.
+      properties:
+        signosVida: { enum: [observados, no_observados, no_se, null] }
+        consciente: { $ref: '#/components/schemas/RespuestaSiNoSe' }
+        sangrado: { $ref: '#/components/schemas/RespuestaSiNoSe' }
+    PersonaPrincipalParcial:
+      type: object
+      additionalProperties: false
+      description: Campos omitidos quedan sin respuesta. Sin nombres, documentos ni otras personas.
+      properties:
+        signosVida: { enum: [observados, no_observados, no_se] }
+        consciente: { enum: [si, no, no_se] }
+        sangrado: { enum: [si, no, no_se] }
+    EvaluacionEnvio:
+      type: object
+      additionalProperties: false
+      description: Evaluacion rapida opcional del envio (P5.1). Con heridos `si`, una cantidad omitida queda `no_se`.
+      properties:
+        cantidadHeridos:
+          oneOf:
+            - { type: integer, minimum: 1, maximum: 999 }
+            - { const: no_se }
+        personaPrincipal: { $ref: '#/components/schemas/PersonaPrincipalParcial' }
+    RespuestasEvaluacion:
+      type: object
+      additionalProperties: false
+      required: [heridos, atencionMedica, cantidadHeridos, personaPrincipal]
+      properties:
+        heridos: { $ref: '#/components/schemas/RespuestaSiNoSe' }
+        atencionMedica: { $ref: '#/components/schemas/RespuestaSiNoSe' }
+        cantidadHeridos: { $ref: '#/components/schemas/CantidadHeridos' }
+        personaPrincipal: { $ref: '#/components/schemas/PersonaPrincipal' }
+    VistaEvaluacionAutor:
+      type: object
+      additionalProperties: false
+      required: [version, respuestas, informadaEn, puedeAclarar, solicitudCompletar]
+      description: Ultima version de origen ciudadano. Sin cambios ni motivos de operadores.
+      properties:
+        version: { type: integer, minimum: 1 }
+        respuestas: { $ref: '#/components/schemas/RespuestasEvaluacion' }
+        informadaEn: { type: string, format: date-time }
+        puedeAclarar: { type: boolean, description: El incidente no esta cerrado. }
+        solicitudCompletar: { type: boolean, description: SAMU interviene y nadie informo observaciones de la persona principal. }
+    CondicionMedicaVigente:
+      type: object
+      additionalProperties: false
+      required: [heridos, atencionMedica, cantidadHeridos, revisionPendiente, version, origen, institucion, informadaEn, observacionesInformadas]
+      description: Resumen de heridos para la coordinacion. Sin observaciones de la persona principal ni motivos.
+      properties:
+        heridos: { $ref: '#/components/schemas/RespuestaSiNoSe' }
+        atencionMedica: { $ref: '#/components/schemas/RespuestaSiNoSe' }
+        cantidadHeridos: { $ref: '#/components/schemas/CantidadHeridos' }
+        revisionPendiente: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        origen: { enum: [ciudadano, operador] }
+        institucion: { enum: [pnp, bomberos, samu, serenazgo, null] }
+        informadaEn: { type: string, format: date-time }
+        observacionesInformadas: { type: boolean }
+    DetalleSanitario:
+      type: object
+      additionalProperties: false
+      required: [version, informadaEn, pendiente, vigente, historial]
+      description: Solo para el operador SAMU participante. Sin nombres de operadores, telefono ni coordenadas.
+      properties:
+        version: { type: integer, minimum: 1 }
+        informadaEn: { type: string, format: date-time }
+        pendiente: { type: boolean, description: SAMU interviene sin observaciones de la persona principal. }
+        vigente: { $ref: '#/components/schemas/RespuestasEvaluacion' }
+        historial:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [version, origen, institucion, instante, camposModificados, motivo]
+            properties:
+              version: { type: integer, minimum: 1 }
+              origen: { enum: [ciudadano, operador] }
+              institucion: { enum: [pnp, bomberos, samu, serenazgo, null] }
+              instante: { type: string, format: date-time }
+              camposModificados:
+                type: array
+                items: { enum: [heridos, atencionMedica, cantidadHeridos, signosVida, consciente, sangrado] }
+              motivo: { type: [string, 'null'] }
+    AclaracionEvaluacion:
+      type: object
+      additionalProperties: false
+      description: |
+        Cambios parciales: solo los campos presentes cambian; null no se admite. `atencionMedica` solo en
+        accidente. Si heridos deja de ser `si`, la cantidad anterior se elimina y figura como modificada.
+        La persona principal se admite si SAMU interviene o ya intervino.
+      properties:
+        heridos: { enum: [si, no, no_se] }
+        atencionMedica: { enum: [si, no, no_se] }
+        cantidadHeridos:
+          oneOf:
+            - { type: integer, minimum: 1, maximum: 999 }
+            - { const: no_se }
+        personaPrincipal: { $ref: '#/components/schemas/PersonaPrincipalParcial' }
+    AclaracionEvaluacionOperador:
+      allOf:
+        - { $ref: '#/components/schemas/AclaracionEvaluacion' }
+      type: object
+      unevaluatedProperties: false
+      required: [motivo]
+      description: La persona principal solo la envia un operador SAMU. El motivo solo lo lee SAMU y nunca se registra en logs.
+      properties:
+        motivo: { type: string, minLength: 10, maxLength: 500 }
+    ResultadoAclaracionOperador:
+      type: object
+      additionalProperties: false
+      required: [version, condicionMedica, samuIncorporado]
+      properties:
+        version: { type: integer, minimum: 1 }
+        condicionMedica:
+          type: object
+          additionalProperties: false
+          required: [heridos, atencionMedica, cantidadHeridos]
+          properties:
+            heridos: { $ref: '#/components/schemas/RespuestaSiNoSe' }
+            atencionMedica: { $ref: '#/components/schemas/RespuestaSiNoSe' }
+            cantidadHeridos: { $ref: '#/components/schemas/CantidadHeridos' }
+        samuIncorporado: { type: boolean, description: El recalculo incorporo a SAMU (participacion o faltante pendiente). }
     ConsultaSeguimiento:
       type: object
       additionalProperties: false
@@ -2387,6 +2701,8 @@ components:
                 - FALTANTE_INEXISTENTE
                 - SEDE_NO_DESIGNABLE
                 - ENRUTAMIENTO_NO_PENDIENTE
+                - EVALUACION_CERRADA
+                - SIN_AMBITO
             message: { type: string }
             requisitos:
               type: array

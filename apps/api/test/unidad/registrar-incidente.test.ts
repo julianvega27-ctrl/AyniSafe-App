@@ -39,12 +39,13 @@ const cuerpo = (extra: Record<string, unknown> = {}) => ({
 const deInvitado = (extra: Record<string, unknown> = {}) => cuerpo({ telefonoContacto: '987654321', ...extra });
 
 /** Dobles en memoria que registran el orden de los pasos. */
-function crear(opciones: { territorio?: () => Promise<TerritorioEnvio>; falloEn?: 'envio' | 'evento'; permitido?: boolean } = {}) {
+function crear(opciones: { territorio?: () => Promise<TerritorioEnvio>; falloEn?: 'envio' | 'evento' | 'evaluacion'; permitido?: boolean } = {}) {
   const pasos: string[] = [];
   const solicitudes = new Map<string, SolicitudPrevia & { ambito: string }>();
   const envios = new Map<string, NuevoEnvio>();
   const incidentes = new Map<string, IncidenteCreado>();
   const eventos: NuevoEvento[] = [];
+  const evaluaciones = new Map<string, Parameters<DependenciasRegistro['evaluaciones']['crear']>[1]>();
   let despertado = 0;
   let consumos = 0;
   let n = 0;
@@ -107,7 +108,7 @@ function crear(opciones: { territorio?: () => Promise<TerritorioEnvio>; falloEn?
   // La unidad de trabajo simula el rollback restaurando copias de los mapas.
   const uow: UnidadDeTrabajo = {
     async enTransaccion(fn) {
-      const copia = { s: new Map(solicitudes), e: new Map(envios), i: new Map(incidentes), ev: [...eventos] };
+      const copia = { s: new Map(solicitudes), e: new Map(envios), i: new Map(incidentes), ev: [...eventos], evl: new Map(evaluaciones) };
       try {
         return await fn(TX);
       } catch (e) {
@@ -118,6 +119,8 @@ function crear(opciones: { territorio?: () => Promise<TerritorioEnvio>; falloEn?
         incidentes.clear();
         copia.i.forEach((v, k) => incidentes.set(k, v));
         eventos.splice(0, eventos.length, ...copia.ev);
+        evaluaciones.clear();
+        copia.evl.forEach((v, k) => evaluaciones.set(k, v));
         throw e;
       }
     },
@@ -126,6 +129,13 @@ function crear(opciones: { territorio?: () => Promise<TerritorioEnvio>; falloEn?
   const deps: DependenciasRegistro = {
     categorias: { idsActivos: async () => new Set(['robo', 'pelea', 'accidente-transito']) },
     envios: repo,
+    evaluaciones: {
+      async crear(_tx, datos) {
+        pasos.push('crearEvaluacion');
+        if (opciones.falloEn === 'evaluacion') throw new Error('fallo evaluacion');
+        evaluaciones.set(datos.incidenteId, datos);
+      },
+    },
     incidentes: incidentesPort,
     territorio,
     limitador,
@@ -142,6 +152,7 @@ function crear(opciones: { territorio?: () => Promise<TerritorioEnvio>; falloEn?
     pasos,
     solicitudes,
     envios,
+    evaluaciones,
     incidentes,
     eventos,
     secretos,
@@ -281,6 +292,36 @@ describe('RegistrarIncidente', () => {
     expect(t.envios.size).toBe(0);
     expect(t.eventos).toHaveLength(0);
     expect(t.despertado).toBe(0);
+  });
+
+  it('una pelea con heridos crea la version 1 de la evaluacion antes del evento, con cantidad no_se', async () => {
+    const t = crear();
+    await t.caso.ejecutar(CUENTA, CLAVE, cuerpo({ categoriaId: 'pelea', heridos: 'si', evaluacion: { personaPrincipal: { consciente: 'si' } } }));
+    expect(t.pasos.slice(-3)).toEqual(['insertarEnvio', 'crearEvaluacion', 'publicarEvento']);
+    const [datos] = [...t.evaluaciones.values()];
+    expect(datos).toMatchObject({
+      samuRequerido: true,
+      actorUsuarioId: CUENTA.usuarioId,
+      instantanea: { heridos: 'si', cantidadHeridos: 'no_se', consciente: 'si', signosVida: null, sangrado: null },
+    });
+  });
+
+  it('un robo no crea evaluacion y el invitado queda sin actor', async () => {
+    const t = crear();
+    await t.caso.ejecutar(CUENTA, CLAVE, cuerpo());
+    expect(t.evaluaciones.size).toBe(0);
+    const i = crear();
+    await i.caso.ejecutar({ modalidad: 'invitado', origenRed: '203.0.113.7' }, CLAVE, deInvitado({ categoriaId: 'pelea', heridos: 'no_se' }));
+    expect([...i.evaluaciones.values()][0]).toMatchObject({ actorUsuarioId: null, samuRequerido: false });
+  });
+
+  it('un fallo al crear la evaluacion revierte todo sin consumir la clave', async () => {
+    const t = crear({ falloEn: 'evaluacion' });
+    await expect(t.caso.ejecutar(CUENTA, CLAVE, cuerpo({ categoriaId: 'pelea', heridos: 'si' }))).rejects.toThrow(RegistroNoDisponibleError);
+    expect(t.incidentes.size).toBe(0);
+    expect(t.solicitudes.size).toBe(0);
+    expect(t.evaluaciones.size).toBe(0);
+    expect(t.eventos).toHaveLength(0);
   });
 
   it('la misma clave en dos cuentas crea dos incidentes', async () => {

@@ -76,7 +76,7 @@ describe('vistas con lista cerrada de campos', () => {
     const { s } = crear();
     const d = await s.detalleDeAutor(AUTOR, 'inc-7k3m9-q2txa');
     expect(Object.keys(d).sort()).toEqual([
-      'actuaciones', 'categoria', 'descripcion', 'estado', 'institucionResponsable', 'ocurrencia', 'recibidoEn', 'referencia', 'respuestas', 'territorio',
+      'actuaciones', 'categoria', 'descripcion', 'estado', 'evaluacion', 'institucionResponsable', 'ocurrencia', 'recibidoEn', 'referencia', 'respuestas', 'territorio',
     ]);
     expect(d.institucionResponsable).toEqual({ estado: 'pendiente' });
     expect(d.actuaciones).toEqual([]);

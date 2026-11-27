@@ -3,14 +3,25 @@ import type { Logger } from './compartido/logger';
 import { PrismaUnidadDeTrabajo } from './compartido/prisma-transaccion';
 import { distritosPiloto, type ModuloConsultas, type OpcionesBandeja, type OpcionesSeguimiento } from './modules/consultas';
 import type { ModuloIdentidad } from './modules/identidad';
+import { Router } from 'express';
 import {
   crearEnrutamientoConPrisma,
   crearRouterEnrutamiento,
+  crearRouterEvaluacionOperador,
+  type ResultadoAclaracionOperador,
   normalizarReferencia,
   type ModuloOperaciones,
   type ServicioEnrutamiento,
 } from './modules/operaciones';
-import type { DependenciasRegistroIncidentes, ModuloReportes, TerritorioEnvio, TerritorioPort } from './modules/reportes';
+import {
+  EvaluacionCerradaError,
+  EvaluacionNoEncontradaError,
+  ValidacionEvaluacionError,
+  type DependenciasRegistroIncidentes,
+  type ModuloReportes,
+  type TerritorioEnvio,
+  type TerritorioPort,
+} from './modules/reportes';
 import type { PrismaClient } from './generated/prisma/client';
 
 /**
@@ -38,12 +49,24 @@ export function dependenciasRegistro(
     readonly identidad: ModuloIdentidad;
     readonly consultas: ModuloConsultas;
     readonly operaciones: ModuloOperaciones;
+    /** Recalculo por la condicion medica (P5.1); sin el, Reportes no ofrece aclaraciones. */
+    readonly enrutamiento?: ServicioEnrutamiento;
   },
   despertarEntregas: () => void,
   logger: Logger,
 ): DependenciasRegistroIncidentes {
+  const { enrutamiento } = modulos;
   return {
     incidentes: modulos.operaciones.incidentes,
+    ...(enrutamiento
+      ? {
+          condicionMedica: { aplicar: (tx, cambio) => enrutamiento.aplicarCondicionMedica(tx, cambio) },
+          idPorReferencia: async (texto: string) => {
+            const referencia = normalizarReferencia(texto);
+            return referencia ? ((await modulos.operaciones.incidentes.porReferencia(referencia))?.id ?? null) : null;
+          },
+        }
+      : {}),
     territorio: puertoTerritorio(modulos.consultas),
     limitador: modulos.identidad.limitador,
     identificarSolicitante: modulos.identidad.identificarSolicitante,
@@ -88,6 +111,7 @@ export function opcionesSeguimiento(
       nombres: async () => new Map((await obtenerReportes().categorias.listar()).map((c) => [c.id, c.nombre])),
     },
     ...(modulos.enrutamiento ? { responsables: responsablesDe(modulos.enrutamiento, modulos.identidad) } : {}),
+    evaluacion: { vistaAutor: (incidenteId, abierto) => lecturaEvaluacion(obtenerReportes).vistaAutor(incidenteId, abierto) },
     limitador: modulos.identidad.limitador,
     identificar: modulos.identidad.identificarSolicitante,
     logger,
@@ -138,9 +162,19 @@ export function opcionesBandeja(
     categorias: {
       nombres: async () => new Map((await obtenerReportes().categorias.listar()).map((c) => [c.id, c.nombre])),
     },
+    evaluacion: {
+      condiciones: (ids) => lecturaEvaluacion(obtenerReportes).condicionesVigentes(ids),
+      detalleSanitario: (incidenteId, usuarioId) => lecturaEvaluacion(obtenerReportes).detalleSanitario(incidenteId, usuarioId),
+    },
     identificar: identidad.identificarSolicitante,
     logger,
   };
+}
+
+function lecturaEvaluacion(obtenerReportes: () => ModuloReportes) {
+  const evaluacion = obtenerReportes().evaluacion;
+  if (!evaluacion) throw new Error('Reportes sin evaluacion compuesta');
+  return evaluacion.lectura;
 }
 
 /**
@@ -168,6 +202,11 @@ export function enrutamientoDe(
           atencionMedica: d.atencionMedica,
         };
       },
+      async condicionBloqueada(tx, incidenteId) {
+        const evaluacion = obtenerReportes().evaluacion;
+        if (!evaluacion) throw new Error('Reportes sin evaluacion compuesta');
+        return evaluacion.lectura.condicionBloqueada(tx, incidenteId);
+      },
     },
     sedes: {
       elegibles: (institucion, distritoId, categoriaId) => identidad.sedesEnrutamiento.elegibles(institucion, distritoId, categoriaId),
@@ -177,7 +216,46 @@ export function enrutamientoDe(
   });
 }
 
-/** Rutas de enrutamientos pendientes del administrador (P4.2). */
+/** Ambito vigente del operador para Operaciones (sede habilitada), o null. */
+function ambitoOperador(identidad: ModuloIdentidad) {
+  return async (usuarioId: string) => {
+    const a = await identidad.consultarAmbitoOperador.ejecutar(usuarioId);
+    return a && a.habilitadaAtencion ? { sedeId: a.sede.id, distritos: a.distritos, categorias: a.categorias } : null;
+  };
+}
+
+/**
+ * Aclaracion del operador por la fachada de Reportes (P5.1). Traduce sus errores a un resultado para
+ * que Operaciones no importe Reportes. La respuesta solo lleva el resumen de heridos.
+ */
+function aclararComoOperador(obtenerReportes: () => ModuloReportes) {
+  return async (
+    incidenteId: string,
+    autor: { readonly usuarioId: string; readonly institucion: string },
+    entrada: unknown,
+  ): Promise<ResultadoAclaracionOperador> => {
+    const aclarar = obtenerReportes().evaluacion?.aclarar;
+    if (!aclarar) throw new Error('Reportes sin aclaraciones compuestas');
+    try {
+      const r = await aclarar.ejecutar(incidenteId, { origen: 'operador', ...autor }, entrada);
+      const i = r.instantanea;
+      return {
+        tipo: 'ok',
+        version: r.version,
+        nueva: r.nueva,
+        samuIncorporado: r.samuIncorporado,
+        condicionMedica: { heridos: i.heridos, atencionMedica: i.atencionMedica, cantidadHeridos: i.cantidadHeridos },
+      };
+    } catch (e) {
+      if (e instanceof ValidacionEvaluacionError) return { tipo: 'validacion', campos: e.campos };
+      if (e instanceof EvaluacionNoEncontradaError) return { tipo: 'no_encontrado' };
+      if (e instanceof EvaluacionCerradaError) return { tipo: 'cerrado' };
+      throw e;
+    }
+  };
+}
+
+/** Rutas de Operaciones: pendientes del administrador (P4.2) y precision de la condicion medica (P5.1). */
 export function routerOperaciones(
   enrutamiento: ServicioEnrutamiento,
   identidad: ModuloIdentidad,
@@ -185,7 +263,17 @@ export function routerOperaciones(
   logger: Logger,
 ) {
   const distritos = new Map(distritosPiloto().map((d) => [d.id, d.nombre]));
-  return crearRouterEnrutamiento(enrutamiento, {
+  const router = Router();
+  router.use(
+    crearRouterEvaluacionOperador(enrutamiento, {
+      identificar: identidad.identificarSolicitante,
+      origenWebPermitido: identidad.origenWebPermitido,
+      ambito: ambitoOperador(identidad),
+      aclarar: aclararComoOperador(obtenerReportes),
+      logger,
+    }),
+  );
+  router.use(crearRouterEnrutamiento(enrutamiento, {
     identificar: identidad.identificarSolicitante,
     origenWebPermitido: identidad.origenWebPermitido,
     vista: {
@@ -197,5 +285,6 @@ export function routerOperaciones(
       },
     },
     logger,
-  });
+  }));
+  return router;
 }

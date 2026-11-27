@@ -127,6 +127,8 @@ describe('resumen del incidente', () => {
     ocurrencia: { modo: 'ahora', instante: '2026-11-26T10:58:00.000Z' },
     territorio: { estado: 'resuelto', distrito: { id: 'DIS-01', nombre: 'Ayacucho' } },
     respuestasCiudadano: { heridos: 'si', atencionMedica: 'no_se' },
+    condicionMedica: null,
+    accesoSanitario: false,
     otrasInstituciones: ['samu'],
   };
 

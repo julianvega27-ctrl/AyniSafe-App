@@ -320,6 +320,7 @@ model ParticipacionIncidente {
   designadoPor String?  @map("designado_por") @db.Uuid
   motivo       String?
   creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(3)
   enrutamiento EnrutamientoIncidente @relation(fields: [incidenteId], references: [incidenteId], onDelete: Restrict)
   @@unique([incidenteId, sedeId], map: "participaciones_una_por_sede")
   @@index([sedeId, incidenteId], map: "participaciones_sede_incidente")
@@ -361,4 +362,69 @@ model SolicitudEnvio {
   creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
   @@id([ambito, clave])
   @@map("solicitudes_envio")
+}
+
+/// P5.1 (Operaciones): auditoria de cada recalculo del enrutamiento por la condicion medica, sin datos sanitarios.
+model CambioEnrutamiento {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incidenteId       String   @map("incidente_id") @db.Uuid
+  versionEvaluacion Int      @map("version_evaluacion")
+  origen            String
+  actorTipo         String   @map("actor_tipo")
+  actorUsuarioId    String?  @map("actor_usuario_id") @db.Uuid
+  antes             Json
+  despues           Json
+  creadoEn          DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+  @@index([incidenteId, creadoEn], map: "cambios_enrutamiento_incidente")
+  @@map("cambios_enrutamiento")
+}
+
+/// P5.1 (Reportes): evaluacion vigente. Con heridos 'si', cantidad null = desconocida. CHECK en la migracion.
+model EvaluacionIncidente {
+  incidenteId    String   @id @map("incidente_id") @db.Uuid
+  versionVigente Int      @map("version_vigente")
+  heridos        String?
+  atencionMedica String?  @map("atencion_medica")
+  cantidadHeridos Int?    @map("cantidad_heridos") @db.SmallInt
+  signosVida     String?  @map("signos_vida")
+  consciente     String?
+  sangrado       String?
+  samuRequerido  Boolean  @map("samu_requerido")
+  actualizadaEn  DateTime @default(now()) @map("actualizada_en") @db.Timestamptz(3)
+  versiones      VersionEvaluacion[]
+  accesos        AccesoEvaluacion[]
+  @@map("evaluaciones_incidente")
+}
+
+/// P5.1 (Reportes): version inmutable con la instantanea completa, origen y campos modificados.
+model VersionEvaluacion {
+  incidenteId       String   @map("incidente_id") @db.Uuid
+  version           Int
+  heridos           String?
+  atencionMedica    String?  @map("atencion_medica")
+  cantidadHeridos   Int?     @map("cantidad_heridos") @db.SmallInt
+  signosVida        String?  @map("signos_vida")
+  consciente        String?
+  sangrado          String?
+  origen            String
+  actorUsuarioId    String?  @map("actor_usuario_id") @db.Uuid
+  institucion       String?
+  camposModificados String[] @default([]) @map("campos_modificados")
+  motivo            String?
+  creadaEn          DateTime @default(now()) @map("creada_en") @db.Timestamptz(3)
+  evaluacion        EvaluacionIncidente @relation(fields: [incidenteId], references: [incidenteId], onDelete: Restrict)
+  @@id([incidenteId, version])
+  @@map("versiones_evaluacion")
+}
+
+/// P5.1 (Reportes): lectura autorizada del detalle sanitario, sin contenido.
+model AccesoEvaluacion {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incidenteId String   @map("incidente_id") @db.Uuid
+  usuarioId   String   @map("usuario_id") @db.Uuid
+  version     Int
+  accedidoEn  DateTime @default(now()) @map("accedido_en") @db.Timestamptz(3)
+  evaluacion  EvaluacionIncidente @relation(fields: [incidenteId], references: [incidenteId], onDelete: Restrict)
+  @@index([incidenteId, accedidoEn], map: "accesos_evaluacion_incidente")
+  @@map("accesos_evaluacion")
 }

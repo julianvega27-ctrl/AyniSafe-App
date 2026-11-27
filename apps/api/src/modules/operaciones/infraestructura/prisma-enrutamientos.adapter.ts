@@ -12,7 +12,7 @@ import type {
   PendienteFila,
 } from '../aplicacion/enrutamiento';
 import { faltantesDesdeJson, type Faltante, type InstitucionDestino, type Papel, type ResultadoEnrutamiento } from '../dominio/matriz';
-import type { OrigenParticipacion } from '../aplicacion/enrutamiento';
+import type { CambioEnrutamiento, OrigenParticipacion } from '../aplicacion/enrutamiento';
 
 interface FilaBandejaSql {
   readonly incidente_id: string;
@@ -24,6 +24,7 @@ interface FilaBandejaSql {
   readonly revision_medica_pendiente: boolean;
   readonly papel: string;
   readonly origen: string;
+  readonly institucion: string;
 }
 
 const aFilaBandeja = (f: FilaBandejaSql): FilaBandeja => ({
@@ -36,12 +37,13 @@ const aFilaBandeja = (f: FilaBandejaSql): FilaBandeja => ({
   revisionMedicaPendiente: f.revision_medica_pendiente,
   papel: f.papel as Papel,
   origen: f.origen as OrigenParticipacion,
+  institucion: f.institucion as InstitucionDestino,
 });
 
 // Visibilidad por ambito vigente: $1 sede, $2 distritos, $3 categorias.
 const SELECT_BANDEJA = `
   SELECT p.incidente_id, i.referencia, i.estado, e.registrado_en, e.categoria_id, e.distrito_id,
-         e.revision_medica_pendiente, p.papel, p.origen
+         e.revision_medica_pendiente, p.papel, p.origen, p.institucion
     FROM participaciones_incidente p
     JOIN enrutamientos_incidente e ON e.incidente_id = p.incidente_id
     JOIN incidentes i ON i.id = p.incidente_id
@@ -173,6 +175,31 @@ export class PrismaEnrutamientosAdapter implements EnrutamientosRepositorio {
        WHERE incidente_id = ${incidenteId}::uuid AND sede_id <> ${ambito.sedeId}::uuid
        ORDER BY institucion`;
     return { ...aFilaBandeja(filas[0]), otrasInstituciones: otras.map((o) => o.institucion as InstitucionDestino) };
+  }
+
+  async participaciones(tx: ContextoTransaccional, incidenteId: string) {
+    const filas = await clienteDe(tx).$queryRaw<{ institucion: string; papel: string }[]>`
+      SELECT institucion, papel FROM participaciones_incidente WHERE incidente_id = ${incidenteId}::uuid ORDER BY creado_en, id`;
+    return filas.map((f) => ({ institucion: f.institucion as InstitucionDestino, papel: f.papel as Papel }));
+  }
+
+  async actualizarPapel(tx: ContextoTransaccional, incidenteId: string, institucion: InstitucionDestino, papel: Papel): Promise<void> {
+    await clienteDe(tx).$executeRaw`
+      UPDATE participaciones_incidente SET papel = ${papel}, actualizado_en = CURRENT_TIMESTAMP
+       WHERE incidente_id = ${incidenteId}::uuid AND institucion = ${institucion}`;
+  }
+
+  async actualizarRevisionMedica(tx: ContextoTransaccional, incidenteId: string, pendiente: boolean): Promise<void> {
+    await clienteDe(tx).$executeRaw`
+      UPDATE enrutamientos_incidente SET revision_medica_pendiente = ${pendiente}, actualizado_en = CURRENT_TIMESTAMP
+       WHERE incidente_id = ${incidenteId}::uuid`;
+  }
+
+  async registrarCambio(tx: ContextoTransaccional, c: CambioEnrutamiento): Promise<void> {
+    await clienteDe(tx).$executeRaw`
+      INSERT INTO cambios_enrutamiento (incidente_id, version_evaluacion, origen, actor_tipo, actor_usuario_id, antes, despues)
+      VALUES (${c.incidenteId}::uuid, ${c.versionEvaluacion}, 'condicion_medica', ${c.actorTipo}, ${c.actorUsuarioId}::uuid,
+              ${JSON.stringify(c.antes)}::jsonb, ${JSON.stringify(c.despues)}::jsonb)`;
   }
 
   async principales(ids: readonly string[]): Promise<ReadonlyMap<string, InstitucionDestino>> {

@@ -43,6 +43,8 @@ describe('migracion desde base vacia', () => {
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`,
     );
     expect(tablas.rows.map((t) => t.tablename).sort()).toEqual([
+      'accesos_evaluacion',
+      'cambios_enrutamiento',
       'categorias',
       'coberturas_sede',
       'competencias_sede',
@@ -52,6 +54,7 @@ describe('migracion desde base vacia', () => {
       'envios_correo',
       'envios_incidente',
       'estado_territorial',
+      'evaluaciones_incidente',
       'eventos',
       'geometrias_distritales',
       'incidentes',
@@ -64,6 +67,7 @@ describe('migracion desde base vacia', () => {
       'tokens_cuenta',
       'usuarios',
       'ventanas_intentos',
+      'versiones_evaluacion',
       'versiones_territoriales',
     ]);
 

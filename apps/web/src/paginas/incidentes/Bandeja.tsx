@@ -6,7 +6,8 @@ import { FalloDeConexion } from '../../componentes/FalloDeConexion';
 import { Icono } from '../../componentes/iconos';
 import { Mensaje } from '../../componentes/Mensaje';
 import { useSesion } from '../../sesion/SesionContexto';
-import { ESTADO, fecha, INSTITUCION, PAPEL, textoRespuesta, textoTerritorio } from './etiquetas';
+import { BloqueCondicionMedica, SeccionEvaluacionSamu } from './Evaluacion';
+import { ESTADO, fecha, INSTITUCION, PAPEL, textoTerritorio } from './etiquetas';
 
 /**
  * Bandeja del operador (P4.2). Reproduce la tabla de Incidents.jsx del origen (efc1bce8) sin el
@@ -205,11 +206,19 @@ type EstadoResumen =
   | { readonly estado: 'sin-permiso' }
   | { readonly estado: 'fallo'; readonly causa: 'red' | 'servicio' };
 
-/** Resumen limitado de un incidente de la bandeja. Sin acciones que la API aun no ofrece (P6). */
+/**
+ * Resumen limitado de un incidente de la bandeja. Ofrece solo las acciones que la API tiene: precisar
+ * la condicion medica y, para SAMU participante, la evaluacion rapida (P5.1). Sin «Asumir caso» (P6).
+ */
 export function ResumenIncidenteVista({ id }: { id: string }) {
   const { expirar } = useSesion();
   const [datos, setDatos] = useState<EstadoResumen>({ estado: 'cargando' });
   const [intento, setIntento] = useState(0);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const actualizado = (texto: string) => {
+    setAviso(texto);
+    setIntento((n) => n + 1);
+  };
 
   useEffect(() => {
     const control = new AbortController();
@@ -273,6 +282,13 @@ export function ResumenIncidenteVista({ id }: { id: string }) {
   return (
     <div className="page-stack">
       <div>{volver}</div>
+      {aviso ? (
+        <div role="status">
+          <Mensaje tipo="exito" titulo={aviso}>
+            El resumen se actualizó con la condición vigente.
+          </Mensaje>
+        </div>
+      ) : null}
       <div className="detail-grid">
         <section className="panel" aria-labelledby="titulo-resumen">
           <div className="panel-heading">
@@ -299,21 +315,8 @@ export function ResumenIncidenteVista({ id }: { id: string }) {
           </dl>
           <p className="description">{r.descripcion}</p>
         </section>
-        <section className="panel" aria-labelledby="titulo-condicion">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">Informado por el ciudadano</span>
-              <h2 id="titulo-condicion">Condición médica</h2>
-            </div>
-          </div>
-          <dl className="kv">
-            <dt>¿Hay personas heridas?</dt>
-            <dd>{textoRespuesta(r.respuestasCiudadano.heridos)}</dd>
-            <dt>¿Se necesita atención médica?</dt>
-            <dd>{textoRespuesta(r.respuestasCiudadano.atencionMedica)}</dd>
-          </dl>
-          <p>Son respuestas del ciudadano sin revisión clínica. Las acciones de atención se habilitarán en una próxima entrega.</p>
-        </section>
+        <BloqueCondicionMedica resumen={r} onActualizado={actualizado} />
+        {r.accesoSanitario ? <SeccionEvaluacionSamu resumen={r} version={intento} onActualizado={actualizado} /> : null}
       </div>
     </div>
   );

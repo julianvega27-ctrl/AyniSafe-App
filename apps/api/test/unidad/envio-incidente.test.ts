@@ -50,6 +50,7 @@ describe('validarEnvio: datos originales', () => {
       heridos: null,
       atencionMedica: null,
       telefonoContacto: null,
+      evaluacion: null,
     });
   });
 
@@ -154,7 +155,7 @@ describe('validarEnvio: punto obligatorio', () => {
 
 describe('validarEnvio: respuestas para SAMU', () => {
   it('las categorias de heridos y de atencion medica son las del contrato', () => {
-    expect([...CATEGORIAS_HERIDOS].sort()).toEqual(['accidente-transito', 'agresion', 'pelea', 'violencia']);
+    expect([...CATEGORIAS_HERIDOS].sort()).toEqual(['accidente-transito', 'agresion', 'emergencia-medica', 'pelea', 'violencia']);
     expect([...CATEGORIAS_ATENCION_MEDICA]).toEqual(['accidente-transito']);
   });
 
@@ -168,9 +169,14 @@ describe('validarEnvio: respuestas para SAMU', () => {
     expect(validarEnvio(cuerpo({ categoriaId: 'pelea', heridos: 'si' }), 'cuenta', CATEGORIAS, AHORA).heridos).toBe('si');
   });
 
-  it('rechaza preguntas no aplicables: robo con heridos y agresion con atencion medica', () => {
+  it('rechaza preguntas no aplicables: robo con heridos y agresion o emergencia medica con atencion medica', () => {
     expect(errores(cuerpo({ heridos: 'no' }))).toHaveProperty('heridos');
     expect(errores(cuerpo({ categoriaId: 'agresion', atencionMedica: 'si' }))).toHaveProperty('atencionMedica');
+    expect(errores(cuerpo({ categoriaId: 'emergencia-medica', atencionMedica: 'si' }))).toHaveProperty('atencionMedica');
+  });
+
+  it('emergencia medica admite heridos (decision del 26/11/2026)', () => {
+    expect(validarEnvio(cuerpo({ categoriaId: 'emergencia-medica', heridos: 'no' }), 'cuenta', CATEGORIAS, AHORA).heridos).toBe('no');
   });
 
   it.each([['No'], ['si ']])('rechaza el valor %j', (valor) => {
@@ -195,6 +201,30 @@ describe('validarEnvio: telefono segun modalidad', () => {
   });
 });
 
+describe('validarEnvio: evaluacion rapida', () => {
+  it('pelea con heridos y evaluacion parcial', () => {
+    const v = validarEnvio(
+      cuerpo({ categoriaId: 'pelea', heridos: 'si', evaluacion: { cantidadHeridos: 2, personaPrincipal: { consciente: 'si' } } }),
+      'cuenta',
+      CATEGORIAS,
+      AHORA,
+    );
+    expect(v.evaluacion).toEqual({ cantidadHeridos: 2, personaPrincipal: { signosVida: null, consciente: 'si', sangrado: null } });
+  });
+
+  it('sin evaluacion en el cuerpo queda null', () => {
+    expect(validarEnvio(cuerpo({ categoriaId: 'pelea', heridos: 'si' }), 'cuenta', CATEGORIAS, AHORA).evaluacion).toBeNull();
+  });
+
+  it('rechaza la evaluacion cuando SAMU no interviene y la cantidad sin heridos', () => {
+    expect(errores(cuerpo({ evaluacion: {} }))).toHaveProperty('evaluacion');
+    expect(errores(cuerpo({ categoriaId: 'pelea', heridos: 'no_se', evaluacion: {} }))).toHaveProperty('evaluacion');
+    expect(errores(cuerpo({ categoriaId: 'emergencia-medica', heridos: 'no', evaluacion: { cantidadHeridos: 1 } }))).toHaveProperty([
+      'evaluacion.cantidadHeridos',
+    ]);
+  });
+});
+
 describe('contenido canonico e idempotencia', () => {
   const secretos = new HmacSecretosAdapter('s'.repeat(40));
   const huella = (entrada: unknown, modalidad: Modalidad = 'invitado') =>
@@ -214,6 +244,33 @@ describe('contenido canonico e idempotencia', () => {
   it('cambia con el contenido o la modalidad', () => {
     expect(huella(invitado())).not.toBe(huella(invitado({ descripcion: 'Otro texto distinto' })));
     expect(huella(cuerpo(), 'cuenta')).not.toBe(huella(invitado()));
+  });
+
+  it('un envio sin evaluacion conserva el contenido canonico de P4', () => {
+    const v = validarEnvio(invitado(), 'invitado', CATEGORIAS, AHORA);
+    expect(contenidoCanonico('invitado', v)).toBe(
+      JSON.stringify([
+        'invitado',
+        'robo',
+        'Me arrebataron el celular en la esquina',
+        'ahora',
+        '2026-11-26T15:00:00.000Z',
+        -13.1588,
+        -74.2232,
+        'gps',
+        12,
+        null,
+        null,
+        '987654321',
+      ]),
+    );
+  });
+
+  it('dos evaluaciones distintas producen huellas distintas', () => {
+    const conEvaluacion = (consciente: string) =>
+      invitado({ categoriaId: 'pelea', heridos: 'si', evaluacion: { personaPrincipal: { consciente } } });
+    expect(huella(conEvaluacion('si'))).not.toBe(huella(conEvaluacion('no')));
+    expect(huella(conEvaluacion('si'))).not.toBe(huella(invitado({ categoriaId: 'pelea', heridos: 'si' })));
   });
 
   it('otro secreto produce otra huella', () => {

@@ -68,7 +68,14 @@ export interface ResponsablesSeguimientoPort {
   deIncidentes(ids: readonly string[]): Promise<ReadonlyMap<string, { readonly id: string; readonly nombre: string }>>;
 }
 
+/** Puerto hacia Reportes: respuestas propias del autor (P5.1), sin cambios ni motivos de operadores. */
+export interface EvaluacionAutorPort {
+  vistaAutor(incidenteId: string, abierto: boolean): Promise<unknown | null>;
+}
+
 export interface DependenciasSeguimiento {
+  /** Evaluacion propia en el detalle del autor (P5.1). Nunca se usa en la vista del invitado. */
+  readonly evaluacion?: EvaluacionAutorPort;
   /** Sin el puerto (pruebas de P4.1), la institucion responsable se informa pendiente. */
   readonly responsables?: ResponsablesSeguimientoPort;
   readonly envios: EnviosSeguimientoPort;
@@ -181,6 +188,9 @@ export class SeguimientoCiudadano {
       descripcion: detalle.descripcion,
       ocurrencia: { modo: detalle.ocurrencia.modo, instante: detalle.ocurrencia.instante.toISOString() },
       respuestas: { heridos: detalle.heridos, atencionMedica: detalle.atencionMedica },
+      evaluacion: this.d.evaluacion
+        ? await this.protegido(() => this.d.evaluacion!.vistaAutor(incidente.id, incidente.estado !== 'CERRADO'))
+        : null,
       institucionResponsable: await this.protegido(() => this.responsable(incidente.id)),
       actuaciones: [] as const,
     };

@@ -1,4 +1,5 @@
 import 'cliente_http.dart';
+import 'evaluacion.dart';
 
 /// Categoría del catálogo público (`/publico/categorias`).
 class CategoriaIncidente {
@@ -154,9 +155,13 @@ class ResumenIncidente {
     required this.estado,
     required this.recibidoEn,
     required this.territorio,
+    this.categoriaId,
   });
   final String referencia;
   final String categoria;
+
+  /// Identificador estable de la categoría (decide qué preguntas de la evaluación aplican).
+  final String? categoriaId;
   final String estado;
   final DateTime recibidoEn;
   final TerritorioIncidente territorio;
@@ -181,6 +186,10 @@ class ResumenIncidente {
     return ResumenIncidente(
       referencia: json['referencia'] as String,
       categoria: nombre,
+      categoriaId:
+          categoria is Map<String, dynamic> && categoria['id'] is String
+          ? categoria['id'] as String
+          : null,
       estado: json['estado'] as String,
       recibidoEn: recibido,
       territorio: territorio,
@@ -221,11 +230,15 @@ class DetalleIncidente {
     required this.descripcion,
     required this.ocurridoEn,
     required this.institucionResponsable,
+    this.evaluacion,
   });
   final ResumenIncidente resumen;
   final String descripcion;
   final DateTime ocurridoEn;
   final InstitucionResponsable institucionResponsable;
+
+  /// Evaluación propia (P5.1); null si el incidente no tiene evaluación.
+  final EvaluacionPropia? evaluacion;
   bool get institucionPendiente => institucionResponsable.pendiente;
 
   static DetalleIncidente? desdeJson(Object? json) {
@@ -247,8 +260,44 @@ class DetalleIncidente {
       descripcion: json['descripcion'] as String,
       ocurridoEn: instante,
       institucionResponsable: InstitucionResponsable.desdeJson(institucion),
+      evaluacion: EvaluacionPropia.desdeJson(json['evaluacion']),
     );
   }
+}
+
+/// Resultado de aclarar la evaluación propia (P5.1).
+sealed class ResultadoAclaracion {
+  const ResultadoAclaracion();
+}
+
+final class AclaracionAplicada extends ResultadoAclaracion {
+  const AclaracionAplicada(this.evaluacion);
+  final EvaluacionPropia evaluacion;
+}
+
+final class AclaracionCamposInvalidos extends ResultadoAclaracion {
+  const AclaracionCamposInvalidos(this.campos);
+  final Map<String, String> campos;
+}
+
+final class AclaracionCerrada extends ResultadoAclaracion {
+  const AclaracionCerrada();
+}
+
+final class AclaracionNoEncontrada extends ResultadoAclaracion {
+  const AclaracionNoEncontrada();
+}
+
+final class AclaracionSesionInvalida extends ResultadoAclaracion {
+  const AclaracionSesionInvalida();
+}
+
+final class AclaracionSinConexion extends ResultadoAclaracion {
+  const AclaracionSinConexion();
+}
+
+final class AclaracionNoDisponible extends ResultadoAclaracion {
+  const AclaracionNoDisponible();
 }
 
 /// Vista limitada del invitado: solo estado y resumen ciudadano.
@@ -459,6 +508,43 @@ class IncidentesRepositorio {
     if (r is! ConsultaObtenida<Map<String, dynamic>>) return _sinValor(r);
     final d = DetalleIncidente.desdeJson(r.valor);
     return d == null ? const ConsultaNoDisponible() : ConsultaObtenida(d);
+  }
+
+  /// Aclara la evaluación propia con solo los campos que cambian. Reintentar la misma aclaración no
+  /// crea otra versión en el servidor.
+  Future<ResultadoAclaracion> aclararEvaluacion(
+    String token,
+    String referencia,
+    Map<String, Object?> cambios,
+  ) async {
+    final RespuestaApi r;
+    try {
+      r = await _http.enviar(
+        'POST',
+        '/ciudadano/incidentes/${Uri.encodeComponent(referencia)}/evaluacion',
+        token: token,
+        cuerpo: cambios,
+      );
+    } on Exception {
+      return const AclaracionSinConexion();
+    }
+    switch (r.estado) {
+      case 200:
+        final e = EvaluacionPropia.desdeJson(r.cuerpo?['evaluacion']);
+        return e == null
+            ? const AclaracionNoDisponible()
+            : AclaracionAplicada(e);
+      case 400:
+        return AclaracionCamposInvalidos(_campos(r));
+      case 401:
+        return const AclaracionSesionInvalida();
+      case 404:
+        return const AclaracionNoEncontrada();
+      case 409:
+        return const AclaracionCerrada();
+      default:
+        return const AclaracionNoDisponible();
+    }
   }
 
   /// Consulta del invitado: referencia y código siempre en el cuerpo, nunca en la URL.

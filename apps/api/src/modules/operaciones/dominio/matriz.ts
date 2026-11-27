@@ -183,3 +183,34 @@ export function faltantesDesdeJson(valor: unknown): Faltante[] {
     return { institucion: f.institucion as InstitucionDestino, papel: f.papel as Papel, motivo: f.motivo };
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Actualizacion positiva de la condicion medica (P5.1, design decision 4)
+
+export interface PlanCondicionMedica {
+  /** Instituciones que aun no participan ni faltan. */
+  readonly incorporar: readonly Destinatario[];
+  /** Instituciones presentes que adoptan otro papel. */
+  readonly cambiosPapel: readonly Destinatario[];
+}
+
+/**
+ * Compara el objetivo de la matriz con las instituciones presentes (participantes o faltantes).
+ * Solo actua si el objetivo requiere a SAMU: sin SAMU no se retira ni se rebaja a nadie (los
+ * destinatarios sin SAMU coinciden con los del enrutamiento original). SAMU nunca baja de rango;
+ * las demas instituciones adoptan el papel objetivo (PNP pasa a simultanea en un accidente).
+ */
+export function planificarCondicionMedica(
+  presentes: ReadonlyMap<InstitucionDestino, Papel>,
+  objetivo: ResolucionDestinatarios,
+): PlanCondicionMedica {
+  if (!objetivo.destinatarios.some((d) => d.institucion === 'samu')) return { incorporar: [], cambiosPapel: [] };
+  const incorporar: Destinatario[] = [];
+  const cambiosPapel: Destinatario[] = [];
+  for (const d of objetivo.destinatarios) {
+    const actual = presentes.get(d.institucion);
+    if (actual === undefined) incorporar.push(d);
+    else if (actual !== d.papel && !(d.institucion === 'samu' && RANGO[d.papel] > RANGO[actual])) cambiosPapel.push(d);
+  }
+  return { incorporar, cambiosPapel };
+}
