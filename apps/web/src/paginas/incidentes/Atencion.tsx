@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react';
-import { api, type ResultadoCierre, type ResumenIncidente, type Verificacion } from '../../api/cliente';
+import { api, type Prioridad, type ResultadoCierre, type ResumenIncidente, type Verificacion } from '../../api/cliente';
 import { Boton } from '../../componentes/Boton';
 import { Campo } from '../../componentes/Campo';
 import { Dialogo } from '../../componentes/Dialogo';
@@ -7,7 +7,7 @@ import { GrupoOpciones } from '../../componentes/GrupoOpciones';
 import { Icono } from '../../componentes/iconos';
 import { Mensaje } from '../../componentes/Mensaje';
 import { useSesion } from '../../sesion/SesionContexto';
-import { CONFLICTO_ATENCION, ESTADO, fecha, INSTITUCION, RESULTADO, textoHistorial, VERIFICACION } from './etiquetas';
+import { CONFLICTO_ATENCION, ESTADO, fecha, INSTITUCION, PRIORIDAD, RESULTADO, textoHistorial, VERIFICACION } from './etiquetas';
 
 /**
  * Atencion institucional en el resumen del operador (P6, spec `web/bandeja-incidentes`). Muestra el
@@ -16,7 +16,7 @@ import { CONFLICTO_ATENCION, ESTADO, fecha, INSTITUCION, RESULTADO, textoHistori
  * componentes compartidos existentes, sin estilos nuevos.
  */
 
-type Dialogo = 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular' | null;
+type Dialogo = 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular' | 'priorizar' | null;
 
 const largo = (t: string) => [...t.trim()].length;
 
@@ -114,6 +114,11 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
               Registrar verificación
             </Boton>
           ) : null}
+          {puede('priorizar') ? (
+            <Boton variante="secundario" onClick={() => setDialogo('priorizar')} disabled={enviando}>
+              Revisar prioridad
+            </Boton>
+          ) : null}
           {puede('vincular') ? (
             <Boton variante="secundario" onClick={() => setDialogo('vincular')} disabled={enviando}>
               Vincular como duplicado
@@ -141,6 +146,16 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
       ) : null}
       {dialogo === 'verificar' ? (
         <DialogoVerificacion
+          resumen={resumen}
+          onCerrar={() => setDialogo(null)}
+          onResultado={(aviso) => {
+            setDialogo(null);
+            onActualizado(aviso);
+          }}
+        />
+      ) : null}
+      {dialogo === 'priorizar' ? (
+        <DialogoPrioridad
           resumen={resumen}
           onCerrar={() => setDialogo(null)}
           onResultado={(aviso) => {
@@ -395,6 +410,81 @@ function DialogoVinculo({ resumen, onCerrar, onResultado }: { resumen: ResumenIn
         <div className="acciones-tarjeta form-grid__completo">
           <Boton type="submit" cargando={enviando}>
             Vincular
+          </Boton>
+          <Boton variante="secundario" onClick={onCerrar} disabled={enviando}>
+            Cancelar
+          </Boton>
+        </div>
+      </form>
+    </Dialogo>
+  );
+}
+
+const VALORES_PRIORIDAD: readonly (readonly [Exclude<Prioridad, 'SIN_EVALUAR'>, string])[] = [
+  ['NORMAL', 'Normal'],
+  ['ALTA', 'Alta'],
+  ['URGENTE', 'Urgente'],
+];
+
+function DialogoPrioridad({ resumen, onCerrar, onResultado }: { resumen: ResumenIncidente; onCerrar: () => void; onResultado: (aviso: string) => void }) {
+  const { expirar } = useSesion();
+  const idTitulo = useId();
+  const [valor, setValor] = useState<Exclude<Prioridad, 'SIN_EVALUAR'> | null>(resumen.prioridad === 'SIN_EVALUAR' ? null : resumen.prioridad);
+  const [motivo, setMotivo] = useState('');
+  const [errores, setErrores] = useState<Record<string, string>>({});
+  const [enviando, setEnviando] = useState(false);
+  const [fallo, setFallo] = useState<string | null>(null);
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    if (enviando) return;
+    const locales: Record<string, string> = {};
+    if (!valor) locales.valor = 'Elige Normal, Alta o Urgente.';
+    if (largo(motivo) < 10 || largo(motivo) > 500) locales.motivo = 'Escribe un motivo de 10 a 500 caracteres.';
+    setErrores(locales);
+    if (Object.keys(locales).length || !valor) return;
+    setEnviando(true);
+    setFallo(null);
+    const r = await api.revisarPrioridad(resumen.id, valor, motivo.trim());
+    setEnviando(false);
+    if (r.tipo === 'ok') return onResultado(`Prioridad revisada: ${PRIORIDAD[r.datos.prioridad].texto}. La bandeja mantiene el orden de llegada.`);
+    if (r.tipo === 'error' && r.estado === 401) return expirar();
+    if (r.tipo === 'error' && r.estado === 400) return setErrores(r.campos ?? { motivo: 'Revisa los datos.' });
+    if (r.tipo === 'error' && r.codigo && CONFLICTO_ATENCION[r.codigo]) return onResultado(CONFLICTO_ATENCION[r.codigo]!);
+    setFallo('No pudimos revisar la prioridad. Inténtalo de nuevo.');
+  }
+
+  return (
+    <Dialogo tituloId={idTitulo} ocupado={enviando} onCerrar={onCerrar}>
+      <form className="form-grid compact" onSubmit={(e) => void enviar(e)} aria-labelledby={idTitulo} noValidate>
+        <h3 id={idTitulo} className="form-grid__completo">
+          Revisar prioridad de {resumen.referencia}
+        </h3>
+        <p className="form-grid__completo nota-panel">
+          Vigente: {PRIORIDAD[resumen.prioridad].texto}
+          {resumen.prioridadOrigen === 'propuesta' ? ' (propuesta por la categoría)' : resumen.prioridadOrigen === 'revisada' ? ' (revisada)' : ''}. No es triaje
+          clínico ni cambia el orden de llegada de la bandeja.
+        </p>
+        {fallo ? (
+          <div className="form-grid__completo" role="status">
+            <Mensaje tipo="error" titulo="No se revisó la prioridad">{fallo}</Mensaje>
+          </div>
+        ) : null}
+        <div className="form-grid__completo">
+          <GrupoOpciones leyenda="Prioridad" opciones={VALORES_PRIORIDAD} valor={valor} alCambiar={setValor} error={errores.valor} deshabilitado={enviando} />
+        </div>
+        <Campo
+          etiqueta="Motivo"
+          ayuda="Entre 10 y 500 caracteres. Queda registrado con tu cuenta."
+          value={motivo}
+          maxLength={500}
+          onChange={(e) => setMotivo(e.target.value)}
+          error={errores.motivo}
+          required
+        />
+        <div className="acciones-tarjeta form-grid__completo">
+          <Boton type="submit" cargando={enviando}>
+            Guardar prioridad
           </Boton>
           <Boton variante="secundario" onClick={onCerrar} disabled={enviando}>
             Cancelar

@@ -32,6 +32,7 @@ const resumen = (extra: Partial<ResumenIncidente> = {}): ResumenIncidente => ({
   responsable: { asignado: false, esUsted: false },
   vinculado: false,
   prioridad: 'SIN_EVALUAR',
+  prioridadOrigen: null,
   descripcion: 'Me arrebataron el celular',
   ocurrencia: { modo: 'ahora', instante: '2026-11-26T09:58:00.000Z' },
   territorio: { estado: 'resuelto', distrito: { id: 'DIS-01', nombre: 'Ayacucho' } },
@@ -142,6 +143,24 @@ describe('vinculación de duplicados', () => {
       [`/api/v1/operador/incidentes/${ID}/vinculo`, { referenciaPrincipal: 'INC-7K3M9-Q2TXA', motivo: 'Mismo hecho reportado dos veces' }],
     ]);
     expect(await screen.findByText('Vinculado a otro reporte del mismo hecho: se atiende desde el incidente principal.')).toBeInTheDocument();
+  });
+});
+
+describe('prioridad', () => {
+  it('muestra la etiqueta con texto e icono y revisa con motivo en una sola solicitud', async () => {
+    const base = resumen({ ...EN_REVISION, prioridad: 'NORMAL', prioridadOrigen: 'propuesta', atencion: { ...EN_REVISION.atencion!, accionesPermitidas: ['iniciar_atencion', 'priorizar'] } });
+    const revisado = resumen({ ...base, prioridad: 'URGENTE', prioridadOrigen: 'revisada' });
+    const { llamadas } = montar([base, revisado], () => json(200, { prioridad: 'URGENTE', origen: 'revisada' }));
+    renderizarApp(RUTA);
+    expect(await screen.findByText('Prioridad: Normal (propuesta)')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Revisar prioridad' }));
+    const dialogo = await screen.findByRole('dialog');
+    await userEvent.click(within(dialogo).getByLabelText('Urgente'));
+    await userEvent.type(within(dialogo).getByLabelText('Motivo'), 'Hay una persona atrapada');
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Guardar prioridad' }));
+    expect(await screen.findByText('Prioridad revisada: Urgente. La bandeja mantiene el orden de llegada.')).toBeInTheDocument();
+    expect(llamadas.filter((l) => l.metodo === 'POST').map((l) => l.cuerpo)).toEqual([{ valor: 'URGENTE', motivo: 'Hay una persona atrapada' }]);
+    expect(await screen.findByText('Prioridad: Urgente (revisada)')).toBeInTheDocument();
   });
 });
 

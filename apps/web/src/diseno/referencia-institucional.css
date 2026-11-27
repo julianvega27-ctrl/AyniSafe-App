@@ -210,6 +210,10 @@
 /* PriorityBadge del origen; «unknown» corresponde a Sin evaluar en AyniSafe (DESIGN.md). */
 .priority-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 7px; font-size: .75rem; font-weight: 700; white-space: nowrap; border: 1px solid transparent; }
 .priority-badge--unknown { color: var(--color-prioridad-pendiente-texto); background: var(--color-prioridad-pendiente-fondo); border-color: var(--color-prioridad-pendiente-borde); }
+/* P6: variantes azul/ambar/roja del PriorityBadge del origen (DESIGN.md); la roja lleva borde de 2px. */
+.priority-badge--normal { color: var(--color-prioridad-normal-texto); background: var(--color-prioridad-normal-fondo); border-color: var(--color-prioridad-normal-borde); }
+.priority-badge--high { color: var(--color-prioridad-alta-texto); background: var(--color-prioridad-alta-fondo); border-color: var(--color-prioridad-alta-borde); }
+.priority-badge--urgent { color: var(--color-prioridad-urgente-texto); background: var(--color-prioridad-urgente-fondo); border: 2px solid var(--color-prioridad-urgente-borde); }
 .page-intro.with-action { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .page-intro.with-action > div { min-width: 0; flex: 1 1 260px; }
 .detail-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }

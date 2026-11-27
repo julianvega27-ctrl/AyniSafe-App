@@ -111,12 +111,15 @@ export interface FilaBandeja {
   readonly responsable: { readonly asignado: boolean; readonly esUsted: boolean };
   /** Duplicado vinculado (P6 grupo B): estado y resultado son los del principal. */
   readonly vinculado: boolean;
-  readonly prioridad: 'SIN_EVALUAR';
+  /** Etiqueta vigente (P6 grupo C); no ordena la bandeja. */
+  readonly prioridad: Prioridad;
+  readonly prioridadOrigen: 'propuesta' | 'revisada' | null;
 }
 
 export type Verificacion = 'SIN_VERIFICAR' | 'VERIFICADO' | 'NO_VERIFICADO';
+export type Prioridad = 'SIN_EVALUAR' | 'NORMAL' | 'ALTA' | 'URGENTE';
 export type ResultadoCierre = 'ATENDIDO' | 'DESCARTADO';
-export type AccionAtencion = 'asumir' | 'iniciar_atencion' | 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular';
+export type AccionAtencion = 'asumir' | 'iniciar_atencion' | 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular' | 'priorizar';
 
 /** Atencion institucional del resumen (P6). La API decide las acciones permitidas. */
 export interface AtencionOperador {
@@ -490,6 +493,8 @@ export const api = {
       metodo: 'POST',
       cuerpo,
     }),
+  revisarPrioridad: (id: string, valor: Exclude<Prioridad, 'SIN_EVALUAR'>, motivo: string) =>
+    llamar<{ prioridad: Prioridad; origen: 'revisada' }>(`/api/v1/operador/incidentes/${enc(id)}/prioridad`, { metodo: 'POST', cuerpo: { valor, motivo } }),
   vincularDuplicado: (id: string, referenciaPrincipal: string, motivo: string) =>
     llamar<{ vinculado: true }>(`/api/v1/operador/incidentes/${enc(id)}/vinculo`, { metodo: 'POST', cuerpo: { referenciaPrincipal, motivo } }),
   asignaciones: (senal?: AbortSignal) => llamar<{ elementos: readonly AsignacionAdmin[] }>(ASI, { senal }),

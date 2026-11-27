@@ -5,6 +5,7 @@ import type {
   Faltante,
   PapelInstitucion,
   RespuestaCiudadano,
+  Prioridad,
   ResultadoCierre,
   SignosVida,
   TerritorioVista,
@@ -32,6 +33,15 @@ export const ESTADO: Record<EstadoIncidente, string> = {
   EN_REVISION: 'En revisión',
   EN_ATENCION: 'En atención',
   CERRADO: 'Cerrado',
+};
+
+// --- Prioridad (P6 grupo C): texto, icono y color; nunca ordena la bandeja ---------------------
+
+export const PRIORIDAD: Record<Prioridad, { readonly texto: string; readonly clase: string; readonly icono: 'reloj' | 'info' | 'aviso' }> = {
+  SIN_EVALUAR: { texto: 'Sin evaluar', clase: 'priority-badge--unknown', icono: 'reloj' },
+  NORMAL: { texto: 'Normal', clase: 'priority-badge--normal', icono: 'info' },
+  ALTA: { texto: 'Alta', clase: 'priority-badge--high', icono: 'aviso' },
+  URGENTE: { texto: 'Urgente', clase: 'priority-badge--urgent', icono: 'aviso' },
 };
 
 // --- Atencion institucional (P6) -------------------------------------------------------------
@@ -78,6 +88,8 @@ export function textoHistorial(h: { accion: string; institucion: TipoInstitucion
       return `Administración liberó la asignación de ${inst}`;
     case 'reasignar':
       return `Administración reasignó el caso dentro de ${inst}`;
+    case 'prioridad':
+      return `${inst}: prioridad ${(PRIORIDAD[h.valorAnterior as Prioridad]?.texto ?? h.valorAnterior)} → ${(PRIORIDAD[h.valorNuevo as Prioridad]?.texto ?? h.valorNuevo)}`;
     case 'vincular':
       return `${inst}: vinculado como duplicado de otro reporte del mismo hecho`;
     default:

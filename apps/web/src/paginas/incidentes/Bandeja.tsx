@@ -9,7 +9,7 @@ import { useSesion } from '../../sesion/SesionContexto';
 import { BloqueAtencion } from './Atencion';
 import { BloqueCondicionMedica, SeccionEvaluacionSamu } from './Evaluacion';
 import { Fotografias } from './Fotografias';
-import { ESTADO, fecha, INSTITUCION, PAPEL, textoTerritorio } from './etiquetas';
+import { ESTADO, fecha, INSTITUCION, PAPEL, PRIORIDAD, textoTerritorio } from './etiquetas';
 
 /**
  * Bandeja del operador (P4.2). Reproduce la tabla de Incidents.jsx del origen (efc1bce8) sin el
@@ -38,9 +38,12 @@ export function olvidarBandeja(): void {
 function Etiquetas({ fila }: { fila: FilaBandeja }) {
   return (
     <ul className="incident-indicators" aria-label="Indicadores">
-      <li className="priority-badge priority-badge--unknown">
-        <Icono nombre="reloj" />
-        <span>Prioridad: Sin evaluar</span>
+      <li className={`priority-badge ${PRIORIDAD[fila.prioridad].clase}`}>
+        <Icono nombre={PRIORIDAD[fila.prioridad].icono} />
+        <span>
+          Prioridad: {PRIORIDAD[fila.prioridad].texto}
+          {fila.prioridadOrigen === 'propuesta' ? ' (propuesta)' : fila.prioridadOrigen === 'revisada' ? ' (revisada)' : ''}
+        </span>
       </li>
       {fila.responsable?.asignado ? (
         <li className="pill">
