@@ -175,6 +175,7 @@ function doble(opciones: { sedeExiste?: boolean; correoLibre?: boolean; instituc
     reemplazarCobertura: async (_id, ids) => ({ ...SEDE, distritos: [...ids] }),
     reemplazarCompetencias: async (_id, ids) => ({ ...SEDE, categorias: [...ids] }),
     habilitar: sinUso, deshabilitar: sinUso, listarOperadores: async () => null, cambiarEstadoOperador: sinUso, ambitoDeOperador: sinUso,
+    sedesElegibles: sinUso, estadoDesignacion: sinUso,
   };
   return d;
 }

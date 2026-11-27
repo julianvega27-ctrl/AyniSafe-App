@@ -86,7 +86,66 @@ export interface CategoriaCatalogo {
   readonly activa: boolean;
 }
 
+// --- Enrutamiento y bandeja (P4.2) ----------------------------------------------------------
+
+export type PapelInstitucion = 'principal' | 'simultanea' | 'condicionada';
+export type EstadoIncidente = 'REGISTRADO' | 'EN_REVISION' | 'EN_ATENCION' | 'CERRADO';
+export type RespuestaCiudadano = 'si' | 'no' | 'no_se' | null;
+
+export type TerritorioVista =
+  | { readonly estado: 'resuelto'; readonly distrito: { readonly id: string; readonly nombre: string | null } }
+  | { readonly estado: 'pendiente'; readonly motivo: string };
+
+export interface FilaBandeja {
+  readonly id: string;
+  readonly referencia: string;
+  readonly categoria: { readonly id: string; readonly nombre: string | null };
+  readonly distrito: { readonly id: string; readonly nombre: string | null } | null;
+  readonly estado: EstadoIncidente;
+  readonly registradoEn: string;
+  readonly papel: PapelInstitucion;
+  readonly condicionMedicaPorConfirmar: boolean;
+  readonly prioridad: 'SIN_EVALUAR';
+}
+
+export interface ResumenIncidente extends FilaBandeja {
+  readonly descripcion: string;
+  readonly ocurrencia: { readonly modo: 'ahora' | 'antes'; readonly instante: string };
+  readonly territorio: TerritorioVista;
+  readonly respuestasCiudadano: { readonly heridos: RespuestaCiudadano; readonly atencionMedica: RespuestaCiudadano };
+  readonly otrasInstituciones: readonly TipoInstitucion[];
+}
+
+export interface Faltante {
+  readonly institucion: TipoInstitucion;
+  readonly papel: PapelInstitucion;
+  readonly motivo: 'sin_distrito' | 'sin_sede_elegible';
+}
+
+export interface PendienteEnrutamiento {
+  readonly incidenteId: string;
+  readonly referencia: string;
+  readonly categoria: { readonly id: string; readonly nombre: string | null };
+  readonly territorio: TerritorioVista;
+  readonly registradoEn: string;
+  readonly faltantes: readonly Faltante[];
+}
+
+export interface ResultadoEnrutamiento {
+  readonly enrutamiento: {
+    readonly incidenteId: string;
+    readonly resultado: 'ENRUTADO' | 'ENRUTAMIENTO_PENDIENTE';
+    readonly faltantes: readonly Faltante[];
+  };
+}
+
+export interface Pagina<T> {
+  readonly elementos: readonly T[];
+  readonly siguiente: string | null;
+}
+
 const ORG = '/api/v1/administrador/organizacion';
+const PEN = '/api/v1/admin/enrutamientos-pendientes';
 const enc = encodeURIComponent;
 
 export interface ContenidoPublico {
@@ -112,6 +171,8 @@ export type Resultado<T> =
       readonly reintentarEn?: number;
       /** Requisitos incumplidos cuando el codigo es REQUISITOS_HABILITACION. */
       readonly faltantes?: readonly string[];
+      /** Requisitos incumplidos de la sede cuando el codigo es SEDE_NO_DESIGNABLE. */
+      readonly requisitos?: readonly string[];
     }
   /** Sin conexion o la solicitud no llego. */
   | { readonly tipo: 'red' }
@@ -168,11 +229,15 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}): Promise<Resulta
   let codigo: string | undefined;
   let campos: Record<string, string> | undefined;
   let faltantes: string[] | undefined;
+  let requisitos: string[] | undefined;
   try {
-    const json = (await respuesta.json()) as { error?: { code?: string; fields?: Record<string, string>; faltantes?: string[] } };
+    const json = (await respuesta.json()) as {
+      error?: { code?: string; fields?: Record<string, string>; faltantes?: string[]; requisitos?: string[] };
+    };
     codigo = json.error?.code;
     campos = json.error?.fields;
     faltantes = Array.isArray(json.error?.faltantes) ? json.error.faltantes : undefined;
+    requisitos = Array.isArray(json.error?.requisitos) ? json.error.requisitos : undefined;
   } catch {
     /* cuerpo no JSON */
   }
@@ -184,6 +249,7 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}): Promise<Resulta
     campos,
     reintentarEn: respuesta.status === 429 && Number.isFinite(espera) && espera > 0 ? espera : undefined,
     faltantes,
+    requisitos,
   };
 }
 
@@ -237,4 +303,15 @@ export const api = {
   distritos: (senal?: AbortSignal) =>
     llamar<{ distritos: readonly DistritoCatalogo[] }>('/api/v1/publico/territorio/distritos', { senal }),
   categorias: (senal?: AbortSignal) => llamar<{ categorias: readonly CategoriaCatalogo[] }>('/api/v1/publico/categorias', { senal }),
+
+  // Bandeja del operador y pendientes del administrador (P4.2). Sin consultas periodicas.
+  bandeja: (cursor: string | null, senal?: AbortSignal) =>
+    llamar<Pagina<FilaBandeja>>(`/api/v1/operador/incidentes${cursor ? `?cursor=${enc(cursor)}` : ''}`, { senal }),
+  resumenIncidente: (id: string, senal?: AbortSignal) => llamar<ResumenIncidente>(`/api/v1/operador/incidentes/${enc(id)}`, { senal }),
+  pendientesEnrutamiento: (cursor: string | null, senal?: AbortSignal) =>
+    llamar<Pagina<PendienteEnrutamiento>>(`${PEN}${cursor ? `?cursor=${enc(cursor)}` : ''}`, { senal }),
+  designarSede: (incidenteId: string, datos: { institucion: TipoInstitucion; sedeId: string; motivo: string }) =>
+    llamar<ResultadoEnrutamiento>(`${PEN}/${enc(incidenteId)}/designaciones`, { metodo: 'POST', cuerpo: datos }),
+  reevaluarEnrutamiento: (incidenteId: string) =>
+    llamar<ResultadoEnrutamiento>(`${PEN}/${enc(incidenteId)}/reevaluar`, { metodo: 'POST' }),
 };

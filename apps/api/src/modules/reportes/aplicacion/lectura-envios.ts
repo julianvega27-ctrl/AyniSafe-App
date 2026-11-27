@@ -24,6 +24,30 @@ export interface EnvioInvitadoVerificado {
   readonly recibidoEn: Date;
 }
 
+/** Condiciones del enrutamiento de Operaciones (P4.2). Sin narrativa, telefono ni coordenadas. */
+export interface DatosEnrutamientoEnvio {
+  readonly categoriaId: string;
+  readonly territorio: TerritorioEnvio;
+  readonly heridos: RespuestaSamu | null;
+  readonly atencionMedica: RespuestaSamu | null;
+  readonly recibidoEn: Date;
+}
+
+/**
+ * Originales para el resumen operativo del panel (P4.2). Sin telefono, coordenadas, autor,
+ * huellas ni modalidad.
+ */
+export interface EnvioResumenOperativo {
+  readonly incidenteId: string;
+  readonly categoriaId: string;
+  readonly descripcion: string;
+  readonly ocurrencia: { readonly modo: ModoOcurrencia; readonly instante: Date };
+  readonly territorio: TerritorioEnvio;
+  readonly heridos: RespuestaSamu | null;
+  readonly atencionMedica: RespuestaSamu | null;
+  readonly recibidoEn: Date;
+}
+
 export interface CursorHistorial {
   readonly recibidoEn: Date;
   readonly incidenteId: string;
@@ -37,6 +61,9 @@ export interface EnviosLecturaRepositorio {
   detalleDeAutor(usuarioId: string, incidenteId: string): Promise<EnvioDetalleAutor | null>;
   /** Solo envios de invitado; null en cualquier otro caso. */
   huellaCodigoDe(incidenteId: string): Promise<(EnvioInvitadoVerificado & { readonly codigoHuella: string }) | null>;
+  /** Null si el incidente no tiene envio. */
+  datosEnrutamiento(incidenteId: string): Promise<DatosEnrutamientoEnvio | null>;
+  resumenOperativo(ids: readonly string[]): Promise<readonly EnvioResumenOperativo[]>;
 }
 
 /** Identificador fijo para igualar el trabajo cuando la referencia no existe. */
@@ -54,6 +81,17 @@ export class LecturaEnvios {
 
   detalleDeAutor(usuarioId: string, incidenteId: string): Promise<EnvioDetalleAutor | null> {
     return this.repositorio.detalleDeAutor(usuarioId, incidenteId);
+  }
+
+  /** Contrato interno del enrutamiento de Operaciones (P4.2). */
+  datosEnrutamiento(incidenteId: string): Promise<DatosEnrutamientoEnvio | null> {
+    return this.repositorio.datosEnrutamiento(incidenteId);
+  }
+
+  /** Originales para el resumen operativo; el llamador ya comprobo el ambito del operador. */
+  async resumenOperativo(ids: readonly string[]): Promise<ReadonlyMap<string, EnvioResumenOperativo>> {
+    if (ids.length === 0) return new Map();
+    return new Map((await this.repositorio.resumenOperativo(ids)).map((e) => [e.incidenteId, e]));
   }
 
   /**

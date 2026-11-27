@@ -33,7 +33,9 @@ export type {
 export type { SecretosPort } from './aplicacion/puertos/secretos.port';
 export type {
   CursorHistorial,
+  DatosEnrutamientoEnvio,
   EnvioDetalleAutor,
+  EnvioResumenOperativo,
   EnvioInvitadoVerificado,
   EnvioResumen,
   LecturaEnvios,

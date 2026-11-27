@@ -156,6 +156,21 @@ autorización está en la API. Cabeceras de seguridad (CSP sin terceros, sin inc
 Las cuentas de administrador se crean por un procedimiento controlado de línea de comandos y las de operador las
 creará la entrega de gestión de cuentas (Spec 06); la web solo permite **activar** una cuenta invitada.
 
+### 2.11 Enrutamiento y bandeja inicial (P4.2)
+
+La evidencia de implementación y sus límites están en [P4.2](../validacion/p4-enrutamiento.md). Se conserva la composición del origen y los componentes de DESIGN.md.
+
+| Vista | Navegación, campos y acciones |
+|---|---|
+| Incidentes del operador | `/panel/operador/incidentes`: filas de su sede en el orden recibido, del más antiguo al más reciente; referencia, categoría, distrito, papel institucional, estado, condición médica por confirmar y «Sin evaluar». «Cargar más» usa el cursor y «Actualizar» vuelve a consultar desde el inicio. No hay polling. |
+| Resumen del operador | `/panel/operador/incidentes/:id`: datos permitidos del caso, descripción, ocurrencia y respuestas marcadas como informadas por el ciudadano. Volver a la bandeja conserva su posición. Un 404 se presenta como «Incidente no disponible», sin distinguir si existe. Sin teléfono, coordenadas ni detalle de evaluación sanitaria. |
+| Inicio del administrador | `/panel/administrador`: solo el bloque «Enrutamiento pendiente», FIFO con paginación y faltantes por institución. «Designar sede» abre un diálogo con sede de la institución faltante y motivo obligatorio de 10 a 500 caracteres. «Reevaluar» consulta la configuración corregida. El resultado confirmado actualiza la lista; un 409 se explica sin simular éxito. El resto del resumen sigue no disponible. |
+| Seguimiento móvil | El detalle del autor y la consulta con código muestran el nombre de la institución principal asignada, con icono; sin asignación reconocida, «Pendiente de asignación». Una asignación no confirma recepción institucional ni atención. No se exponen sedes u operadores. |
+
+Las consultas muestran carga, vacío y error con «Reintentar». Un 401 vuelve al acceso sin datos privados y un 403 explica la falta de permiso. El ámbito se valida en cada consulta del backend; las designaciones son excepciones limitadas al caso. El administrador no obtiene acceso a la descripción ni a datos sanitarios.
+
+Pendiente para P5/P6: evaluación y actualización de la condición médica, prioridad revisada, «Asumir caso», actuaciones, cambios de estado, reclasificación, sede coordinadora y sustitución de PNP por Serenazgo. Pendiente para P8: avisos por usuario, lectura, contador, campana, polling, resumen completo e historial. La administración de reglas y el apoyo local opcional de Serenazgo siguen sin activarse.
+
 ## 3. Aspectos pendientes
 
 Los siguientes puntos no constituyen decisiones cerradas ni deben presentarse como requisitos ya aprobados:

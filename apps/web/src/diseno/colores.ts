@@ -23,6 +23,9 @@ export const COLORES = {
   '--color-aviso-texto': '#92400E',
   '--color-error-fondo': '#FFF0ED',
   '--color-error-texto': '#9E453F',
+  '--color-prioridad-pendiente-texto': '#475569',
+  '--color-prioridad-pendiente-fondo': '#F1F5F9',
+  '--color-prioridad-pendiente-borde': '#CBD5E1',
   '--color-accion': '#137D72',
   '--color-portada-fondo': '#FAFBF7',
   '--color-portada-texto': '#183E41',
@@ -39,6 +42,7 @@ export interface ParDeColor {
 
 /** Combinaciones realmente usadas en la web. */
 export const PARES_DE_COLOR: readonly ParDeColor[] = [
+  { nombre: 'prioridad sin evaluar del origen', texto: '--color-prioridad-pendiente-texto', fondo: '--color-prioridad-pendiente-fondo', minimo: 4.5 },
   { nombre: 'accion principal de referencia', texto: '--color-superficie', fondo: '--color-accion', minimo: 4.5 },
   { nombre: 'texto de portada', texto: '--color-portada-texto', fondo: '--color-portada-fondo', minimo: 4.5 },
   { nombre: 'texto secundario de portada', texto: '--color-portada-suave', fondo: '--color-portada-fondo', minimo: 4.5 },

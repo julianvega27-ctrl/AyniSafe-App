@@ -74,6 +74,8 @@ tags:
   - name: Categorias
   - name: Incidentes
   - name: Seguimiento
+  - name: Enrutamiento
+  - name: Bandeja
 paths:
   /auth/ciudadanos/registro:
     post:
@@ -1130,9 +1132,10 @@ paths:
       operationId: consultarMiIncidente
       summary: Detalle privado de un incidente propio
       description: |
-        Datos originales del autor, estado, territorio y respuestas para SAMU. La institucion responsable y
-        las actuaciones se informan como pendientes hasta el enrutamiento (P4.2) y la atencion (P6). Un
-        incidente ajeno, de invitado o inexistente responde el mismo 404, sin revelar si existe.
+        Datos originales del autor, estado, territorio y respuestas para SAMU. La institucion responsable es
+        la principal con participacion (P4.2), sin sede ni operadores, o pendiente si falta; las actuaciones
+        se informan pendientes hasta la atencion (P6). Un incidente ajeno, de invitado o inexistente responde
+        el mismo 404, sin revelar si existe.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: referencia
@@ -1201,6 +1204,159 @@ paths:
         '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
         '415': { $ref: '#/components/responses/TipoNoSoportado' }
         '429': { $ref: '#/components/responses/LimiteExcedido' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes:
+    get:
+      tags: [Bandeja]
+      operationId: listarBandejaOperador
+      summary: Bandeja FIFO de los incidentes en que participa la sede del operador
+      description: |
+        Solo lectura (P4.2). Incidentes con participacion de la sede del operador dentro de su ambito vigente
+        (distrito y categoria del enrutamiento cubiertos por la sede; las participaciones designadas por el
+        administrador son excepcion limitada al caso). Orden de llegada, del mas antiguo al mas reciente, con
+        desempate por identificador, en paginas de 50. La prioridad es `SIN_EVALUAR` hasta P6 y no reordena.
+        Sin telefono, coordenadas, codigo, autor, otras sedes ni operadores. Unico parametro admitido: `cursor`.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, maxLength: 200 }
+      responses:
+        '200':
+          description: Pagina de la bandeja (puede estar vacia).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BandejaOperador' }
+        '400': { $ref: '#/components/responses/ConsultaBandejaInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoBandeja' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}:
+    get:
+      tags: [Bandeja]
+      operationId: consultarResumenOperador
+      summary: Resumen limitado de un incidente de la bandeja
+      description: |
+        Campos de la fila mas descripcion, ocurrencia, resultado territorial, respuestas de heridos y atencion
+        medica informadas por el ciudadano y tipos de las demas instituciones participantes. Sin telefono,
+        coordenadas, codigo, autor, evidencias ni detalle de evaluacion SAMU. Un incidente fuera del ambito,
+        inexistente o con identificador malformado responde el mismo 404.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: Resumen del incidente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResumenIncidenteOperador' }
+        '400': { $ref: '#/components/responses/ConsultaBandejaInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoBandeja' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /admin/enrutamientos-pendientes:
+    get:
+      tags: [Enrutamiento]
+      operationId: listarEnrutamientosPendientes
+      summary: Incidentes en ENRUTAMIENTO_PENDIENTE, del mas antiguo al mas reciente
+      description: |
+        Solo administradores (P4.2, RF35). Cada fila indica las instituciones faltantes con su papel y motivo
+        (`sin_distrito` o `sin_sede_elegible`). Sin descripcion, telefono, coordenadas ni respuestas sanitarias.
+        Paginas de 50 con cursor opaco. No crea avisos por usuario (P8).
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, maxLength: 200 }
+      responses:
+        '200':
+          description: Pagina de pendientes (puede estar vacia).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PendientesEnrutamiento' }
+        '400': { $ref: '#/components/responses/ConsultaBandejaInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoEnrutamiento' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /admin/enrutamientos-pendientes/{incidenteId}/designaciones:
+    post:
+      tags: [Enrutamiento]
+      operationId: designarSedeEnrutamiento
+      summary: Designar una sede habilitada para una institucion faltante
+      description: |
+        Excepcion limitada al caso: la sede debe estar activa y habilitada, ser de la institucion faltante y
+        tener un operador activo; no se exige cobertura ni competencia y no concede acceso sanitario. Queda
+        auditada con el administrador, el motivo (10 a 500 caracteres) y el instante. Dos designaciones
+        simultaneas para el mismo faltante: una prospera y la otra recibe 409. El motivo no se registra en logs.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: incidenteId
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DesignacionSolicitud' }
+      responses:
+        '201':
+          description: Participacion designada creada; el enrutamiento pasa a ENRUTADO si no quedan faltantes.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoEnrutamientoAdmin' }
+        '400': { $ref: '#/components/responses/ConsultaBandejaInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoEnrutamiento' }
+        '404': { $ref: '#/components/responses/EnrutamientoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoEnrutamiento' }
+        '413': { $ref: '#/components/responses/CuerpoDemasiadoGrande' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /admin/enrutamientos-pendientes/{incidenteId}/reevaluar:
+    post:
+      tags: [Enrutamiento]
+      operationId: reevaluarEnrutamiento
+      summary: Reevaluar los faltantes con la configuracion vigente
+      description: |
+        Aplica la misma version de la regla con los datos originales y las sedes elegibles vigentes, solo para
+        los faltantes `sin_sede_elegible`; los `sin_distrito` se resuelven por designacion. Conserva las
+        participaciones existentes. Sin cuerpo.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: incidenteId
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: Resultado de la reevaluacion (puede seguir pendiente).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoEnrutamientoAdmin' }
+        '400': { $ref: '#/components/responses/ConsultaBandejaInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoEnrutamiento' }
+        '404': { $ref: '#/components/responses/EnrutamientoNoEncontrado' }
+        '409': { $ref: '#/components/responses/ConflictoEnrutamiento' }
         '503': { $ref: '#/components/responses/ServicioNoDisponible' }
 components:
   securitySchemes:
@@ -1963,9 +2119,167 @@ components:
       type: object
       additionalProperties: false
       required: [estado]
-      description: Sin enrutamiento (P4.2) la institucion responsable queda pendiente; no se inventa.
+      description: Sin principal con participacion la institucion responsable queda pendiente; no se inventa.
       properties:
         estado: { const: pendiente }
+    InstitucionResponsable:
+      description: Principal con participacion (tipo y nombre, sin sede ni operadores) o pendiente. Un estado desconocido se trata como pendiente.
+      oneOf:
+        - { $ref: '#/components/schemas/InstitucionPendiente' }
+        - type: object
+          additionalProperties: false
+          required: [estado, institucion]
+          properties:
+            estado: { const: asignada }
+            institucion:
+              type: object
+              additionalProperties: false
+              required: [id, nombre]
+              properties:
+                id: { $ref: '#/components/schemas/TipoInstitucionDestino' }
+                nombre: { type: string }
+    TipoInstitucionDestino:
+      type: string
+      enum: [pnp, bomberos, samu, serenazgo]
+    PapelInstitucion:
+      type: string
+      enum: [principal, simultanea, condicionada]
+    Faltante:
+      type: object
+      additionalProperties: false
+      required: [institucion, papel, motivo]
+      properties:
+        institucion: { $ref: '#/components/schemas/TipoInstitucionDestino' }
+        papel: { $ref: '#/components/schemas/PapelInstitucion' }
+        motivo: { type: string, enum: [sin_distrito, sin_sede_elegible] }
+    DistritoVista:
+      type: object
+      additionalProperties: false
+      required: [id, nombre]
+      properties:
+        id: { type: string }
+        nombre: { type: [string, 'null'] }
+    CamposFilaBandeja:
+      type: object
+      required: [id, referencia, categoria, distrito, estado, registradoEn, papel, condicionMedicaPorConfirmar, prioridad]
+      properties:
+        id: { type: string, format: uuid }
+        referencia: { type: string }
+        categoria: { $ref: '#/components/schemas/CategoriaVista' }
+        distrito:
+          description: Nulo si el incidente no tiene distrito resuelto (solo visible por designacion).
+          oneOf:
+            - { $ref: '#/components/schemas/DistritoVista' }
+            - { type: 'null' }
+        estado: { type: string, enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
+        registradoEn: { type: string, format: date-time }
+        papel: { $ref: '#/components/schemas/PapelInstitucion' }
+        condicionMedicaPorConfirmar:
+          type: boolean
+          description: Heridos o atencion medica desconocidos; pendiente de revision, no equivale a «no».
+        prioridad: { const: SIN_EVALUAR }
+    FilaBandejaOperador:
+      allOf:
+        - { $ref: '#/components/schemas/CamposFilaBandeja' }
+      unevaluatedProperties: false
+    BandejaOperador:
+      type: object
+      additionalProperties: false
+      required: [elementos, siguiente]
+      properties:
+        elementos:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/FilaBandejaOperador' }
+        siguiente: { type: [string, 'null'] }
+    ResumenIncidenteOperador:
+      allOf:
+        - { $ref: '#/components/schemas/CamposFilaBandeja' }
+      type: object
+      unevaluatedProperties: false
+      required: [descripcion, ocurrencia, territorio, respuestasCiudadano, otrasInstituciones]
+      properties:
+        descripcion: { type: string }
+        ocurrencia:
+          type: object
+          additionalProperties: false
+          required: [modo, instante]
+          properties:
+            modo: { type: string, enum: [ahora, antes] }
+            instante: { type: string, format: date-time }
+        territorio: { $ref: '#/components/schemas/TerritorioIncidente' }
+        respuestasCiudadano:
+          type: object
+          additionalProperties: false
+          required: [heridos, atencionMedica]
+          description: Informadas por el ciudadano, sin revision clinica.
+          properties:
+            heridos: { enum: [si, no, no_se, null] }
+            atencionMedica: { enum: [si, no, no_se, null] }
+        otrasInstituciones:
+          type: array
+          items: { $ref: '#/components/schemas/TipoInstitucionDestino' }
+    FilaPendienteEnrutamiento:
+      type: object
+      additionalProperties: false
+      required: [incidenteId, referencia, categoria, territorio, registradoEn, faltantes]
+      properties:
+        incidenteId: { type: string, format: uuid }
+        referencia: { type: string }
+        categoria: { $ref: '#/components/schemas/CategoriaVista' }
+        territorio:
+          description: Distrito usado por la regla o motivo territorial original.
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [estado, distrito]
+              properties:
+                estado: { const: resuelto }
+                distrito: { $ref: '#/components/schemas/DistritoVista' }
+            - type: object
+              additionalProperties: false
+              required: [estado, motivo]
+              properties:
+                estado: { const: pendiente }
+                motivo: { type: string, enum: [frontera, solapamiento, fuera_area, sin_cartografia, sin_distrito] }
+        registradoEn: { type: string, format: date-time }
+        faltantes:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Faltante' }
+    PendientesEnrutamiento:
+      type: object
+      additionalProperties: false
+      required: [elementos, siguiente]
+      properties:
+        elementos:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/FilaPendienteEnrutamiento' }
+        siguiente: { type: [string, 'null'] }
+    DesignacionSolicitud:
+      type: object
+      additionalProperties: false
+      required: [institucion, sedeId, motivo]
+      properties:
+        institucion: { $ref: '#/components/schemas/TipoInstitucionDestino' }
+        sedeId: { type: string, format: uuid }
+        motivo: { type: string, minLength: 10, maxLength: 500 }
+    ResultadoEnrutamientoAdmin:
+      type: object
+      additionalProperties: false
+      required: [enrutamiento]
+      properties:
+        enrutamiento:
+          type: object
+          additionalProperties: false
+          required: [incidenteId, resultado, faltantes]
+          properties:
+            incidenteId: { type: string, format: uuid }
+            resultado: { type: string, enum: [ENRUTADO, ENRUTAMIENTO_PENDIENTE] }
+            faltantes:
+              type: array
+              items: { $ref: '#/components/schemas/Faltante' }
     ElementoHistorial:
       type: object
       additionalProperties: false
@@ -2012,7 +2326,7 @@ components:
           properties:
             heridos: { type: [string, 'null'], enum: [si, no, no_se, null] }
             atencionMedica: { type: [string, 'null'], enum: [si, no, no_se, null] }
-        institucionResponsable: { $ref: '#/components/schemas/InstitucionPendiente' }
+        institucionResponsable: { $ref: '#/components/schemas/InstitucionResponsable' }
         actuaciones: { type: array, maxItems: 0 }
     ConsultaSeguimiento:
       type: object
@@ -2031,7 +2345,7 @@ components:
         categoria: { $ref: '#/components/schemas/CategoriaVista' }
         estado: { type: string, enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
         recibidoEn: { type: string, format: date-time }
-        institucionResponsable: { $ref: '#/components/schemas/InstitucionPendiente' }
+        institucionResponsable: { $ref: '#/components/schemas/InstitucionResponsable' }
         actuaciones: { type: array, maxItems: 0 }
     Error:
       type: object
@@ -2070,7 +2384,14 @@ components:
                 - IDEMPOTENCY_KEY_REQUIRED
                 - IDEMPOTENCY_CONFLICT
                 - TRACKING_NOT_FOUND
+                - FALTANTE_INEXISTENTE
+                - SEDE_NO_DESIGNABLE
+                - ENRUTAMIENTO_NO_PENDIENTE
             message: { type: string }
+            requisitos:
+              type: array
+              description: Solo en SEDE_NO_DESIGNABLE. Requisitos incumplidos de la sede.
+              items: { type: string, enum: [sede_existente, misma_institucion, institucion_activa, sede_activa, sede_habilitada, operador_activo] }
             faltantes:
               type: array
               description: Solo en REQUISITOS_HABILITACION. Requisitos incumplidos, en orden estable.
@@ -2083,6 +2404,56 @@ components:
               type: string
               description: Identificador aleatorio de la solicitud; no contiene datos de cuenta.
   responses:
+    ConsultaBandejaInvalida:
+      description: Cursor manipulado, parametros no admitidos o cuerpo invalido (con `fields` por campo).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ProhibidoBandeja:
+      description: |
+        `FORBIDDEN` si la sesion no es de operador (administrador o ciudadano) o si su sede no esta habilitada
+        para atencion. Sin datos de incidentes.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    IncidenteNoDisponible:
+      description: Incidente fuera del ambito, inexistente o con identificador malformado. Misma respuesta para todas las causas.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: NOT_FOUND, message: "Incidente no disponible.", requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
+    ProhibidoEnrutamiento:
+      description: |
+        `FORBIDDEN` si la sesion no es de administrador o `FORBIDDEN_ORIGIN` si la modificacion no viene del
+        origen web configurado.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    EnrutamientoNoEncontrado:
+      description: El incidente no existe, no tiene enrutamiento o el identificador no tiene el formato esperado.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ConflictoEnrutamiento:
+      description: |
+        `FALTANTE_INEXISTENTE` (la institucion ya no falta, incluida una designacion concurrente),
+        `SEDE_NO_DESIGNABLE` (con `requisitos`) o `ENRUTAMIENTO_NO_PENDIENTE`. Sin cambios parciales.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: SEDE_NO_DESIGNABLE, message: "La sede elegida no cumple los requisitos para recibir el caso.", requisitos: [sede_habilitada], requestId: "2adb1a23-ba50-4f5b-a4bc-5ba5a478e614" } }
     SeguimientoNoEncontrado:
       description: Referencia inexistente, incidente ajeno o de otra modalidad, o codigo incorrecto. Misma respuesta para todas las causas.
       headers:

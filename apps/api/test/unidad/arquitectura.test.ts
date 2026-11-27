@@ -86,6 +86,22 @@ describe('limites arquitectonicos', () => {
     expect(verificar(valid).infracciones).toEqual([]);
   });
 
+  it('rechaza ciclos entre modulos aunque usen fachadas publicas (P4.2)', () => {
+    const ciclo = fixture({
+      'src/modules/uno/index.ts': "export * from '../dos';\nexport const uno = 1;",
+      'src/modules/dos/index.ts': "import { tres } from '../tres';\nexport const dos = tres;",
+      'src/modules/tres/index.ts': "import { uno } from '../uno';\nexport const tres = uno;",
+    });
+    const r = verificar(ciclo).infracciones.filter((i) => i.regla === 'ciclo-entre-modulos');
+    expect(r).toHaveLength(1);
+    const sinCiclo = fixture({
+      'src/modules/uno/index.ts': "import { dos } from '../dos';\nexport const uno = dos;",
+      'src/modules/dos/index.ts': 'export const dos = 2;',
+      'src/composicion.ts': "import { uno } from './modules/uno';\nimport { dos } from './modules/dos';\nexport const t = [uno, dos];",
+    });
+    expect(verificar(sinCiclo).infracciones).toEqual([]);
+  });
+
   it('permite composicion declarada sin eximir a las capas internas', () => {
     const root = fixture({
       'src/modules/uno/uno.module.ts': "import './infraestructura/repo'; import 'express';",

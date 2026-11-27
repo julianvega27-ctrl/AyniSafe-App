@@ -170,7 +170,7 @@ export function MarcoInstitucional({ rol, titulo, secciones = [], acciones, chil
               <ul className="sidebar-list">
                 {secciones.map((s) => (
                   <li key={s.id}>
-                    <NavLink to={rutaSeccion(rol, s.id)} end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+                    <NavLink to={rutaSeccion(rol, s.id)} end={s.id === 'inicio'} className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
                       <span className="nav-icon" aria-hidden="true">
                         {SIMBOLO[s.id] ?? '•'}
                       </span>

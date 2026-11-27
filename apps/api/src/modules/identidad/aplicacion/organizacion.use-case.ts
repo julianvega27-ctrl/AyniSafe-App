@@ -4,6 +4,8 @@ import {
   CorreoOperadorEnUsoError,
   normalizarNombreSede,
   RecursoNoEncontradoError,
+  requisitosDesignacion,
+  type RequisitoDesignacion,
   SedeExistenteError,
   TIPOS_INSTITUCION,
   type AmbitoOperador,
@@ -255,4 +257,34 @@ export class ConsultarAmbitoOperadorUseCase {
   ejecutar(usuarioId: string): Promise<AmbitoOperador | null> {
     return this.organizacion.ambitoDeOperador(usuarioId);
   }
+}
+
+/**
+ * Contrato interno de sedes para el enrutamiento de Operaciones (P4.2). Lee siempre la configuracion
+ * vigente, sin cache.
+ */
+export class SedesEnrutamientoUseCase {
+  constructor(private readonly organizacion: OrganizacionPort) {}
+
+  /** Sedes elegibles; vacio si la institucion no es una de las cuatro admitidas. */
+  elegibles(institucion: string, distritoId: string, categoriaId: string): Promise<string[]> {
+    if (!esTipoInstitucion(institucion)) return Promise.resolve([]);
+    return this.organizacion.sedesElegibles(institucion, distritoId, categoriaId);
+  }
+
+  /** Requisitos incumplidos para designar la sede a la institucion; vacio si es designable. */
+  async designable(sedeId: string, institucion: string): Promise<RequisitoDesignacion[]> {
+    if (!esTipoInstitucion(institucion)) return ['misma_institucion'];
+    if (!esUuid(sedeId)) return ['sede_existente'];
+    return requisitosDesignacion(await this.organizacion.estadoDesignacion(sedeId), institucion);
+  }
+
+  /** Nombres visibles de las instituciones (para el seguimiento ciudadano). */
+  async nombresInstituciones(): Promise<ReadonlyMap<string, string>> {
+    return new Map((await this.organizacion.listarInstituciones()).map((i) => [i.id, i.nombre]));
+  }
+}
+
+function esTipoInstitucion(valor: string): valor is TipoInstitucion {
+  return (TIPOS_INSTITUCION as readonly string[]).includes(valor);
 }

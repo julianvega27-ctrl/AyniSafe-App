@@ -11,6 +11,8 @@ import { LimitadorTerritorial } from './infraestructura/limitador-territorial';
 import { crearRouterTerritorial } from './presentacion/territorio.routes';
 import { SeguimientoCiudadano, type DependenciasSeguimiento } from './aplicacion/seguimiento.use-case';
 import { crearRouterSeguimiento, type IdentificarConsultante } from './presentacion/seguimiento.routes';
+import { BandejaInstitucional, type DependenciasBandeja } from './aplicacion/bandeja.use-case';
+import { crearRouterBandeja, type IdentificarOperador } from './presentacion/bandeja.routes';
 import type { Logger } from '../../compartido/logger';
 
 export type { TerritorioRepositorio } from './aplicacion/territorio.use-case';
@@ -23,8 +25,24 @@ export {
   type EnviosSeguimientoPort,
   type IncidentesSeguimientoPort,
   type LimitadorSeguimientoPort,
+  type ResponsablesSeguimientoPort,
 } from './aplicacion/seguimiento.use-case';
 export type { IdentificarConsultante } from './presentacion/seguimiento.routes';
+export {
+  BandejaInstitucional,
+  PAGINA_BANDEJA,
+  type AmbitoBandejaPort,
+  type DependenciasBandeja,
+  type OriginalesBandejaPort,
+  type ParticipacionesBandejaPort,
+} from './aplicacion/bandeja.use-case';
+export type { IdentificarOperador } from './presentacion/bandeja.routes';
+
+/** Bandeja del operador (P4.2): puertos hacia Identidad, Operaciones y Reportes. */
+export interface OpcionesBandeja extends DependenciasBandeja {
+  readonly identificar: IdentificarOperador;
+  readonly logger: Logger;
+}
 
 /** Seguimiento ciudadano (P4.1): puertos hacia Reportes, Operaciones e Identidad. */
 export interface OpcionesSeguimiento extends DependenciasSeguimiento {
@@ -47,6 +65,7 @@ export interface OpcionesTerritorio {
   readonly secretoLimitador: string;
   readonly ahora?: () => number;
   readonly seguimiento?: OpcionesSeguimiento;
+  readonly bandeja?: OpcionesBandeja;
 }
 
 export type { ContenidoPublico } from './dominio/contenido';
@@ -84,6 +103,9 @@ export function crearModuloConsultas(entrada: unknown = fuente, opciones?: Opcio
   const territorio = new ConsultarTerritorio(opciones?.repositorio ?? { leer: async () => null });
   router.use('/publico/territorio', crearRouterTerritorial(territorio,
     new LimitadorTerritorial(opciones?.secretoLimitador ?? randomBytes(32).toString('hex'), opciones?.ahora)));
+  if (opciones?.bandeja) {
+    router.use(crearRouterBandeja(new BandejaInstitucional(opciones.bandeja), opciones.bandeja.identificar, opciones.bandeja.logger));
+  }
   if (!opciones?.seguimiento) return { router, contenido, territorio };
   const seguimiento = new SeguimientoCiudadano(opciones.seguimiento);
   router.use(crearRouterSeguimiento(seguimiento, opciones.seguimiento.identificar, opciones.seguimiento.logger));
@@ -94,10 +116,12 @@ export function crearModuloConsultasConPrisma(
   prisma: PrismaClient,
   secretoLimitador: string,
   seguimiento?: OpcionesSeguimiento,
+  bandeja?: OpcionesBandeja,
 ): ModuloConsultas {
   return crearModuloConsultas(fuente, {
     repositorio: new PrismaTerritorioAdapter(prisma),
     secretoLimitador,
     ...(seguimiento ? { seguimiento } : {}),
+    ...(bandeja ? { bandeja } : {}),
   });
 }

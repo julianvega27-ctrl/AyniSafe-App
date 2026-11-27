@@ -52,22 +52,23 @@ class EtiquetaEstado extends StatelessWidget {
   }
 }
 
-/// Institución responsable y actuaciones: pendientes hasta el enrutamiento (P4.2) y la atención (P6).
+/// La asignación no confirma recepción institucional ni atención (P6).
 class BloquePendienteAtencion extends StatelessWidget {
-  const BloquePendienteAtencion({super.key});
+  const BloquePendienteAtencion({super.key, required this.institucion});
+  final InstitucionResponsable institucion;
 
   @override
-  Widget build(BuildContext context) => const Column(
+  Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Card(
         child: ListTile(
-          leading: Icon(Icons.account_balance_outlined),
-          title: Text('Institución responsable'),
-          subtitle: Text('Pendiente de asignación.'),
+          leading: const Icon(Icons.account_balance_outlined),
+          title: const Text('Institución responsable'),
+          subtitle: Text(institucion.nombre ?? 'Pendiente de asignación.'),
         ),
       ),
-      Card(
+      const Card(
         child: ListTile(
           leading: Icon(Icons.timeline),
           title: Text('Actuaciones'),
@@ -323,7 +324,7 @@ class _DetalleIncidentePantallaState extends State<DetalleIncidentePantalla> {
                     subtitle: Text(d.resumen.territorio.texto),
                   ),
                 ),
-                const BloquePendienteAtencion(),
+                BloquePendienteAtencion(institucion: d.institucionResponsable),
               ],
               ConsultaNoEncontrada() => [
                 const MensajeAccesible(
@@ -579,7 +580,7 @@ class _ConsultarCodigoPantallaState extends State<ConsultarCodigoPantalla> {
                 subtitle: Text(_fecha(vista.recibidoEn)),
               ),
             ),
-            const BloquePendienteAtencion(),
+            BloquePendienteAtencion(institucion: vista.institucionResponsable),
           ],
         ],
       ),

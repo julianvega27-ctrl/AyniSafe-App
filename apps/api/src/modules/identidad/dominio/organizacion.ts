@@ -81,6 +81,32 @@ export function requisitosFaltantes(estado: EstadoParaHabilitar): RequisitoHabil
   return faltantes;
 }
 
+export type RequisitoDesignacion = 'sede_existente' | 'misma_institucion' | 'institucion_activa' | 'sede_activa' | 'sede_habilitada' | 'operador_activo';
+
+/**
+ * Requisitos incumplidos para designar una sede a una institucion faltante (P4.2, RF35). No exige
+ * cobertura ni competencia: la designacion es una excepcion limitada al caso.
+ */
+export function requisitosDesignacion(
+  estado: {
+    readonly institucionId: TipoInstitucion;
+    readonly institucionActiva: boolean;
+    readonly sedeActiva: boolean;
+    readonly habilitadaAtencion: boolean;
+    readonly operadoresActivos: number;
+  } | null,
+  institucion: TipoInstitucion,
+): RequisitoDesignacion[] {
+  if (!estado) return ['sede_existente'];
+  const faltan: RequisitoDesignacion[] = [];
+  if (estado.institucionId !== institucion) faltan.push('misma_institucion');
+  if (!estado.institucionActiva) faltan.push('institucion_activa');
+  if (!estado.sedeActiva) faltan.push('sede_activa');
+  if (!estado.habilitadaAtencion) faltan.push('sede_habilitada');
+  if (estado.operadoresActivos < 1) faltan.push('operador_activo');
+  return faltan;
+}
+
 /** Ambito resuelto de un operador. Nulo (ambito vacio) si la cuenta, sede o institucion no estan activas. */
 export interface AmbitoOperador {
   readonly institucion: { readonly id: TipoInstitucion; readonly nombre: string };

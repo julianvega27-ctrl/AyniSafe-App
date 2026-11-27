@@ -55,7 +55,7 @@ export const contenido = (extra: Partial<ContenidoPublico> = {}): ContenidoPubli
 });
 
 export const SECCIONES_ADMIN = [
-  { id: 'inicio', titulo: 'Inicio', disponible: false },
+  { id: 'inicio', titulo: 'Inicio', disponible: true },
   { id: 'instituciones-sedes', titulo: 'Instituciones y sedes', disponible: true },
   { id: 'operadores', titulo: 'Operadores', disponible: true },
   { id: 'coberturas', titulo: 'Coberturas', disponible: true },
@@ -66,7 +66,7 @@ export const SECCIONES_ADMIN = [
 ];
 export const SECCIONES_OPERADOR = [
   { id: 'inicio', titulo: 'Inicio', disponible: false },
-  { id: 'incidentes', titulo: 'Incidentes', disponible: false },
+  { id: 'incidentes', titulo: 'Incidentes', disponible: true },
   { id: 'mapa', titulo: 'Mapa', disponible: false },
   { id: 'indicadores', titulo: 'Indicadores', disponible: false },
   { id: 'historial', titulo: 'Historial', disponible: false },
@@ -101,6 +101,15 @@ export function servidorFalso(opciones: { sesion?: UsuarioInstitucional | null; 
       if (!estado.sesion) return json(401, { error: { code: 'UNAUTHENTICATED' } });
       if (estado.sesion.rol !== panel[1]) return json(403, { error: { code: 'FORBIDDEN' } });
       return json(200, { usuario: estado.sesion, secciones: panel[1] === 'administrador' ? SECCIONES_ADMIN : SECCIONES_OPERADOR });
+    }
+    // P4.2: sin casos por defecto (las pruebas de bandeja y pendientes instalan los suyos).
+    if (ruta.startsWith('/api/v1/admin/enrutamientos-pendientes') && metodo === 'GET') {
+      if (estado.sesion?.rol !== 'administrador') return json(estado.sesion ? 403 : 401, { error: { code: estado.sesion ? 'FORBIDDEN' : 'UNAUTHENTICATED' } });
+      return json(200, { elementos: [], siguiente: null });
+    }
+    if (ruta.startsWith('/api/v1/operador/incidentes') && metodo === 'GET') {
+      if (estado.sesion?.rol !== 'operador') return json(estado.sesion ? 403 : 401, { error: { code: estado.sesion ? 'FORBIDDEN' : 'UNAUTHENTICATED' } });
+      return ruta === '/api/v1/operador/incidentes' ? json(200, { elementos: [], siguiente: null }) : json(404, { error: { code: 'NOT_FOUND' } });
     }
     return json(404, { error: { code: 'NOT_FOUND' } });
   };

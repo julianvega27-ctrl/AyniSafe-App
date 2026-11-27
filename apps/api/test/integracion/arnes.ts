@@ -4,8 +4,8 @@ import type { Express } from 'express';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultasConPrisma, idsDistritosPiloto } from '../../src/modules/consultas';
 import { crearModuloReportesConPrisma, type ModuloReportes } from '../../src/modules/reportes';
-import { crearModuloOperacionesConPrisma, type ModuloOperaciones } from '../../src/modules/operaciones';
-import { dependenciasRegistro, opcionesSeguimiento } from '../../src/composicion';
+import { crearModuloOperacionesConPrisma, type ModuloOperaciones, type ServicioEnrutamiento } from '../../src/modules/operaciones';
+import { dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from '../../src/composicion';
 import type { ConsumidorEventos } from '../../src/compartido/eventos/eventos';
 import { ProcesadorEntregas } from '../../src/compartido/eventos/procesador-entregas';
 import { PrismaOrganizacionAdapter } from '../../src/modules/identidad/infraestructura/prisma-organizacion.adapter';
@@ -87,6 +87,8 @@ export interface OpcionesArnes {
   readonly sobrescribir?: Partial<DependenciasIdentidad>;
   /** Consumidores de eventos del procesador del arnes (P4.1). Por defecto, ninguno. */
   readonly consumidores?: readonly ConsumidorEventos[];
+  /** Registra el consumidor de enrutamiento (P4.2) en el procesador del arnes. Por defecto, no. */
+  readonly enrutar?: boolean;
   /** Limite de envios de invitado (P4.1). Por defecto, holgado. */
   readonly limiteInvitado?: { readonly maximo: number; readonly ventanaMs: number };
   /** Limites de la consulta por codigo (P4.1). Por defecto, los del servicio. */
@@ -105,6 +107,7 @@ export interface Arnes {
   readonly reportes: ModuloReportes;
   readonly operaciones: ModuloOperaciones;
   readonly procesador: ProcesadorEntregas;
+  readonly enrutamiento: ServicioEnrutamiento;
   readonly deps: DependenciasIdentidad;
   /** Adaptador de correo en memoria (salvo que se sobrescriba): no valida el proveedor real. */
   readonly correo: CorreoPruebaAdapter;
@@ -166,11 +169,23 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   const operaciones = crearModuloOperacionesConPrisma(prisma);
   modulosCreados.add(modulo);
   clientesCreados.add(prisma);
-  const consultas = crearModuloConsultasConPrisma(prisma, SECRETO_PRUEBA, {
-    ...opcionesSeguimiento({ identidad: modulo, operaciones }, () => reportes!, logger),
-    ...(opciones.limitesSeguimiento ? { limites: opciones.limitesSeguimiento } : {}),
-  });
-  const procesador = new ProcesadorEntregas(prisma, opciones.consumidores ?? [], logger);
+  let procesadorCreado: ProcesadorEntregas | undefined;
+  const enrutamiento = enrutamientoDe(prisma, modulo, () => reportes!, () => procesadorCreado?.despertar());
+  const consultas = crearModuloConsultasConPrisma(
+    prisma,
+    SECRETO_PRUEBA,
+    {
+      ...opcionesSeguimiento({ identidad: modulo, operaciones, enrutamiento }, () => reportes!, logger),
+      ...(opciones.limitesSeguimiento ? { limites: opciones.limitesSeguimiento } : {}),
+    },
+    opcionesBandeja(modulo, enrutamiento, () => reportes!, logger),
+  );
+  const procesador = new ProcesadorEntregas(
+    prisma,
+    [...(opciones.consumidores ?? []), ...(opciones.enrutar ? [enrutamiento.consumidor()] : [])],
+    logger,
+  );
+  procesadorCreado = procesador;
   procesadoresCreados.add(procesador);
   reportes = crearModuloReportesConPrisma(prisma, {
     ...dependenciasRegistro(prisma, { identidad: modulo, consultas, operaciones }, () => procesador.despertar(), logger),
@@ -182,12 +197,13 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     identidad: modulo,
     consultas,
     reportes,
+    operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger),
   });
-  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, deps, correo };
+  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, deps, correo };
 }
 
 export async function limpiarBd(prisma: PrismaClient): Promise<void> {
-  await prisma.$executeRawUnsafe('TRUNCATE entregas_evento, eventos, solicitudes_envio, envios_incidente, incidentes CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE participaciones_incidente, enrutamientos_incidente, entregas_evento, eventos, solicitudes_envio, envios_incidente, incidentes CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE envios_correo, tokens_cuenta, sesiones, usuarios, ventanas_intentos CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE estado_territorial, geometrias_distritales, versiones_territoriales CASCADE');
   await prisma.$executeRaw`INSERT INTO estado_territorial(ambito) VALUES ('ayacucho-metropolitano')`;

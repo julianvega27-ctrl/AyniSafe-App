@@ -14,7 +14,7 @@ export interface CategoriaVista {
   readonly nombre: string | null;
 }
 
-/** Mientras no exista enrutamiento (P4.2) ni actuaciones (P6), se informan como pendientes. */
+/** Sin principal con participacion (P4.2) se informa pendiente; las actuaciones llegan en P6. */
 export const INSTITUCION_PENDIENTE = { estado: 'pendiente' } as const;
 
 export const PAGINA_HISTORIAL = 20;

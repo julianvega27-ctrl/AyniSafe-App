@@ -51,6 +51,14 @@ describe('tokens y contraste (guia de UI, WCAG AA)', () => {
     ['antetitulo', COLORES['--color-accion'], COLORES['--color-fondo'], 4.5],
     ['cerrar sesion', COLORES['--color-error-texto'], '#FFFFFF', 4.5],
     ['anillo de foco en el lateral', '#7AD8AB', '#133941', 3],
+    // Bandeja y pendientes (P4.2): tabla del origen con la cabecera ajustada al texto suave.
+    ['cabecera de tabla', COLORES['--color-texto-suave'], '#F9FBFB', 4.5],
+    ['nombre en la tabla', '#253F47', '#FFFFFF', 4.5],
+    ['fila enlazada al pasar el cursor', '#203843', '#F2F9F6', 4.5],
+    ['referencia en la fila resaltada', COLORES['--color-texto-suave'], '#F2F9F6', 4.5],
+    ['etiqueta de la fila', '#476D70', '#ECF3F2', 4.5],
+    ['condicion medica por confirmar', COLORES['--color-aviso-texto'], COLORES['--color-aviso-fondo'], 4.5],
+    ['foco de la fila enlazada', COLORES['--color-accion'], '#F2F9F6', 3],
   ] as const)('marco institucional: %s cumple el contraste minimo', (_n, texto, fondo, minimo) => {
     expect(contraste(texto, fondo)).toBeGreaterThanOrEqual(minimo);
   });
