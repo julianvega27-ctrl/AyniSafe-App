@@ -271,11 +271,15 @@ Pendientes explícitos: avisos persistentes por usuario, lectura, contador, camp
 
 ## Estado de cierre
 
+docs/p4.2-cierre
 Las 22 tareas de implementación y validación de P4.2 se completaron localmente y la implementación se fusionó mediante el PR #7 en `main` `08ca417a8c0eaf205ccae46dc41b849d22fa53ab`, con CI aprobado. La evidencia de ese CI se incorporó a `docs/p4.2-cierre` mediante `4142c7a` (cherry-pick del commit `3c3a320`, que había quedado en la rama de implementación después de su fusión).
 
 El 26/11/2026, hora de Lima, se sincronizaron las siete capacidades de este cambio y se archivó localmente en `openspec/changes/archive/2026-11-26-enrutamiento-bandeja-inicial/`. Se preservaron los Purpose y requisitos/escenarios no afectados de las specs existentes. La segunda sincronización no produjo cambios (idempotencia). Validación: 26 specs aprobadas, 0 fallidas, y cambio válido en modo estricto antes del archivo. Se mantienen cuatro advertencias previas de textos mayores de 500 caracteres en requisitos no modificados por este cierre; no se reescribieron para ocultarlas.
 
 Este cierre contiene solo documentación y OpenSpec. Su commit, PR y CI están pendientes; no se declara que el CI de `08ca417` haya evaluado los cambios posteriores de cierre. No se modificó código de producto, no se desplegó y no se eliminaron ramas.
+
+Las tareas de implementación y validación de P4.2 quedan completas localmente. No se creó commit, PR, despliegue ni archivo OpenSpec. CI y revisión del responsable siguen pendientes; el workflow posterior se ejecuta cuando se solicite. Se conservan todos los cambios previos del árbol de trabajo y el donante permanece limpio.
+ main
 
 ## Validación en GitHub Actions
 
@@ -292,6 +296,10 @@ Resultados comprobados:
 
 La ejecución terminó correctamente con los cuatro trabajos aprobados.
 La cobertura de la API se conserva en el artefacto de esta ejecución,
+ docs/p4.2-cierre
 con retención de 14 días.
 
 Contraste del CI por el agente durante el cierre: evento `push` de `main`, iniciado el **26/11/2026 a las 21:09:43 de Lima**, conclusión `success`; API, Flutter, Web y secretos con conclusión `success`. Artefacto disponible al consultar: `api-cobertura-08ca417a8c0eaf205ccae46dc41b849d22fa53ab`, con vencimiento **10/12/2026 a las 21:12:44 de Lima**. Los porcentajes de la sección local no se atribuyen a esta ejecución sin consultar su reporte de cobertura.
+
+con retención de 14 días.
+ main
