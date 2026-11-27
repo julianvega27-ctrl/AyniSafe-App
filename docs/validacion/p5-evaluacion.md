@@ -312,3 +312,37 @@ Durante la verificación manual el responsable pidió mejorar la legibilidad de 
 El responsable recorrió y dio por verificadas las tareas **8.4** (app en el emulador Android con la API local) y **10.3** (recorrido integrado con el registro desde Flutter). El dispositivo, las capturas y el resultado de TalkBack no constan en este informe.
 
 Durante esa verificación se encontró que la base de desarrollo `ayni_safe_dev` no tenía aplicada la migración `20261128100000_evaluacion_rapida`: solo se había aplicado en `*_test`. Por eso el registro respondía 503 y la app mostraba «Reintentar envío». Se aplicó con `prisma migrate deploy` y se reencolaron 9 entregas de enrutamiento fallidas desde el 26/11 (anteriores a P5) con `eventos:reintentar`. Al cambiar a una rama con migraciones nuevas hay que ejecutar `npm run db:migrar` en `apps/api`.
+
+## CI remoto
+
+- **PR:** [#11](https://github.com/julianvega27-ctrl/AyniSafe-App/pull/11), rama `feat/p5-evaluacion`, revisión `e7a81197cb77148460b801aebab99cd2d1304598`.
+- **Commits:**
+  - especificación: `23b311b`;
+  - API: `4c1c1ca`;
+  - móvil: `c086d42`;
+  - web: `7dc3f65`;
+  - evidencia: `e7a8119`.
+
+**GitHub Actions, ejecución [46014267917](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/46014267917)** (`pull_request`, 27/11/2026): aprobada.
+
+| Job | Resultado | Duración |
+|---|---|---|
+| API (tipos, arquitectura, contrato y Jest con cobertura) | Aprobado | 4 min 34 s |
+| Flutter (análisis y pruebas) | Aprobado | 1 min 24 s |
+| Web (lint, tipos, compilación y pruebas) | Aprobado | 31 s |
+| Escaneo de secretos del repositorio | Aprobado | 14 s |
+
+Con los archivos ya versionados, el escaneo de secretos cubre también los archivos nuevos de P5.1.
+
+**Fusión:** el PR #11 se fusionó en `main` el 27/11/2026 como `f8957177db391b6722f1e6dbe43065afecdf84af`. La ejecución [46015575847](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/46015575847) (`push` a `main`) aprobó los cuatro trabajos. Artefacto de cobertura: `api-cobertura-f8957177db391b6722f1e6dbe43065afecdf84af`, que vence el 11/12/2026. Los porcentajes de la validación local no se atribuyen a esta ejecución sin consultar su reporte.
+
+## Cierre OpenSpec (rama `docs/p5.1-cierre`)
+
+- **Specs sincronizadas:**
+  - 2 capacidades nuevas: `reportes/evaluacion-rapida` (9 requisitos) y `consultas/detalle-sanitario` (5);
+  - deltas en 7 capacidades existentes: `consultas/bandeja-institucional` (~2), `consultas/seguimiento-ciudadano` (~1 +1), `movil/reporte-incidente` (~2 +2), `movil/seguimiento-incidentes` (+2), `operaciones/enrutamiento` (~1 +4), `reportes/registro-incidentes` (~2 +1) y `web/bandeja-incidentes` (~1 +3).
+- **Verificación:** se comprobó que los 36 bloques de requisitos de los deltas aparecen una sola vez en las specs principales. Los requisitos no afectados se conservan tal cual.
+- **Archivo:** `openspec/changes/archive/2026-11-27-evaluacion-rapida-samu`. `openspec list` ya no muestra cambios activos.
+- **`openspec validate --specs`:** 28 specs aprobadas, 0 fallidas.
+- La migración `20261128100000_evaluacion_rapida` conserva en su comentario la ruta del cambio sin archivar. No se edita porque Prisma valida su checksum.
+- Este cierre contiene solo documentación y OpenSpec: no modifica código de producto ni se desplegó.

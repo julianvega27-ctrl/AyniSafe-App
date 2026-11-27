@@ -32,6 +32,10 @@ Cada fila MUST incluir referencia, categoría, distrito, estado, instante de reg
 - **WHEN** se inspecciona una fila de la bandeja
 - **THEN** contiene solo los campos enumerados y la prioridad es «Sin evaluar»
 
+#### Scenario: Revisión resuelta y papel actualizado
+- **WHEN** una aclaración resuelve la revisión médica y cambia el papel de la institución del operador
+- **THEN** la siguiente consulta ya no marca la condición médica por confirmar y muestra el papel vigente
+
 ### Requirement: Ámbito vigente en cada consulta
 La bandeja y el resumen MUST filtrarse en el backend con el ámbito vigente del operador: sede activa y habilitada, distrito del incidente dentro de su cobertura y categoría dentro de sus competencias. Una participación designada por el administrador MUST seguir visible aunque no cumpla cobertura o competencia. Un operador sin ámbito MUST recibir 403.
 
@@ -48,11 +52,15 @@ La bandeja y el resumen MUST filtrarse en el backend con el ámbito vigente del 
 - **THEN** recibe 401 o 403 y ningún dato de incidentes
 
 ### Requirement: Resumen por identificador
-El operador MUST poder leer por identificador el resumen de un incidente de su bandeja, con los campos de la fila, la descripción, el modo e instante de ocurrencia, el resultado territorial, las respuestas de heridos y atención médica marcadas como informadas por el ciudadano y los tipos de las demás instituciones participantes. MUST NOT incluir teléfono, coordenadas, código, autor, evidencias ni el detalle de evaluación SAMU.
+El operador MUST poder leer por identificador el resumen de un incidente de su bandeja: campos de la fila, descripción, ocurrencia, resultado territorial, respuestas originales de heridos y atención médica como informadas por el ciudadano, condición médica vigente (resumen de heridos), si tiene acceso al detalle sanitario y tipos de las demás instituciones participantes. MUST NOT incluir teléfono, coordenadas, código, autor, evidencias ni observaciones de la persona principal.
 
 #### Scenario: Resumen propio
 - **WHEN** el operador abre un incidente de su bandeja
 - **THEN** recibe el resumen con los campos permitidos y sin datos excluidos
+
+#### Scenario: Condición precisada por un operador
+- **WHEN** un operador PNP precisó heridos si en un accidente
+- **THEN** el resumen conserva la respuesta original del ciudadano y muestra la condición vigente con origen operador, institución PNP e instante
 
 ### Requirement: Aislamiento ante acceso directo
 Un identificador ajeno al ámbito del operador, inexistente o malformado MUST responder 404 con el mismo cuerpo, sin revelar si existe. Manipular el cursor o los parámetros MUST NOT ampliar el conjunto visible. Un ciudadano o un administrador MUST recibir 403 en la bandeja y en el resumen.
