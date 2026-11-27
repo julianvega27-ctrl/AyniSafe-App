@@ -62,7 +62,7 @@ La migración ahora rechaza ese cierre, como exige la spec. Se corrigieron ambas
 ## Pendiente, sin presentarlo como hecho
 
 - **Recorrido en Android real.** Lo verifica el responsable de forma manual; no se ejecutó aquí.
-- **PR, CI remoto y fusión.**
+- **Fusión del PR.** El PR #15 tiene CI en verde en la ejecución `46075468404`, con 4 jobs: API (tipos, arquitectura, contrato y Jest con cobertura), Web, Flutter y escaneo de secretos.
 - **Fuera del alcance de P6:**
   - reapertura de cerrados;
   - transferencia de turno solicitada por el operador;
