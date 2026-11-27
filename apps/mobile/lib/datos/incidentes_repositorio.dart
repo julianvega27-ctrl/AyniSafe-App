@@ -233,7 +233,68 @@ class InstitucionResponsable {
   }
 }
 
-/// Detalle privado del autor; las actuaciones llegan con P6.
+/// Hito ciudadano de la atención (P6): texto fijo del servidor, sin operadores ni sedes.
+class Actuacion {
+  const Actuacion({required this.texto, required this.instante});
+  final String texto;
+  final DateTime instante;
+}
+
+/// Resultado del cierre con su resumen ciudadano (P6).
+class CierreCiudadano {
+  const CierreCiudadano({required this.atendido, required this.resumen});
+  final bool atendido;
+  final String resumen;
+}
+
+/// Actuaciones, cierre y coordinación tal como los informa el servidor; la app no los infiere.
+class AtencionCiudadana {
+  const AtencionCiudadana({
+    this.actuaciones = const [],
+    this.cierre,
+    this.coordinacion,
+  });
+  final List<Actuacion> actuaciones;
+  final CierreCiudadano? cierre;
+  final String? coordinacion;
+
+  static AtencionCiudadana desdeJson(Map<String, dynamic> json) {
+    final actuaciones = <Actuacion>[];
+    final lista = json['actuaciones'];
+    if (lista is List) {
+      for (final a in lista) {
+        if (a is! Map<String, dynamic>) continue;
+        final texto = a['texto'];
+        final instante = a['instante'] is String
+            ? DateTime.tryParse(a['instante'] as String)
+            : null;
+        if (texto is String && texto.trim().isNotEmpty && instante != null) {
+          actuaciones.add(Actuacion(texto: texto.trim(), instante: instante));
+        }
+      }
+    }
+    CierreCiudadano? cierre;
+    final c = json['cierre'];
+    if (c is Map<String, dynamic> &&
+        (c['resultado'] == 'ATENDIDO' || c['resultado'] == 'DESCARTADO') &&
+        c['resumenCiudadano'] is String) {
+      cierre = CierreCiudadano(
+        atendido: c['resultado'] == 'ATENDIDO',
+        resumen: (c['resumenCiudadano'] as String).trim(),
+      );
+    }
+    final coordinacion = json['coordinacion'];
+    return AtencionCiudadana(
+      actuaciones: actuaciones,
+      cierre: cierre,
+      coordinacion: coordinacion is String && coordinacion.trim().isNotEmpty
+          ? coordinacion.trim()
+          : null,
+    );
+  }
+}
+
+/// Detalle privado del autor con sus actuaciones (P6).
 class DetalleIncidente {
   const DetalleIncidente({
     required this.resumen,
@@ -242,8 +303,12 @@ class DetalleIncidente {
     required this.institucionResponsable,
     this.evaluacion,
     this.evidencias = const [],
+    this.atencion = const AtencionCiudadana(),
   });
   final ResumenIncidente resumen;
+
+  /// Hitos, cierre y coordinación (P6).
+  final AtencionCiudadana atencion;
   final String descripcion;
   final DateTime ocurridoEn;
   final InstitucionResponsable institucionResponsable;
@@ -276,6 +341,7 @@ class DetalleIncidente {
       institucionResponsable: InstitucionResponsable.desdeJson(institucion),
       evaluacion: EvaluacionPropia.desdeJson(json['evaluacion']),
       evidencias: EvidenciaVista.listaDesdeJson(json['evidencias']),
+      atencion: AtencionCiudadana.desdeJson(json),
     );
   }
 }
@@ -323,12 +389,16 @@ class VistaInvitado {
     required this.estado,
     required this.recibidoEn,
     required this.institucionResponsable,
+    this.atencion = const AtencionCiudadana(),
   });
   final String referencia;
   final String categoria;
   final String estado;
   final DateTime recibidoEn;
   final InstitucionResponsable institucionResponsable;
+
+  /// Hitos, cierre y coordinación (P6).
+  final AtencionCiudadana atencion;
   bool get institucionPendiente => institucionResponsable.pendiente;
 
   static VistaInvitado? desdeJson(Object? json) {
@@ -354,6 +424,7 @@ class VistaInvitado {
       estado: json['estado'] as String,
       recibidoEn: recibido,
       institucionResponsable: InstitucionResponsable.desdeJson(institucion),
+      atencion: AtencionCiudadana.desdeJson(json),
     );
   }
 }

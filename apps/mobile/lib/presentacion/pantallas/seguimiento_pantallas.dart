@@ -55,31 +55,84 @@ class EtiquetaEstado extends StatelessWidget {
   }
 }
 
-/// La asignación no confirma recepción institucional ni atención (P6).
+/// Institución responsable, cierre y actuaciones tal como los informa el servidor (P6). La
+/// asignación no confirma atención; sin hitos, las actuaciones siguen pendientes.
 class BloquePendienteAtencion extends StatelessWidget {
-  const BloquePendienteAtencion({super.key, required this.institucion});
+  const BloquePendienteAtencion({
+    super.key,
+    required this.institucion,
+    this.atencion = const AtencionCiudadana(),
+  });
   final InstitucionResponsable institucion;
+  final AtencionCiudadana atencion;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Card(
-        child: ListTile(
-          leading: const Icon(Icons.account_balance_outlined),
-          title: const Text('Institución responsable'),
-          subtitle: Text(institucion.nombre ?? 'Pendiente de asignación.'),
+  Widget build(BuildContext context) {
+    final cierre = atencion.cierre;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.account_balance_outlined),
+            title: const Text('Institución responsable'),
+            subtitle: Text(institucion.nombre ?? 'Pendiente de asignación.'),
+          ),
         ),
-      ),
-      const Card(
-        child: ListTile(
-          leading: Icon(Icons.timeline),
-          title: Text('Actuaciones'),
-          subtitle: Text('Aún no hay actuaciones registradas.'),
+        if (atencion.coordinacion != null)
+          Card(
+            key: const Key('coordinacion'),
+            child: ListTile(
+              leading: const Icon(Icons.link),
+              title: Text(atencion.coordinacion!),
+              subtitle: const Text(
+                'Tu reporte se atiende junto con otro del mismo hecho.',
+              ),
+            ),
+          ),
+        if (cierre != null)
+          Card(
+            key: const Key('cierre'),
+            child: ListTile(
+              leading: Icon(
+                cierre.atendido
+                    ? Icons.task_alt
+                    : Icons.do_not_disturb_on_outlined,
+              ),
+              title: Text(cierre.atendido ? 'Atendido' : 'Descartado'),
+              subtitle: Text(cierre.resumen),
+            ),
+          ),
+        Card(
+          key: const Key('actuaciones'),
+          child: atencion.actuaciones.isEmpty
+              ? const ListTile(
+                  leading: Icon(Icons.timeline),
+                  title: Text('Actuaciones'),
+                  subtitle: Text('Aún no hay actuaciones registradas.'),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const ListTile(
+                      leading: Icon(Icons.timeline),
+                      title: Text('Actuaciones'),
+                    ),
+                    for (final a in atencion.actuaciones)
+                      ListTile(
+                        dense: true,
+                        leading: const ExcludeSemantics(
+                          child: Icon(Icons.circle, size: 10),
+                        ),
+                        title: Text(a.texto),
+                        subtitle: Text(_fecha(a.instante)),
+                      ),
+                  ],
+                ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 /// Evaluación propia del autor (P5.1): sus respuestas con el instante en que las informó, sin
@@ -440,7 +493,10 @@ class _DetalleIncidentePantallaState extends State<DetalleIncidentePantalla> {
                     subtitle: Text(d.resumen.territorio.texto),
                   ),
                 ),
-                BloquePendienteAtencion(institucion: d.institucionResponsable),
+                BloquePendienteAtencion(
+                  institucion: d.institucionResponsable,
+                  atencion: d.atencion,
+                ),
                 if (d.evaluacion case final ev?)
                   SeccionEvaluacionPropia(
                     evaluacion: ev,
@@ -453,7 +509,11 @@ class _DetalleIncidentePantallaState extends State<DetalleIncidentePantalla> {
                   cargar: (id) async {
                     final token = widget.obtenerToken();
                     if (token == null) return const ConsultaSesionInvalida();
-                    return widget.repositorio.fotoPropia(token, d.resumen.referencia, id);
+                    return widget.repositorio.fotoPropia(
+                      token,
+                      d.resumen.referencia,
+                      id,
+                    );
                   },
                 ),
               ],
@@ -711,7 +771,10 @@ class _ConsultarCodigoPantallaState extends State<ConsultarCodigoPantalla> {
                 subtitle: Text(_fecha(vista.recibidoEn)),
               ),
             ),
-            BloquePendienteAtencion(institucion: vista.institucionResponsable),
+            BloquePendienteAtencion(
+              institucion: vista.institucionResponsable,
+              atencion: vista.atencion,
+            ),
           ],
         ],
       ),
