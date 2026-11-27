@@ -63,16 +63,16 @@ Al cargar o refrescar el navegador, la web MUST consultar la sesión al servidor
 El panel MUST mostrar las secciones de su rol recibidas de la API según la guía UI: operador con Inicio, Incidentes, Mapa, Indicadores e Historial; administrador con Inicio, Instituciones y sedes, Operadores, Coberturas, Categorías, Reglas, Contenido/contactos e Historial. MUST mostrar cuenta y cierre de sesión en cabecera. Un destino no disponible según la API MUST indicar «Aún no disponible» con texto e icono, sin datos de ejemplo.
 
 #### Scenario: Sección disponible
-- **WHEN** la API marca disponible una sección del administrador
+- **WHEN** la API marca disponible una sección del administrador o del operador
 - **THEN** la web abre su contenido operativo en lugar del aviso pendiente
 
 #### Scenario: Panel del administrador
 - **WHEN** un administrador entra a su panel
-- **THEN** ve «Instituciones y sedes», «Operadores» y «Coberturas» operativas, el resto de secciones marcadas como no disponibles y su nombre y rol en la cabecera
+- **THEN** ve «Inicio» con solo el bloque de enrutamiento pendiente, «Instituciones y sedes», «Operadores» y «Coberturas» operativas, el resto de secciones marcadas como no disponibles y su nombre y rol en la cabecera
 
 #### Scenario: Panel del operador
 - **WHEN** un operador entra a su panel
-- **THEN** ve las secciones de operación marcadas como no disponibles
+- **THEN** ve «Incidentes» operativa con su bandeja y las demás secciones de operación marcadas como no disponibles
 
 #### Scenario: Rol ajeno
 - **WHEN** un operador navega a la ruta del panel del administrador
@@ -83,7 +83,7 @@ El panel MUST mostrar las secciones de su rol recibidas de la API según la guí
 - **THEN** la sesión se revoca, la web vuelve a la portada o a `/acceso` y el botón Atrás no reabre contenido privado
 
 #### Scenario: Sección no operativa
-- **WHEN** se selecciona Inicio, Historial u otro destino sin implementación operativa
+- **WHEN** se selecciona el Inicio del operador, Historial u otro destino sin implementación operativa
 - **THEN** se abre su explicación pendiente sin consultar servicios futuros ni presentar ceros como métricas reales
 
 ### Requirement: Rutas protegidas como experiencia, no como control
