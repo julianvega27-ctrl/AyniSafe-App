@@ -351,3 +351,41 @@ Comprobaciones el 27/11/2026: `npm run typecheck` sin errores; `npm run arquitec
 | EQ-15 | **Cubierto** (API, Flutter y panel). | Tres fotos aceptadas; la cuarta, un archivo de más de 5 MB y un documento renombrado se rechazan; el formulario se conserva y se puede enviar sin adjuntos (grupos 7 y 11, recorrido 13.1, Android real aprobado por el responsable en 11.4). |
 | EQ-04 (evidencias) | **Cubierto** en su parte de fotos. | Los no participantes, el administrador, el invitado (con código o permiso), los identificadores ajenos y los malformados no acceden; las respuestas públicas, los eventos y los logs no contienen fotos ni referencias (grupo 9, recorrido 13.1). El mapa y las alertas siguen para P7 y P8. |
 | EQ-17 | **Parcial.** | La eliminación del original y sus derivados por `public_id` registrado está validada contra Cloudinary (spike S5 y recorrido 13.1), con la marca sin contenido. Los vencimientos por cierre (90 días) y la restauración de backups llegan en P6 y P9. |
+
+## PR, CI y fusión
+
+- **PR [#13](https://github.com/julianvega27-ctrl/AyniSafe-App/pull/13)** desde `feat/p5-evidencias`, con estos commits:
+  - especificación: `dd062fc`;
+  - API: `bc5c7b7`;
+  - Flutter: `ca5a238`;
+  - panel: `753a790`;
+  - evidencia: `6e3af4e`.
+
+  Antes del push se comprobó que ningún archivo confirmado contiene los valores de las credenciales del `.env` local.
+
+**GitHub Actions, ejecución [46064611286](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/46064611286)** (`pull_request`, 27/11/2026): aprobada.
+
+| Job | Resultado | Duración |
+|---|---|---|
+| API (tipos, arquitectura, contrato y Jest con cobertura) | Aprobado | 3 min 57 s |
+| Flutter (análisis y pruebas) | Aprobado | 1 min 34 s |
+| Web (lint, tipos, compilación y pruebas) | Aprobado | 38 s |
+| Escaneo de secretos del repositorio | Aprobado | 13 s |
+
+**Fusión:** el PR #13 se fusionó en `main` el 27/11/2026 como `45ba709f69f9cca8dafa3dc1183e59bf43115044`. La ejecución [46066262535](https://github.com/julianvega27-ctrl/AyniSafe-App/actions/runs/46066262535) (`push` a `main`) aprobó los cuatro trabajos: API 5 min 18 s, Flutter 1 min 24 s, web 37 s y secretos 13 s. Artefacto de cobertura: `api-cobertura-45ba709f69f9cca8dafa3dc1183e59bf43115044`, que vence el 11/12/2026. Los porcentajes de la validación local no se atribuyen a esta ejecución sin consultar su reporte.
+
+## Cierre OpenSpec (rama `docs/p5.2-cierre`)
+
+- **Specs sincronizadas** con `openspec archive` (+29 requisitos, ~2 modificados):
+  - 2 capacidades nuevas: `reportes/evidencias-fotograficas` (12 requisitos) y `consultas/acceso-evidencias` (6);
+  - deltas en 6 capacidades existentes: `consultas/bandeja-institucional` (~1 +1), `consultas/seguimiento-ciudadano` (+1), `movil/reporte-incidente` (~1 +4), `movil/seguimiento-incidentes` (+1), `reportes/registro-incidentes` (+2) y `web/bandeja-incidentes` (+2).
+- **Verificación:**
+  - los 31 bloques de requisitos de los deltas aparecen una sola vez en las specs principales;
+  - las specs nuevas tienen título y propósito;
+  - no quedan cabeceras de delta;
+  - los requisitos no afectados se conservan tal cual.
+- **Archivo:** `openspec/changes/archive/2026-11-27-evidencias-fotograficas`. `openspec list` ya no muestra cambios activos.
+- **`openspec validate --specs`:** 30 specs aprobadas, 0 fallidas. Las 4 advertencias de requisitos de más de 500 caracteres corresponden a specs de Identidad y del panel que ya existían, no a este cambio.
+- **Migración.** `20261129100000_evidencias_fotograficas` conserva en su comentario la ruta del cambio sin archivar. No se edita porque Prisma valida su checksum.
+- **Alcance del cierre.** Este cierre contiene solo documentación y OpenSpec: no modifica código de producto ni se desplegó.
+- **Despliegue pendiente** (fuera de este cierre): aplicar `npx prisma migrate deploy` y configurar `EVIDENCIAS_ADAPTADOR=cloudinary` con las variables `CLOUDINARY_*` en Render.

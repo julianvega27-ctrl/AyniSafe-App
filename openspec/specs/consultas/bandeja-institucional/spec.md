@@ -52,7 +52,7 @@ La bandeja y el resumen MUST filtrarse en el backend con el ámbito vigente del 
 - **THEN** recibe 401 o 403 y ningún dato de incidentes
 
 ### Requirement: Resumen por identificador
-El operador MUST poder leer por identificador el resumen de un incidente de su bandeja: campos de la fila, descripción, ocurrencia, resultado territorial, respuestas originales de heridos y atención médica como informadas por el ciudadano, condición médica vigente (resumen de heridos), si tiene acceso al detalle sanitario y tipos de las demás instituciones participantes. MUST NOT incluir teléfono, coordenadas, código, autor, evidencias ni observaciones de la persona principal.
+El operador MUST poder leer por identificador el resumen de un incidente de su bandeja: campos de la fila, descripción, ocurrencia, resultado territorial, respuestas originales de heridos y atención médica como informadas por el ciudadano, condición médica vigente (resumen de heridos), si tiene acceso al detalle sanitario y tipos de las demás instituciones participantes. MUST NOT incluir teléfono, coordenadas, código, autor, contenido de fotos ni observaciones de la persona principal.
 
 #### Scenario: Resumen propio
 - **WHEN** el operador abre un incidente de su bandeja
@@ -80,3 +80,14 @@ Un identificador ajeno al ámbito del operador, inexistente o malformado MUST re
 #### Scenario: Pendiente sin participación
 - **WHEN** un incidente en ENRUTAMIENTO_PENDIENTE no tiene participación de la sede del operador
 - **THEN** no aparece en su bandeja aunque esté en su distrito
+
+### Requirement: Metadatos de fotos en el resumen
+El resumen del operador MUST incluir la lista de fotos disponibles del incidente, con identificador, tipo, tamaño e instante. MUST NOT incluir fotos pendientes, fallidas o eliminadas, ni URLs, identificadores del proveedor, autor o nombre de archivo.
+
+#### Scenario: Incidente con fotos
+- **WHEN** el operador abre un incidente con dos fotos disponibles y una eliminada
+- **THEN** el resumen lista solo las dos disponibles con sus metadatos, sin URLs ni identificadores del proveedor
+
+#### Scenario: Incidente sin fotos
+- **WHEN** el incidente no tiene fotos disponibles
+- **THEN** el resumen trae la lista vacía

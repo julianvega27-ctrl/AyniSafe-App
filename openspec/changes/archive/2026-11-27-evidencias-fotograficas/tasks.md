@@ -2,6 +2,8 @@
 
 Base de planificación: `main` `ecbaea7` (27/11/2026), con P5.1 fusionado y archivado.
 
+Estado: implementación fusionada mediante el PR #13 en `main` `45ba709`, con los cuatro trabajos de CI aprobados (ejecuciones 46064611286 y 46066262535). Specs sincronizadas y cambio archivado el 27/11/2026 en `docs/p5.2-cierre`.
+
 - `proposal.md` y las specs definen el alcance; `design.md` documenta las decisiones técnicas.
 - La evidencia va en `docs/validacion/p5-evidencias.md`. Se crea en 1.1 y se completa en cada grupo.
 - Una casilla se marca solo cuando existen el código y la evidencia ejecutada.
