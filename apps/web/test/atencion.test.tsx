@@ -49,7 +49,7 @@ const EN_REVISION = resumen({
   estado: 'EN_REVISION',
   responsable: { asignado: true, esUsted: true },
   atencion: atencion({
-    responsable: { asignado: true, esUsted: true, nombre: 'Omar Quispe', desde: '2026-11-26T10:05:00.000Z' },
+    responsable: { asignado: true, esUsted: true, automatica: false, nombre: 'Omar Quispe', desde: '2026-11-26T10:05:00.000Z' },
     institucionesConResponsable: ['pnp'],
     accionesPermitidas: ['iniciar_atencion', 'descartar', 'verificar'],
     historial: [
@@ -75,22 +75,26 @@ describe('atención en el resumen del operador', () => {
   it('asume el caso con una sola solicitud y muestra el resumen actualizado en revisión', async () => {
     const { llamadas } = montar([resumen(), EN_REVISION], () => json(201, { asignacion: { id: 'a', institucion: 'pnp', desde: '2026-11-26T10:05:00.000Z' }, estado: 'EN_REVISION' }));
     renderizarApp(RUTA);
-    const boton = await screen.findByRole('button', { name: 'Asumir caso' });
+    const boton = await screen.findByRole('button', { name: 'Tomar el caso' });
     await userEvent.click(boton);
-    expect(await screen.findByText('Asumiste el caso. El incidente pasó a revisión.')).toBeInTheDocument();
+    expect(await screen.findByText('Tomaste el caso. El incidente pasó a revisión.')).toBeInTheDocument();
     expect(llamadas.filter((l) => l.metodo === 'POST').map((l) => l.ruta)).toEqual([`/api/v1/operador/incidentes/${ID}/asumir`]);
     expect(within(bloque()).getByText(/^Tú, desde/)).toBeInTheDocument();
     expect(within(bloque()).getByRole('button', { name: 'Iniciar atención' })).toBeInTheDocument();
     expect(within(bloque()).queryByRole('button', { name: 'Cerrar como atendido' })).not.toBeInTheDocument();
     expect(within(bloque()).getByText('PNP: Registrado → En revisión')).toBeInTheDocument();
+    // Una sola acción principal; el control del caso empieza plegado.
+    expect(within(bloque()).getByRole('list', { name: 'Recorrido del incidente' }).querySelector('[aria-current="step"]')).toHaveTextContent('En revisión');
+    expect(within(bloque()).getByRole('button', { name: /Control del caso/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(bloque()).queryByRole('button', { name: 'Registrar verificación' })).not.toBeInTheDocument();
   });
 
   it('un 409 al asumir explica que otro operador es responsable sin presentarlo como hecho', async () => {
     montar([resumen()], () => json(409, { error: { code: 'CASO_ASUMIDO' } }));
     renderizarApp(RUTA);
-    await userEvent.click(await screen.findByRole('button', { name: 'Asumir caso' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Tomar el caso' }));
     expect(await screen.findByText('Otro operador de tu institución ya es responsable de este caso.')).toBeInTheDocument();
-    expect(screen.queryByText(/Asumiste el caso/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tomaste el caso/)).not.toBeInTheDocument();
   });
 
   it('descartar exige motivo y resumen ciudadano y envía el estado esperado', async () => {
@@ -105,6 +109,7 @@ describe('atención en el resumen del operador', () => {
     expect(llamadas.some((l) => l.metodo === 'POST')).toBe(false);
     await userEvent.type(within(dialogo).getByLabelText('Motivo interno'), 'No se pudo confirmar el hecho');
     await userEvent.type(within(dialogo).getByLabelText('Resumen para el ciudadano'), 'El caso no pudo confirmarse.');
+    expect(within(dialogo).getByText('Lo que verá el ciudadano').parentElement).toHaveTextContent('El caso no pudo confirmarse.');
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Descartar caso' }));
     expect(await screen.findByText('Caso descartado.')).toBeInTheDocument();
     const envio = llamadas.filter((l) => l.metodo === 'POST');
@@ -116,11 +121,11 @@ describe('atención en el resumen del operador', () => {
       motivo: 'No se pudo confirmar el hecho',
       resumenCiudadano: 'El caso no pudo confirmarse.',
     });
-    await waitFor(() => expect(within(bloque()).getByText('Cerrado · Descartado')).toBeInTheDocument());
+    await waitFor(() => expect(within(bloque()).getByText('Caso cerrado: descartado.')).toBeInTheDocument());
   });
 
   it('otro operador responsable no ve acciones y se le informa', async () => {
-    montar([resumen({ estado: 'EN_REVISION', atencion: atencion({ responsable: { asignado: true, esUsted: false, nombre: 'Rosa Huamán', desde: '2026-11-26T10:05:00.000Z' }, accionesPermitidas: [] }) })], () => json(500, {}));
+    montar([resumen({ estado: 'EN_REVISION', atencion: atencion({ responsable: { asignado: true, esUsted: false, automatica: false, nombre: 'Rosa Huamán', desde: '2026-11-26T10:05:00.000Z' }, accionesPermitidas: [] }) })], () => json(500, {}));
     renderizarApp(RUTA);
     expect(await screen.findByText('Otro operador de tu institución es responsable de este caso.')).toBeInTheDocument();
     expect(within(bloque()).queryByRole('button')).not.toBeInTheDocument();
@@ -133,7 +138,8 @@ describe('vinculación de duplicados', () => {
     const vinculado = resumen({ estado: 'EN_REVISION', vinculado: true, atencion: atencion({ accionesPermitidas: [], responsable: EN_REVISION.atencion!.responsable }) });
     const { llamadas } = montar([conVincular, vinculado], () => json(200, { vinculado: true }));
     renderizarApp(RUTA);
-    await userEvent.click(await screen.findByRole('button', { name: 'Vincular como duplicado' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Control del caso/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Vincular como duplicado' }));
     const dialogo = await screen.findByRole('dialog');
     await userEvent.type(within(dialogo).getByLabelText('Referencia del incidente principal'), 'INC-7K3M9-Q2TXA');
     await userEvent.type(within(dialogo).getByLabelText('Motivo'), 'Mismo hecho reportado dos veces');
@@ -152,7 +158,8 @@ describe('prioridad', () => {
     const revisado = resumen({ ...base, prioridad: 'URGENTE', prioridadOrigen: 'revisada' });
     const { llamadas } = montar([base, revisado], () => json(200, { prioridad: 'URGENTE', origen: 'revisada' }));
     renderizarApp(RUTA);
-    expect(await screen.findByText('Prioridad: Normal (propuesta)')).toBeInTheDocument();
+    expect(await screen.findByText('Prioridad: Normal (propuesta)', { exact: false })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Control del caso/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Revisar prioridad' }));
     const dialogo = await screen.findByRole('dialog');
     await userEvent.click(within(dialogo).getByLabelText('Urgente'));
@@ -160,7 +167,34 @@ describe('prioridad', () => {
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Guardar prioridad' }));
     expect(await screen.findByText('Prioridad revisada: Urgente. La bandeja mantiene el orden de llegada.')).toBeInTheDocument();
     expect(llamadas.filter((l) => l.metodo === 'POST').map((l) => l.cuerpo)).toEqual([{ valor: 'URGENTE', motivo: 'Hay una persona atrapada' }]);
-    expect(await screen.findByText('Prioridad: Urgente (revisada)')).toBeInTheDocument();
+    expect(await screen.findByText('Prioridad: Urgente (revisada)', { exact: false })).toBeInTheDocument();
+  });
+});
+
+describe('asignación automática y filtros de la bandeja', () => {
+  it('indica la asignación automática y ofrece directamente iniciar atención', async () => {
+    montar([resumen({ ...EN_REVISION, atencion: { ...EN_REVISION.atencion!, responsable: { asignado: true, esUsted: true, automatica: true, nombre: 'Omar Quispe', desde: '2026-11-26T10:05:00.000Z' } } })], () => json(500, {}));
+    renderizarApp(RUTA);
+    expect(await screen.findByText(/asignado automáticamente: eres el único operador activo de tu sede/)).toBeInTheDocument();
+    expect(within(bloque()).getByRole('button', { name: 'Iniciar atención' })).toBeInTheDocument();
+    expect(within(bloque()).queryByRole('button', { name: 'Tomar el caso' })).not.toBeInTheDocument();
+  });
+
+  it('«Mis casos» consulta la API con el filtro y conserva el orden recibido', async () => {
+    const s = servidorFalso({ sesion: operador });
+    const { llamadas } = instalarApi((l) => {
+      if (l.ruta.startsWith('/api/v1/operador/incidentes')) return json(200, { elementos: [], siguiente: null });
+      return s.manejador(l);
+    });
+    renderizarApp('/panel/operador/incidentes');
+    const grupo = await screen.findByRole('group', { name: 'Filtrar por responsable' });
+    expect(within(grupo).getByRole('button', { name: 'Todos' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(within(grupo).getByRole('button', { name: 'Mis casos' }));
+    expect(await screen.findByText('No tienes casos asignados.')).toBeInTheDocument();
+    expect(llamadas.filter((l) => l.ruta.startsWith('/api/v1/operador/incidentes')).map((l) => l.ruta)).toEqual([
+      '/api/v1/operador/incidentes',
+      '/api/v1/operador/incidentes?responsable=mios',
+    ]);
   });
 });
 

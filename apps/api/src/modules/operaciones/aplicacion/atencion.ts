@@ -268,6 +268,7 @@ export class ServicioAtencion {
         ? {
             asignado: true as const,
             esUsted: propia.operadorId === operadorId,
+            automatica: propia.origen === 'automatica',
             nombre: nombres.get(propia.operadorId)?.nombre ?? null,
             desde: propia.asignadaEn.toISOString(),
           }

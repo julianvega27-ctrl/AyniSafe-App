@@ -118,20 +118,22 @@ export interface FilaBandeja {
 
 export type Verificacion = 'SIN_VERIFICAR' | 'VERIFICADO' | 'NO_VERIFICADO';
 export type Prioridad = 'SIN_EVALUAR' | 'NORMAL' | 'ALTA' | 'URGENTE';
+/** Filtro de la bandeja por responsable (P6 grupo D); no cambia el orden FIFO. */
+export type FiltroResponsable = 'sin_tomar' | 'mios' | 'todos';
 export type ResultadoCierre = 'ATENDIDO' | 'DESCARTADO';
 export type AccionAtencion = 'asumir' | 'iniciar_atencion' | 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular' | 'priorizar';
 
 /** Atencion institucional del resumen (P6). La API decide las acciones permitidas. */
 export interface AtencionOperador {
   readonly responsable:
-    | { readonly asignado: true; readonly esUsted: boolean; readonly nombre: string | null; readonly desde: string }
+    | { readonly asignado: true; readonly esUsted: boolean; readonly automatica: boolean; readonly nombre: string | null; readonly desde: string }
     | { readonly asignado: false };
   readonly institucionesConResponsable: readonly TipoInstitucion[];
   readonly accionesPermitidas: readonly AccionAtencion[];
   readonly historial: readonly {
     readonly accion: string;
     readonly institucion: TipoInstitucion;
-    readonly actorTipo: 'operador' | 'administrador';
+    readonly actorTipo: 'operador' | 'administrador' | 'sistema';
     readonly valorAnterior: string | null;
     readonly valorNuevo: string | null;
     readonly motivo: string | null;
@@ -458,8 +460,13 @@ export const api = {
   categorias: (senal?: AbortSignal) => llamar<{ categorias: readonly CategoriaCatalogo[] }>('/api/v1/publico/categorias', { senal }),
 
   // Bandeja del operador y pendientes del administrador (P4.2). Sin consultas periodicas.
-  bandeja: (cursor: string | null, senal?: AbortSignal) =>
-    llamar<Pagina<FilaBandeja>>(`/api/v1/operador/incidentes${cursor ? `?cursor=${enc(cursor)}` : ''}`, { senal }),
+  bandeja: (cursor: string | null, senal?: AbortSignal, responsable?: FiltroResponsable) => {
+    const q = new URLSearchParams();
+    if (responsable && responsable !== 'todos') q.set('responsable', responsable);
+    if (cursor) q.set('cursor', cursor);
+    const texto = q.toString();
+    return llamar<Pagina<FilaBandeja>>(`/api/v1/operador/incidentes${texto ? `?${texto}` : ''}`, { senal });
+  },
   resumenIncidente: (id: string, senal?: AbortSignal) => llamar<ResumenIncidente>(`/api/v1/operador/incidentes/${enc(id)}`, { senal }),
   contenidoEvidencia: (id: string, evidenciaId: string, senal?: AbortSignal) =>
     obtenerImagen(`/api/v1/operador/incidentes/${enc(id)}/evidencias/${enc(evidenciaId)}/contenido`, senal),

@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react';
-import { api, type Prioridad, type ResultadoCierre, type ResumenIncidente, type Verificacion } from '../../api/cliente';
+import { api, type AccionAtencion, type EstadoIncidente, type Prioridad, type ResultadoCierre, type ResumenIncidente, type Verificacion } from '../../api/cliente';
 import { Boton } from '../../componentes/Boton';
 import { Campo } from '../../componentes/Campo';
 import { Dialogo } from '../../componentes/Dialogo';
@@ -10,35 +10,67 @@ import { useSesion } from '../../sesion/SesionContexto';
 import { CONFLICTO_ATENCION, ESTADO, fecha, INSTITUCION, PRIORIDAD, RESULTADO, textoHistorial, VERIFICACION } from './etiquetas';
 
 /**
- * Atencion institucional en el resumen del operador (P6, spec `web/bandeja-incidentes`). Muestra el
- * responsable de su institucion, ofrece solo las acciones que la API informa como permitidas y explica
- * los conflictos sin presentar la accion como hecha. Composicion `panel`/`kv`/`linea-tiempo` y
- * componentes compartidos existentes, sin estilos nuevos.
+ * Atencion institucional en el resumen del operador (P6, spec `web/bandeja-incidentes`). Composicion
+ * `panel`/`kv`/`estados`/`linea-tiempo` y componentes compartidos, sin estilos locales.
  */
 
 type Dialogo = 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular' | 'priorizar' | null;
 
 const largo = (t: string) => [...t.trim()].length;
 
+const ESTADOS_RECORRIDO: readonly EstadoIncidente[] =['REGISTRADO', 'EN_REVISION', 'EN_ATENCION', 'CERRADO'];
+
+/** Recorrido de los cuatro estados con el actual marcado (texto e icono, nunca solo color). */
+function Recorrido({ estado }: { estado: EstadoIncidente }) {
+  const actual = ESTADOS_RECORRIDO.indexOf(estado);
+  return (
+    <ol className="estados" aria-label="Recorrido del incidente">
+      {ESTADOS_RECORRIDO.map((e, i) => (
+        <li key={e} className={i === actual ? 'pill pill--actual' : 'pill'} aria-current={i === actual ? 'step' : undefined}>
+          <Icono nombre={i < actual ? 'exito' : i === actual ? 'info' : 'reloj'} />
+          {ESTADO[e]}
+          {i === actual ? <span className="solo-lectores"> (estado actual)</span> : null}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+const CONTROLES: readonly { readonly accion: AccionAtencion; readonly dialogo: Exclude<Dialogo, null>; readonly etiqueta: string; readonly efecto: string }[] = [
+  { accion: 'verificar', dialogo: 'verificar', etiqueta: 'Registrar verificación', efecto: 'Indica si se confirmó el hecho. No cambia el estado ni publica el caso.' },
+  { accion: 'priorizar', dialogo: 'priorizar', etiqueta: 'Revisar prioridad', efecto: 'Confirma, eleva o reduce la etiqueta. No cambia el orden de llegada.' },
+  { accion: 'vincular', dialogo: 'vincular', etiqueta: 'Vincular como duplicado', efecto: 'Si otro reporte describe el mismo hecho, este se atenderá desde aquel.' },
+];
+
+/**
+ * Atencion institucional en el resumen del operador (P6, spec `web/bandeja-incidentes`). Muestra el
+ * recorrido de estados, una sola accion principal segun el estado con su efecto, «Descartar» como
+ * accion secundaria y un «Control del caso» plegable (como el «Abrir control» de Incidents.jsx del
+ * origen) para verificacion, prioridad y duplicados. Solo ofrece lo que la API permite.
+ */
 export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenIncidente; onActualizado: (aviso: string) => void }) {
   const { expirar } = useSesion();
   const a = resumen.atencion;
   const [enviando, setEnviando] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
   const [dialogo, setDialogo] = useState<Dialogo>(null);
+  const [controlAbierto, setControlAbierto] = useState(false);
+  const [historialAbierto, setHistorialAbierto] = useState(false);
+  const idControl = useId();
+  const idHistorial = useId();
   if (!a) return null;
-  const puede = (accion: string) => a.accionesPermitidas.includes(accion as never);
+  const puede = (accion: AccionAtencion) => a.accionesPermitidas.includes(accion);
 
-  async function asumir() {
+  async function tomar() {
     if (enviando) return;
     setEnviando(true);
     setFallo(null);
     const r = await api.asumirCaso(resumen.id);
     setEnviando(false);
-    if (r.tipo === 'ok') return onActualizado(r.datos.estado === 'EN_REVISION' && resumen.estado === 'REGISTRADO' ? 'Asumiste el caso. El incidente pasó a revisión.' : 'Asumiste el caso.');
+    if (r.tipo === 'ok') return onActualizado(r.datos.estado === 'EN_REVISION' && resumen.estado === 'REGISTRADO' ? 'Tomaste el caso. El incidente pasó a revisión.' : 'Tomaste el caso.');
     if (r.tipo === 'error' && r.estado === 401) return expirar();
     if (r.tipo === 'error' && r.codigo && CONFLICTO_ATENCION[r.codigo]) return onActualizado(CONFLICTO_ATENCION[r.codigo]!);
-    setFallo('No pudimos asumir el caso. Revisa tu conexión e inténtalo de nuevo.');
+    setFallo('No pudimos tomar el caso. Revisa tu conexión e inténtalo de nuevo.');
   }
 
   async function iniciar() {
@@ -53,6 +85,44 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
     setFallo('No pudimos iniciar la atención. Inténtalo de nuevo.');
   }
 
+  // Una sola accion principal segun el estado, con la frase que explica su efecto.
+  const principal = puede('asumir')
+    ? {
+        texto: 'Tomar el caso',
+        efecto:
+          resumen.papel === 'principal' && resumen.estado === 'REGISTRADO'
+            ? 'Tu sede ya recibió este caso. Tómalo para gestionarlo: pasará a revisión y tu sede verá que lo atiendes.'
+            : 'Tu sede ya recibió este caso. Tómalo para registrar la participación de tu institución.',
+        accion: () => void tomar(),
+      }
+    : puede('iniciar_atencion')
+      ? {
+          texto: 'Iniciar atención',
+          efecto: 'Cuando tu institución empiece a gestionar el caso, inicia la atención. No equivale a llegar al lugar.',
+          accion: () => void iniciar(),
+        }
+      : puede('cerrar_atendido')
+        ? {
+            texto: 'Cerrar como atendido',
+            efecto: 'Cuando la atención termine, ciérralo con un resumen para quien reportó.',
+            accion: () => setDialogo('cerrar_atendido'),
+          }
+        : null;
+
+  const sinAccion = resumen.estado === 'CERRADO'
+    ? `Caso cerrado${resumen.resultado ? `: ${RESULTADO[resumen.resultado].toLowerCase()}` : ''}.`
+    : resumen.vinculado
+      ? 'Vinculado a otro reporte del mismo hecho: se atiende desde el incidente principal.'
+      : a.responsable.asignado && !a.responsable.esUsted
+        ? 'Otro operador de tu institución es responsable de este caso.'
+        : a.responsable.asignado && resumen.papel !== 'principal'
+          ? 'Tu institución participa como apoyo; la institución principal coordina y cierra el caso.'
+          : null;
+
+  const automatica = a.responsable.asignado && a.responsable.automatica;
+  const controles = CONTROLES.filter((c) => puede(c.accion));
+  const ultimo = a.historial.at(-1);
+
   return (
     <section className="panel" aria-labelledby="titulo-atencion">
       <div className="panel-heading">
@@ -60,80 +130,100 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
           <span className="eyebrow">Atención</span>
           <h2 id="titulo-atencion">Responsable y estado</h2>
         </div>
-        <span className="pill">
-          <Icono nombre={resumen.verificacion === 'VERIFICADO' ? 'exito' : resumen.verificacion === 'NO_VERIFICADO' ? 'aviso' : 'reloj'} />
-          {VERIFICACION[resumen.verificacion]}
-        </span>
+        <ul className="estados" aria-label="Verificación y prioridad">
+          <li className="pill">
+            <Icono nombre={resumen.verificacion === 'VERIFICADO' ? 'exito' : resumen.verificacion === 'NO_VERIFICADO' ? 'aviso' : 'reloj'} />
+            {VERIFICACION[resumen.verificacion]}
+          </li>
+          <li className={`priority-badge ${PRIORIDAD[resumen.prioridad].clase}`}>
+            <Icono nombre={PRIORIDAD[resumen.prioridad].icono} />
+            {PRIORIDAD[resumen.prioridad].texto}
+          </li>
+        </ul>
       </div>
+      <Recorrido estado={resumen.estado} />
       {fallo ? (
         <div role="status">
           <Mensaje tipo="error" titulo="No se completó la acción">{fallo}</Mensaje>
         </div>
       ) : null}
       <dl className="kv">
-        <dt>Estado</dt>
-        <dd>
-          {ESTADO[resumen.estado]}
-          {resumen.resultado ? ` · ${RESULTADO[resumen.resultado]}` : ''}
-        </dd>
         <dt>Responsable de tu institución</dt>
         <dd>
           {a.responsable.asignado
             ? a.responsable.esUsted
-              ? `Tú, desde ${fecha(a.responsable.desde)}`
+              ? `Tú, desde ${fecha(a.responsable.desde)}${automatica ? ' (asignado automáticamente: eres el único operador activo de tu sede)' : ''}`
               : `${a.responsable.nombre ?? 'Otro operador'}, desde ${fecha(a.responsable.desde)}`
-            : 'Sin responsable'}
+            : 'Nadie ha tomado el caso todavía'}
         </dd>
         <dt>Instituciones con responsable</dt>
         <dd>{a.institucionesConResponsable.length ? a.institucionesConResponsable.map((i) => INSTITUCION[i]).join(', ') : 'Ninguna'}</dd>
       </dl>
-      {a.accionesPermitidas.length ? (
-        <div className="acciones-tarjeta">
-          {puede('asumir') ? (
-            <Boton onClick={() => void asumir()} cargando={enviando}>
-              Asumir caso
+
+      {principal ? (
+        <div className="siguiente-paso">
+          <h3 className="subtitulo-panel">Siguiente paso</h3>
+          <p className="nota-panel">{principal.efecto}</p>
+          <div className="acciones-tarjeta">
+            <Boton onClick={principal.accion} cargando={enviando}>
+              {principal.texto}
             </Boton>
-          ) : null}
-          {puede('iniciar_atencion') ? (
-            <Boton onClick={() => void iniciar()} cargando={enviando}>
-              Iniciar atención
-            </Boton>
-          ) : null}
-          {puede('cerrar_atendido') ? (
-            <Boton onClick={() => setDialogo('cerrar_atendido')} disabled={enviando}>
-              Cerrar como atendido
-            </Boton>
-          ) : null}
-          {puede('descartar') ? (
-            <Boton variante="secundario" onClick={() => setDialogo('descartar')} disabled={enviando}>
-              Descartar
-            </Boton>
-          ) : null}
-          {puede('verificar') ? (
-            <Boton variante="secundario" onClick={() => setDialogo('verificar')} disabled={enviando}>
-              Registrar verificación
-            </Boton>
-          ) : null}
-          {puede('priorizar') ? (
-            <Boton variante="secundario" onClick={() => setDialogo('priorizar')} disabled={enviando}>
-              Revisar prioridad
-            </Boton>
-          ) : null}
-          {puede('vincular') ? (
-            <Boton variante="secundario" onClick={() => setDialogo('vincular')} disabled={enviando}>
-              Vincular como duplicado
-            </Boton>
-          ) : null}
+            {puede('descartar') ? (
+              <span className="nota-panel">
+                ¿No corresponde?{' '}
+                <button type="button" className="text-button danger" onClick={() => setDialogo('descartar')} disabled={enviando}>
+                  Descartar
+                </button>
+              </span>
+            ) : null}
+          </div>
         </div>
-      ) : resumen.vinculado ? (
-        <p className="nota-panel">Vinculado a otro reporte del mismo hecho: se atiende desde el incidente principal.</p>
-      ) : resumen.estado !== 'CERRADO' && a.responsable.asignado && !a.responsable.esUsted ? (
-        <p className="nota-panel">Otro operador de tu institución es responsable de este caso.</p>
+      ) : sinAccion ? (
+        <p className="nota-panel">{sinAccion}</p>
       ) : null}
-      {a.historial.length ? (
+
+      {controles.length ? (
         <>
-          <h3 className="subtitulo-panel">Historial operativo</h3>
-          <ol className="linea-tiempo" aria-label="Historial operativo, del más antiguo al más reciente">
+          <button
+            type="button"
+            className="text-button"
+            aria-expanded={controlAbierto}
+            aria-controls={idControl}
+            onClick={() => setControlAbierto((v) => !v)}
+          >
+            {controlAbierto ? '▾' : '▸'} Control del caso
+          </button>
+          <ul id={idControl} hidden={!controlAbierto} className="cards cards--respuestas" aria-label="Control del caso">
+            {controles.map((c) => (
+              <li key={c.accion} className="mini-card">
+                <span>{c.efecto}</span>
+                <Boton variante="secundario" onClick={() => setDialogo(c.dialogo)} disabled={enviando}>
+                  {c.etiqueta}
+                </Boton>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
+      {ultimo ? (
+        <div>
+          <button
+            type="button"
+            className="text-button"
+            aria-expanded={historialAbierto}
+            aria-controls={idHistorial}
+            onClick={() => setHistorialAbierto((v) => !v)}
+          >
+            {historialAbierto ? '▾' : '▸'} Historial operativo ({a.historial.length})
+          </button>
+          {!historialAbierto ? (
+            <p className="metadatos">
+              Último: <span>{textoHistorial(ultimo)}</span> · {fecha(ultimo.instante)}
+            </p>
+          ) : null}
+          {historialAbierto ? (
+          <ol id={idHistorial} className="linea-tiempo" aria-label="Historial operativo, del más antiguo al más reciente">
             {a.historial.map((h, i) => (
               <li key={`${h.instante}-${i}`}>
                 <span className="linea-tiempo__titulo">{textoHistorial(h)}</span>
@@ -142,8 +232,10 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
               </li>
             ))}
           </ol>
-        </>
+          ) : null}
+        </div>
       ) : null}
+
       {dialogo === 'verificar' ? (
         <DialogoVerificacion
           resumen={resumen}
@@ -262,6 +354,11 @@ function DialogoCierre({ resumen, resultado, onCerrar, onResultado }: {
           error={errores.resumenCiudadano}
           required
         />
+        <div className="form-grid__completo mini-card" aria-live="polite">
+          <span className="eyebrow">Lo que verá el ciudadano</span>
+          <strong>{resultado === 'ATENDIDO' ? 'Atendido' : 'Descartado'}</strong>
+          <span>{resumenCiudadano.trim() || 'Escribe el resumen para ver cómo quedará.'}</span>
+        </div>
         <div className="acciones-tarjeta form-grid__completo">
           <Boton type="submit" cargando={enviando}>
             {resultado === 'ATENDIDO' ? 'Cerrar como atendido' : 'Descartar caso'}

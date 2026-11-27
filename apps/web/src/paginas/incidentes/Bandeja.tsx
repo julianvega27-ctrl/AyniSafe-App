@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { api, type FilaBandeja, type ResumenIncidente } from '../../api/cliente';
+import { api, type FilaBandeja, type FiltroResponsable, type ResumenIncidente } from '../../api/cliente';
 import { Boton, BotonEnlace } from '../../componentes/Boton';
 import { FalloDeConexion } from '../../componentes/FalloDeConexion';
 import { Icono } from '../../componentes/iconos';
@@ -34,6 +34,18 @@ const memoria = new Map<string, { elementos: readonly FilaBandeja[]; siguiente: 
 export function olvidarBandeja(): void {
   memoria.clear();
 }
+
+/** Filtros por responsable (P6 grupo D): la API filtra y conserva el orden de llegada. */
+const FILTROS: readonly (readonly [FiltroResponsable, string])[] = [
+  ['sin_tomar', 'Sin tomar'],
+  ['mios', 'Mis casos'],
+  ['todos', 'Todos'],
+];
+const VACIO: Record<FiltroResponsable, string> = {
+  sin_tomar: 'No hay casos abiertos de tu sede sin responsable.',
+  mios: 'No tienes casos asignados.',
+  todos: 'No hay incidentes asignados a tu sede.',
+};
 
 function Etiquetas({ fila }: { fila: FilaBandeja }) {
   return (
@@ -74,8 +86,10 @@ function Etiquetas({ fila }: { fila: FilaBandeja }) {
 
 export function Bandeja() {
   const { sesion, expirar } = useSesion();
+  const [filtro, setFiltro] = useState<FiltroResponsable>('todos');
   const usuarioId = sesion.estado === 'autenticado' ? sesion.usuario.id : '';
-  const recordado = memoria.get(usuarioId);
+  const clave = `${usuarioId}:${filtro}`;
+  const recordado = memoria.get(clave);
   const [datos, setDatos] = useState<Estado>(
     recordado ? { estado: 'listo', elementos: recordado.elementos, siguiente: recordado.siguiente } : { estado: 'cargando' },
   );
@@ -93,7 +107,7 @@ export function Bandeja() {
     if (version < 0) return;
     const control = new AbortController();
     api
-      .bandeja(null, control.signal)
+      .bandeja(null, control.signal, filtro)
       .then((r) => {
         if (r.tipo === 'ok') setDatos({ estado: 'listo', elementos: r.datos.elementos, siguiente: r.datos.siguiente });
         else if (r.tipo === 'error' && r.estado === 401) expirar();
@@ -104,26 +118,37 @@ export function Bandeja() {
         /* cancelada al salir */
       });
     return () => control.abort();
+    // filtro forma parte de la consulta: cambiarlo vuelve a pedir la primera pagina.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version, expirar]);
 
   useEffect(() => {
     if (datos.estado === 'listo' && usuarioId) {
-      memoria.set(usuarioId, { elementos: datos.elementos, siguiente: datos.siguiente, desplazamiento: memoria.get(usuarioId)?.desplazamiento ?? 0 });
+      memoria.set(clave, { elementos: datos.elementos, siguiente: datos.siguiente, desplazamiento: memoria.get(clave)?.desplazamiento ?? 0 });
     }
-  }, [datos, usuarioId]);
+  }, [datos, usuarioId, clave]);
 
   const actualizar = useCallback(() => {
-    memoria.delete(usuarioId);
+    memoria.delete(clave);
     setFalloMas(false);
     setDatos({ estado: 'cargando' });
     setVersion((v) => (v < 0 ? 1 : v + 1));
-  }, [usuarioId]);
+  }, [clave]);
+
+  const elegirFiltro = (f: FiltroResponsable) => {
+    if (f === filtro) return;
+    memoria.delete(`${usuarioId}:${f}`);
+    setFiltro(f);
+    setFalloMas(false);
+    setDatos({ estado: 'cargando' });
+    setVersion((v) => (v < 0 ? 1 : v + 1));
+  };
 
   async function cargarMas() {
     if (datos.estado !== 'listo' || !datos.siguiente || cargandoMas) return;
     setCargandoMas(true);
     setFalloMas(false);
-    const r = await api.bandeja(datos.siguiente);
+    const r = await api.bandeja(datos.siguiente, undefined, filtro);
     setCargandoMas(false);
     if (r.tipo === 'ok') {
       setDatos({ estado: 'listo', elementos: [...datos.elementos, ...r.datos.elementos], siguiente: r.datos.siguiente });
@@ -132,8 +157,8 @@ export function Bandeja() {
   }
 
   const recordarPosicion = () => {
-    const actual = memoria.get(usuarioId);
-    if (actual) memoria.set(usuarioId, { ...actual, desplazamiento: window.scrollY });
+    const actual = memoria.get(clave);
+    if (actual) memoria.set(clave, { ...actual, desplazamiento: window.scrollY });
   };
 
   return (
@@ -148,6 +173,13 @@ export function Bandeja() {
         </Boton>
       </div>
       <p>En orden de llegada, del más antiguo al más reciente. La lista no se actualiza sola: usa «Actualizar».</p>
+      <div className="segmented" role="group" aria-label="Filtrar por responsable">
+        {FILTROS.map(([valor, texto]) => (
+          <button key={valor} type="button" aria-pressed={filtro === valor} onClick={() => elegirFiltro(valor)}>
+            {texto}
+          </button>
+        ))}
+      </div>
 
       {datos.estado === 'cargando' ? (
         <p role="status" className="pendiente">
@@ -163,7 +195,7 @@ export function Bandeja() {
       ) : null}
 
       {datos.estado === 'listo' && datos.elementos.length === 0 ? (
-        <p className="empty">No hay incidentes asignados a tu sede.</p>
+        <p className="empty">{VACIO[filtro]}</p>
       ) : null}
 
       {datos.estado === 'listo' && datos.elementos.length > 0 ? (

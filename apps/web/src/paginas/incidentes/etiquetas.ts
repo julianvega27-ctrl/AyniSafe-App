@@ -72,11 +72,13 @@ export const CONFLICTO_ATENCION: Record<string, string> = {
 };
 
 /** Texto del historial operativo, sin actores. */
-export function textoHistorial(h: { accion: string; institucion: TipoInstitucion; valorAnterior: string | null; valorNuevo: string | null }): string {
+export function textoHistorial(h: { accion: string; institucion: TipoInstitucion; actorTipo?: string; valorAnterior: string | null; valorNuevo: string | null }): string {
   const inst = INSTITUCION[h.institucion];
   switch (h.accion) {
     case 'asumir':
-      return `${inst}: un operador asumió el caso`;
+      return h.actorTipo === 'sistema'
+        ? `${inst}: asignado automáticamente al único operador activo de la sede`
+        : `${inst}: un operador tomó el caso`;
     case 'transicion': {
       const nuevo = h.valorNuevo ?? '';
       if (nuevo.startsWith('CERRADO:')) return `${inst}: cerrado como ${(RESULTADO[nuevo.slice(8) as ResultadoCierre] ?? nuevo).toLowerCase()}`;

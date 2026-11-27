@@ -3101,11 +3101,14 @@ components:
           oneOf:
             - type: object
               additionalProperties: false
-              required: [asignado, esUsted, nombre, desde]
+              required: [asignado, esUsted, automatica, nombre, desde]
               description: El nombre solo se informa a operadores de la misma institucion.
               properties:
                 asignado: { const: true }
                 esUsted: { type: boolean }
+                automatica:
+                  type: boolean
+                  description: Asignada por el sistema al unico operador activo de la unica sede principal (P6 grupo D).
                 nombre: { type: [string, 'null'] }
                 desde: { type: string, format: date-time }
             - type: object

@@ -150,6 +150,14 @@
 .pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 18px; padding: 5px 9px; background: #ecf3f2; color: #476d70; font-size: 0.75rem; font-weight: 800; white-space: nowrap; }
 /* AyniSafe: el ámbar del origen (#9b6813 sobre #fff1db) se ajusta al aviso del sistema para AA. */
 .pill.warn { background: var(--color-aviso-fondo); color: var(--color-aviso-texto); }
+/* P6: estado actual del recorrido; par --color-accion/superficie ya verificado AA. */
+.pill.pill--actual { background: var(--color-accion); color: var(--color-superficie); }
+/* P6: control segmentado de Incidents/MapView del origen (efc1bce8, .segmented), para los filtros de la bandeja. */
+.segmented { display: inline-flex; flex-wrap: wrap; background: #edf4f3; border-radius: 9px; padding: 3px; gap: 2px; }
+.segmented button { border: 0; background: transparent; border-radius: 7px; padding: 7px 12px; color: var(--color-texto-suave); font-size: 0.75rem; font-weight: 700; min-height: 32px; cursor: pointer; }
+.segmented button[aria-pressed="true"] { background: var(--color-superficie); color: var(--color-enlace); box-shadow: 0 2px 8px #d8e7e4; }
+.segmented button:focus-visible { outline: 2px solid var(--color-enlace); outline-offset: 2px; }
+.siguiente-paso { border-top: 1px solid var(--color-divisor); margin-top: 16px; padding-top: 4px; }
 .form-grid { display: flex; gap: 15px; flex-wrap: wrap; align-items: end; margin-top: 12px; }
 .form-grid > * { flex: 1 1 200px; min-width: 0; }
 .form-grid.compact { border-top: 1px solid #ecf1f1; padding-top: 17px; margin-top: 18px; }
