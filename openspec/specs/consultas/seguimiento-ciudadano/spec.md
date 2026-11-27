@@ -44,6 +44,10 @@ El autor MUST poder consultar el detalle de un incidente propio con referencia, 
 - **WHEN** un ciudadano consulta por identificador un incidente de otro autor, de invitado o inexistente
 - **THEN** recibe la misma respuesta 404, sin revelar si existe
 
+#### Scenario: Principal cambiada por condición médica
+- **WHEN** una aclaración hizo de SAMU la principal de un accidente con PNP principal
+- **THEN** el autor ve SAMU como institución responsable
+
 ### Requirement: Vista limitada del invitado
 Con referencia y código secreto válidos en el cuerpo de la solicitud, el sistema MUST devolver solo referencia, categoría, estado, recepción, institución responsable (tipo y nombre) o pendiente y resumen ciudadano de actuaciones. MUST NOT devolver descripción, punto, distrito, teléfono, evidencias, respuestas sanitarias, sedes, operadores ni notas internas.
 
@@ -87,3 +91,14 @@ Las respuestas de seguimiento MUST usar no-store y MUST NOT registrar en logs el
 #### Scenario: Cabeceras y contrato
 - **WHEN** se ejecutan las pruebas de contrato del seguimiento
 - **THEN** cada estado documentado se comprueba y todas las respuestas llevan Cache-Control no-store
+
+### Requirement: Evaluación propia del autor
+El detalle del autor MUST incluir, si el incidente tiene evaluación, sus propias respuestas vigentes con su instante, si puede aclararlas y si se solicita completarlas porque SAMU interviene sin observaciones de la persona principal. MUST NOT incluir cambios ni motivos de operadores. La vista del invitado MUST NOT incluir datos de la evaluación.
+
+#### Scenario: SAMU incorporado después
+- **WHEN** un operador activó a SAMU en un accidente del autor sin observaciones
+- **THEN** el detalle indica que se solicita completar la evaluación, sin mostrar la precisión del operador
+
+#### Scenario: Invitado con código
+- **WHEN** un invitado consulta un incidente con evaluación
+- **THEN** la respuesta no contiene heridos, cantidad ni observaciones

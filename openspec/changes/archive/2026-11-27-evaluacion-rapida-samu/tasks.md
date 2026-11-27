@@ -2,6 +2,8 @@
 
 Base de planificación: `main` `24a33f6` (26/11/2026), con P4.1 y P4.2 archivados.
 
+Estado: implementación fusionada mediante el PR #11 en `main` `f895717`, con los cuatro trabajos de CI aprobados (ejecuciones 46014267917 y 46015575847). Specs sincronizadas y cambio archivado el 27/11/2026 en `docs/p5.1-cierre`.
+
 - `proposal.md` y las specs definen el alcance; `design.md` documenta las decisiones técnicas.
 - La evidencia va en `docs/validacion/p5-evaluacion.md`. Se crea en 1.1 y se completa en cada grupo.
 - Una casilla se marca solo cuando existen el código y la evidencia ejecutada. Las pruebas que consuman demasiado tiempo o intentos quedan para verificación manual del responsable, indicándolo en la evidencia.
