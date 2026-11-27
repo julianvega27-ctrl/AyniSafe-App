@@ -9,6 +9,7 @@ import {
   esUuid,
   PermisoAtencionError,
   ValidacionAtencionError,
+  validarVinculo,
   type CodigoConflicto,
 } from '../dominio/atencion';
 import type { IdentificarAdministrador } from './enrutamiento.routes';
@@ -18,6 +19,8 @@ export interface OpcionesRutasAtencion {
   readonly origenWebPermitido: (origin: string | undefined, secFetchSite: string | undefined) => boolean;
   /** Ambito vigente del operador (Identidad); null sin sede habilitada. */
   readonly ambito: (usuarioId: string) => Promise<AmbitoBandeja | null>;
+  /** Grupo B: identificador del incidente por su referencia escrita (null si no existe o no es valida). */
+  readonly idPorReferencia?: (texto: string) => Promise<string | null>;
   readonly logger: Logger;
 }
 
@@ -135,6 +138,18 @@ export function crearRouterAtencion(atencion: ServicioAtencion, enrutamiento: Se
   router.post('/operador/incidentes/:id/verificacion', sinCache, rol('operador', true), ...json, participacion, async (req, res) => {
     const r = await atencion.verificar(res.locals.participacion, res.locals.usuarioId as string, req.body);
     registrar(res, 'verificacion');
+    res.json(r);
+  });
+
+  router.post('/operador/incidentes/:id/vinculo', sinCache, rol('operador', true), ...json, participacion, async (req, res) => {
+    const { referenciaPrincipal, motivo } = validarVinculo(req.body);
+    const ambito = await o.ambito(res.locals.usuarioId as string);
+    const principalId = o.idPorReferencia ? await o.idPorReferencia(referenciaPrincipal) : null;
+    // El principal debe ser visible para la sede del operador; si no, el mismo 404 que un inexistente.
+    const visible = principalId && ambito ? await enrutamiento.participacionDe(ambito, principalId) : null;
+    if (!principalId || !visible) throw new AtencionNoDisponibleError();
+    const r = await atencion.vincular(res.locals.participacion, principalId, res.locals.usuarioId as string, motivo);
+    registrar(res, 'duplicado_vinculado');
     res.json(r);
   });
 

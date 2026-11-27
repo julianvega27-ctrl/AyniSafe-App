@@ -31,12 +31,13 @@ export interface FilaOperaciones {
   readonly verificacion?: string;
   readonly resultadoCierre?: string | null;
   readonly responsableId?: string | null;
+  readonly vinculado?: boolean;
 }
 
 /** Puerto hacia Operaciones: atencion del incidente para el resumen (P6). */
 export interface AtencionBandejaPort {
   vista(
-    p: { readonly incidenteId: string; readonly institucion: string; readonly sedeId: string; readonly papel: string; readonly estado: string },
+    p: { readonly incidenteId: string; readonly institucion: string; readonly sedeId: string; readonly papel: string; readonly estado: string; readonly vinculado: boolean },
     operadorId: string,
   ): Promise<unknown>;
 }
@@ -167,6 +168,7 @@ export class BandejaInstitucional {
       verificacion: f.verificacion ?? 'SIN_VERIFICAR',
       resultado: f.resultadoCierre ?? null,
       responsable: { asignado: Boolean(f.responsableId), esUsted: f.responsableId === usuarioId },
+      vinculado: f.vinculado ?? false,
       prioridad: PRIORIDAD_SIN_EVALUAR,
     };
   }
@@ -199,7 +201,7 @@ export class BandejaInstitucional {
       this.d.evaluacion ? this.d.evaluacion.condiciones([p.incidenteId]) : Promise.resolve(new Map<string, CondicionBandeja>()),
       this.d.evidencias ? this.d.evidencias.metadatos([p.incidenteId]) : Promise.resolve(new Map<string, readonly EvidenciaVista[]>()),
       this.d.atencion && p.institucion
-        ? this.d.atencion.vista({ incidenteId: p.incidenteId, institucion: p.institucion, sedeId: ambito.sedeId, papel: p.papel, estado: p.estado }, usuarioId)
+        ? this.d.atencion.vista({ incidenteId: p.incidenteId, institucion: p.institucion, sedeId: ambito.sedeId, papel: p.papel, estado: p.estado, vinculado: p.vinculado ?? false }, usuarioId)
         : Promise.resolve(null),
     ]);
     const o = originales.get(p.incidenteId);

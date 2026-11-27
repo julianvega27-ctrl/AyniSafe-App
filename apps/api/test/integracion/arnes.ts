@@ -212,7 +212,7 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     identidad: modulo,
     consultas,
     reportes,
-    operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger, atencion),
+    operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger, atencion, operaciones.incidentes),
   });
   return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, atencion, deps, correo, almacenEvidencias };
 }

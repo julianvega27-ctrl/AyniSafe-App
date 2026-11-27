@@ -15,7 +15,8 @@ export type Accion =
   | 'iniciar_atencion'
   | 'cerrar_atendido'
   | 'descartar'
-  | 'verificar';
+  | 'verificar'
+  | 'vincular';
 
 export interface ContextoAcciones {
   readonly estado: EstadoIncidente;
@@ -37,7 +38,7 @@ export function accionesPermitidas(c: ContextoAcciones): readonly Accion[] {
   if (c.estado === 'EN_REVISION') acciones.push('iniciar_atencion');
   if (c.estado === 'EN_ATENCION') acciones.push('cerrar_atendido');
   if (c.estado === 'REGISTRADO' || c.estado === 'EN_REVISION') acciones.push('descartar');
-  acciones.push('verificar');
+  acciones.push('verificar', 'vincular');
   return acciones;
 }
 
@@ -158,6 +159,18 @@ export function validarVerificacion(entrada: unknown): { readonly valor: Exclude
   if (!motivo) campos.motivo = MOTIVO;
   if (Object.keys(campos).length) throw new ValidacionAtencionError(campos);
   return { valor: e.valor as 'VERIFICADO' | 'NO_VERIFICADO', motivo: motivo!, estadoEsperado: esperado };
+}
+
+export function validarVinculo(entrada: unknown): { readonly referenciaPrincipal: string; readonly motivo: string } {
+  const campos: Record<string, string> = {};
+  const e = objeto(entrada, ['referenciaPrincipal', 'motivo'], campos);
+  if (typeof e.referenciaPrincipal !== 'string' || e.referenciaPrincipal.length > 40 || !e.referenciaPrincipal.trim()) {
+    campos.referenciaPrincipal = 'Escribe la referencia del incidente principal.';
+  }
+  const motivo = texto(e.motivo, 10, 500);
+  if (!motivo) campos.motivo = MOTIVO;
+  if (Object.keys(campos).length) throw new ValidacionAtencionError(campos);
+  return { referenciaPrincipal: (e.referenciaPrincipal as string).trim(), motivo: motivo! };
 }
 
 export function validarMotivoAdmin(entrada: unknown, conOperador: boolean): { readonly motivo: string; readonly operadorId?: string } {

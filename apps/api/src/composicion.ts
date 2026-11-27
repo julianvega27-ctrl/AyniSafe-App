@@ -166,6 +166,7 @@ export function opcionesBandeja(
                   sedeId: p.sedeId,
                   papel: p.papel as Papel,
                   estado: p.estado as EstadoIncidente,
+                  vinculado: p.vinculado,
                 },
                 operadorId,
               ),
@@ -315,6 +316,7 @@ export function routerOperaciones(
   obtenerReportes: () => ModuloReportes,
   logger: Logger,
   atencion?: ServicioAtencion,
+  operacionesIncidentes?: ModuloOperaciones['incidentes'],
 ) {
   const distritos = new Map(distritosPiloto().map((d) => [d.id, d.nombre]));
   const router = Router();
@@ -323,6 +325,10 @@ export function routerOperaciones(
       identificar: identidad.identificarSolicitante,
       origenWebPermitido: identidad.origenWebPermitido,
       ambito: ambitoOperador(identidad),
+      idPorReferencia: async (texto) => {
+        const referencia = normalizarReferencia(texto);
+        return referencia ? ((await operacionesIncidentes?.porReferencia(referencia))?.id ?? null) : null;
+      },
       logger,
     }));
   }

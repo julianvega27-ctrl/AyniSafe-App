@@ -291,6 +291,8 @@ model Incidente {
   resultado        String?
   resumenCiudadano String?   @map("resumen_ciudadano")
   cerradoEn        DateTime? @map("cerrado_en") @db.Timestamptz(3)
+  /// P6 (grupo B): incidente principal si este es un duplicado vinculado.
+  principalId      String?   @map("principal_id") @db.Uuid
   enrutamiento EnrutamientoIncidente?
   asignaciones AsignacionIncidente[]
   historial    HistorialIncidente[]

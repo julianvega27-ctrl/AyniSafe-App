@@ -1777,6 +1777,60 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}/vinculo:
+    post:
+      tags: [Atencion]
+      operationId: vincularDuplicado
+      summary: Vincular el incidente como duplicado de un principal
+      description: |
+        Solo el responsable activo de la principal del duplicado, con motivo. El principal debe estar abierto y ser
+        visible para su sede (si no, el mismo 404). Sin cadenas ni ciclos (409 VINCULO_NO_PERMITIDO). El duplicado
+        conserva originales, codigo e historial, deja de admitir transiciones propias y refleja el estado del
+        principal. La vinculacion no descarta ni cierra.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VinculoSolicitud' }
+      responses:
+        '200':
+          description: Vinculado.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoVinculo' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN, FORBIDDEN_ORIGIN, SIN_AMBITO, ASIGNACION_REQUERIDA o NO_PRINCIPAL.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '409':
+          description: VINCULO_NO_PERMITIDO, INCIDENTE_VINCULADO, INCIDENTE_CERRADO o ESTADO_CAMBIADO.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
   /admin/asignaciones:
     get:
       tags: [Atencion]
@@ -2882,7 +2936,7 @@ components:
         nombre: { type: [string, 'null'] }
     CamposFilaBandeja:
       type: object
-      required: [id, referencia, categoria, distrito, estado, registradoEn, papel, condicionMedicaPorConfirmar, verificacion, resultado, responsable, prioridad]
+      required: [id, referencia, categoria, distrito, estado, registradoEn, papel, condicionMedicaPorConfirmar, verificacion, resultado, responsable, vinculado, prioridad]
       properties:
         id: { type: string, format: uuid }
         referencia: { type: string }
@@ -2910,6 +2964,9 @@ components:
           properties:
             asignado: { type: boolean }
             esUsted: { type: boolean }
+        vinculado:
+          type: boolean
+          description: Duplicado vinculado a otro incidente (P6 grupo B); `estado` y `resultado` son los del principal.
         prioridad: { const: SIN_EVALUAR }
     FilaBandejaOperador:
       allOf:
@@ -2999,7 +3056,7 @@ components:
         accionesPermitidas:
           type: array
           description: Acciones que el operador puede ejecutar ahora; la API autoriza con la misma regla.
-          items: { enum: [asumir, iniciar_atencion, cerrar_atendido, descartar, verificar] }
+          items: { enum: [asumir, iniciar_atencion, cerrar_atendido, descartar, verificar, vincular] }
         historial:
           type: array
           description: Historial operativo sin actores; el motivo solo se muestra a la institucion que lo escribio.
@@ -3158,6 +3215,19 @@ components:
       required: [motivo]
       properties:
         motivo: { type: string, minLength: 10, maxLength: 500 }
+    VinculoSolicitud:
+      type: object
+      additionalProperties: false
+      required: [referenciaPrincipal, motivo]
+      properties:
+        referenciaPrincipal: { type: string, maxLength: 40, description: Referencia publica del incidente principal. }
+        motivo: { type: string, minLength: 10, maxLength: 500 }
+    ResultadoVinculo:
+      type: object
+      additionalProperties: false
+      required: [vinculado]
+      properties:
+        vinculado: { const: true }
     ReasignacionSolicitud:
       type: object
       additionalProperties: false

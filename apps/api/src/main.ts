@@ -55,7 +55,7 @@ async function main(): Promise<void> {
     identidad,
     consultas,
     reportes,
-    operaciones: routerOperaciones(enrutamiento, identidad, () => reportes!, logger, atencion),
+    operaciones: routerOperaciones(enrutamiento, identidad, () => reportes!, logger, atencion, operaciones.incidentes),
   });
 
   const servidor = app.listen(entorno.puerto, () => {

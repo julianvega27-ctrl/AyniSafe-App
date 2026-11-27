@@ -28,6 +28,7 @@ interface FilaBandejaSql {
   readonly verificacion: string;
   readonly resultado_cierre: string | null;
   readonly responsable_id: string | null;
+  readonly vinculado: boolean;
 }
 
 const aFilaBandeja = (f: FilaBandejaSql): FilaBandeja => ({
@@ -44,18 +45,21 @@ const aFilaBandeja = (f: FilaBandejaSql): FilaBandeja => ({
   verificacion: f.verificacion,
   resultadoCierre: f.resultado_cierre,
   responsableId: f.responsable_id,
+  vinculado: f.vinculado,
 });
 
 // Visibilidad por ambito vigente: $1 sede, $2 distritos, $3 categorias.
 const SELECT_BANDEJA = `
-  SELECT p.incidente_id, i.referencia, i.estado, e.registrado_en, e.categoria_id, e.distrito_id,
+  SELECT p.incidente_id, i.referencia, COALESCE(pr.estado, i.estado) AS estado, e.registrado_en, e.categoria_id, e.distrito_id,
          e.revision_medica_pendiente, p.papel, p.origen, p.institucion,
-         i.verificacion, i.resultado AS resultado_cierre,
+         i.verificacion, CASE WHEN pr.id IS NULL THEN i.resultado ELSE pr.resultado END AS resultado_cierre,
+         (i.principal_id IS NOT NULL) AS vinculado,
          (SELECT a.operador_id::text FROM asignaciones_incidente a
            WHERE a.incidente_id = p.incidente_id AND a.institucion = p.institucion AND a.activa) AS responsable_id
     FROM participaciones_incidente p
     JOIN enrutamientos_incidente e ON e.incidente_id = p.incidente_id
     JOIN incidentes i ON i.id = p.incidente_id
+    LEFT JOIN incidentes pr ON pr.id = i.principal_id
    WHERE p.sede_id = $1::uuid
      AND (p.origen = 'designacion' OR (e.distrito_id = ANY($2::text[]) AND e.categoria_id = ANY($3::text[])))`;
 

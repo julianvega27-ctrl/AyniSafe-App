@@ -1139,6 +1139,20 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opA!, ini)); // 200
     verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opA!, ini)); // 409
 
+    // Vinculo (grupo B): `tercero` se vincula a `inc`.
+    const VIN = '/operador/incidentes/{id}/vinculo';
+    const tercero = await registrarIncidente(app, prisma);
+    await procesador.esperarReposo();
+    await procesador.procesarPendientes();
+    const vin = { referenciaPrincipal: inc.referencia, motivo };
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opA!, { motivo })); // 400
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, null, vin)); // 401
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opA!, vin)); // 403 (sin asumir)
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opAjeno, vin)); // 404
+    await post(`/operador/incidentes/${tercero.id}/asumir`, opA!);
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opA!, { referenciaPrincipal: tercero.referencia, motivo })); // 409
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opA!, vin)); // 200
+
     // Administrador.
     verificar(ASI, 'get', await get(ASI, cookieAdmin)); // 200
     verificar(ASI, 'get', await get(`${ASI}?x=1`, cookieAdmin)); // 400
@@ -1177,6 +1191,7 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     const roto = new Proxy({}, { get: () => falla }) as unknown as ServicioAtencion;
     const caida = express();
     caida.use('/api/v1', crearRouterAtencion(roto, arnes.enrutamiento, {
+      idPorReferencia: async () => inc.id,
       identificar: arnes.modulo.identificarSolicitante,
       origenWebPermitido: arnes.modulo.origenWebPermitido,
       ambito: async (id) => {
@@ -1191,6 +1206,8 @@ describe('respuestas reales conforme a openapi.yaml', () => {
         .set('Content-Type', 'application/json').send(JSON.stringify(ini))],
       [VER, 'post', request(caida).post(U(`/operador/incidentes/${inc.id}/verificacion`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
         .set('Content-Type', 'application/json').send(JSON.stringify(v))],
+      [VIN, 'post', request(caida).post(U(`/operador/incidentes/${otro.id}/vinculo`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', 'application/json').send(JSON.stringify(vin))],
       [ASI, 'get', request(caida).get(U(ASI)).set('Cookie', cookieAdmin)],
       [CAN, 'get', request(caida).get(U(`${ASI}/${nueva}/candidatos`)).set('Cookie', cookieAdmin)],
       [LIB, 'post', request(caida).post(U(`${ASI}/${nueva}/liberar`)).set('Cookie', cookieAdmin).set('Origin', ORIGEN_WEB_PRUEBA)

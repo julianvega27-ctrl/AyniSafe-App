@@ -100,6 +100,8 @@ export interface FilaBandeja {
   readonly verificacion?: string;
   readonly resultadoCierre?: string | null;
   readonly responsableId?: string | null;
+  /** Grupo B: vinculado como duplicado; el estado es el efectivo del principal. */
+  readonly vinculado?: boolean;
 }
 
 export interface ParticipacionVisible extends FilaBandeja {

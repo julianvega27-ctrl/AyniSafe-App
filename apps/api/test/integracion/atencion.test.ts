@@ -196,9 +196,9 @@ describe('bandeja y resumen con atencion', () => {
     expect(antes.body.atencion.accionesPermitidas).toEqual(['asumir']);
     await asumir(a, inc.id);
     const fila = (await request(app).get(BASE).set('Cookie', a)).body.elementos[0];
-    expect(fila).toMatchObject({ estado: 'EN_REVISION', verificacion: 'SIN_VERIFICAR', resultado: null, responsable: { asignado: true, esUsted: true } });
+    expect(fila).toMatchObject({ estado: 'EN_REVISION', verificacion: 'SIN_VERIFICAR', resultado: null, vinculado: false, responsable: { asignado: true, esUsted: true } });
     const r = (await resumen(a, inc.id)).body;
-    expect(r.atencion.accionesPermitidas).toEqual(['iniciar_atencion', 'descartar', 'verificar']);
+    expect(r.atencion.accionesPermitidas).toEqual(['iniciar_atencion', 'descartar', 'verificar', 'vincular']);
     expect(r.atencion.responsable).toMatchObject({ asignado: true, esUsted: true, nombre: 'Cuenta de prueba' });
     expect(r.atencion.historial.map((h: { accion: string }) => h.accion)).toEqual(['asumir', 'transicion']);
     const otro = (await resumen(b, inc.id)).body;

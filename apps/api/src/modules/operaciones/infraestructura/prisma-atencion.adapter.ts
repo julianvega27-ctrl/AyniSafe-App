@@ -46,10 +46,10 @@ export class PrismaAtencionAdapter implements AtencionRepositorio {
   }
 
   async bloquear(tx: ContextoTransaccional, incidenteId: string): Promise<EstadoBloqueado | null> {
-    const filas = await clienteDe(tx).$queryRaw<{ estado: string; verificacion: string }[]>`
-      SELECT estado, verificacion FROM incidentes WHERE id = ${incidenteId}::uuid FOR UPDATE`;
+    const filas = await clienteDe(tx).$queryRaw<{ estado: string; verificacion: string; principal_id: string | null }[]>`
+      SELECT estado, verificacion, principal_id::text FROM incidentes WHERE id = ${incidenteId}::uuid FOR UPDATE`;
     const f = filas[0];
-    return f ? { estado: f.estado as EstadoIncidente, verificacion: f.verificacion as Verificacion, principalId: null } : null;
+    return f ? { estado: f.estado as EstadoIncidente, verificacion: f.verificacion as Verificacion, principalId: f.principal_id } : null;
   }
 
   async papel(tx: ContextoTransaccional, incidenteId: string, institucion: InstitucionDestino): Promise<Papel | null> {
@@ -125,6 +125,16 @@ export class PrismaAtencionAdapter implements AtencionRepositorio {
     await clienteDe(tx).$executeRaw`UPDATE incidentes SET verificacion = ${valor} WHERE id = ${incidenteId}::uuid`;
   }
 
+  async tieneDuplicados(tx: ContextoTransaccional, incidenteId: string): Promise<boolean> {
+    const filas = await clienteDe(tx).$queryRaw<unknown[]>`
+      SELECT 1 FROM incidentes WHERE principal_id = ${incidenteId}::uuid LIMIT 1`;
+    return filas.length > 0;
+  }
+
+  async vincular(tx: ContextoTransaccional, duplicadoId: string, principalId: string): Promise<void> {
+    await clienteDe(tx).$executeRaw`UPDATE incidentes SET principal_id = ${principalId}::uuid WHERE id = ${duplicadoId}::uuid`;
+  }
+
   async registrar(tx: ContextoTransaccional, e: EntradaHistorial): Promise<void> {
     await clienteDe(tx).$executeRaw`
       INSERT INTO historial_incidente (incidente_id, accion, actor_tipo, actor_usuario_id, institucion, valor_anterior, valor_nuevo, motivo)
@@ -176,8 +186,12 @@ export class PrismaAtencionAdapter implements AtencionRepositorio {
     const base = await this.prisma.$queryRaw<{
       id: string; efectivo_id: string; estado: string; resultado: string | null; resumen_ciudadano: string | null;
     }[]>`
-      SELECT id::text, id::text AS efectivo_id, estado, resultado, resumen_ciudadano
-        FROM incidentes WHERE id = ANY(${[...ids]}::uuid[])`;
+      SELECT i.id::text, COALESCE(p.id, i.id)::text AS efectivo_id,
+             COALESCE(p.estado, i.estado) AS estado,
+             CASE WHEN p.id IS NULL THEN i.resultado ELSE p.resultado END AS resultado,
+             CASE WHEN p.id IS NULL THEN i.resumen_ciudadano ELSE p.resumen_ciudadano END AS resumen_ciudadano
+        FROM incidentes i LEFT JOIN incidentes p ON p.id = i.principal_id
+       WHERE i.id = ANY(${[...ids]}::uuid[])`;
     const efectivos = [...new Set(base.map((b) => b.efectivo_id))];
     const transiciones = await this.prisma.$queryRaw<{ incidente_id: string; institucion: string; valor_nuevo: string; creado_en: Date }[]>`
       SELECT incidente_id::text, institucion, valor_nuevo, creado_en FROM historial_incidente

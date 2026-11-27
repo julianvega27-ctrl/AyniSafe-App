@@ -95,6 +95,9 @@ export interface AtencionRepositorio {
     cierre?: { readonly resultado: Resultado; readonly resumenCiudadano: string },
   ): Promise<void>;
   cambiarVerificacion(tx: ContextoTransaccional, incidenteId: string, valor: Verificacion): Promise<void>;
+  /** Grupo B: el incidente tiene duplicados vinculados. */
+  tieneDuplicados(tx: ContextoTransaccional, incidenteId: string): Promise<boolean>;
+  vincular(tx: ContextoTransaccional, duplicadoId: string, principalId: string): Promise<void>;
   registrar(tx: ContextoTransaccional, entrada: EntradaHistorial): Promise<void>;
   asignacionesActivas(incidenteId: string): Promise<readonly Asignacion[]>;
   historial(incidenteId: string): Promise<readonly FilaHistorial[]>;
@@ -133,6 +136,8 @@ export interface DependenciasAtencion {
 }
 
 export const LIMITE_ASIGNACIONES = 200;
+/** Acciones cuyo valor es un identificador interno (operador o incidente): no se muestra. */
+const SIN_VALORES: ReadonlySet<string> = new Set(['asumir', 'reasignar', 'liberar', 'vincular']);
 
 export class ServicioAtencion {
   constructor(private readonly d: DependenciasAtencion) {}
@@ -265,8 +270,8 @@ export class ServicioAtencion {
         accion: h.accion,
         institucion: h.institucion,
         actorTipo: h.actorTipo,
-        valorAnterior: h.accion === 'asumir' || h.accion === 'reasignar' || h.accion === 'liberar' ? null : h.valorAnterior,
-        valorNuevo: h.accion === 'asumir' || h.accion === 'reasignar' || h.accion === 'liberar' ? null : h.valorNuevo,
+        valorAnterior: SIN_VALORES.has(h.accion) ? null : h.valorAnterior,
+        valorNuevo: SIN_VALORES.has(h.accion) ? null : h.valorNuevo,
         // El motivo solo lo ve la institucion que lo escribio.
         motivo: h.institucion === p.institucion ? h.motivo : null,
         instante: h.creadoEn.toISOString(),
@@ -356,6 +361,36 @@ export class ServicioAtencion {
         motivo,
       });
       return { asignacion: nueva };
+    });
+  }
+
+  /**
+   * Vincula el incidente como duplicado de un principal abierto que la sede tambien ve (RF15). Bloquea
+   * ambos por orden de identificador: dos vinculaciones cruzadas simultaneas no dejan ciclos.
+   */
+  async vincular(p: ParticipacionOperador, principalId: string, operadorId: string, motivo: string): Promise<{ readonly vinculado: true }> {
+    if (principalId === p.incidenteId) throw new ConflictoAtencionError('VINCULO_NO_PERMITIDO');
+    return this.d.unidadDeTrabajo.enTransaccion(async (tx) => {
+      const [primero, segundo] = [p.incidenteId, principalId].sort();
+      const bloqueados = new Map<string, EstadoBloqueado>();
+      for (const id of [primero!, segundo!]) bloqueados.set(id, await this.bloquear(tx, id));
+      const dup = bloqueados.get(p.incidenteId)!;
+      const principal = bloqueados.get(principalId)!;
+      await this.autorizarPrincipal(tx, p, operadorId, dup.estado);
+      if (principal.estado === 'CERRADO' || principal.principalId || (await this.d.repositorio.tieneDuplicados(tx, p.incidenteId))) {
+        throw new ConflictoAtencionError('VINCULO_NO_PERMITIDO', dup.estado);
+      }
+      await this.d.repositorio.vincular(tx, p.incidenteId, principalId);
+      await this.d.repositorio.registrar(tx, {
+        incidenteId: p.incidenteId,
+        accion: 'vincular',
+        actorTipo: 'operador',
+        actorUsuarioId: operadorId,
+        institucion: p.institucion,
+        valorNuevo: principalId,
+        motivo,
+      });
+      return { vinculado: true as const };
     });
   }
 
