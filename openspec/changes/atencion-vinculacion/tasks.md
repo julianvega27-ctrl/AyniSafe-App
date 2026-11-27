@@ -1,0 +1,47 @@
+# Tasks
+
+Grupos verticales por prioridad. Durante la implementación se ejecutan solo las suites afectadas; la suite completa con cobertura, OpenAPI y arquitectura se ejecuta una vez al final (grupo Z). Lo que no se complete de B o C queda como pendiente explícito en `docs/validacion/p6-atencion.md`.
+
+## A. Núcleo obligatorio: atención institucional
+
+### A1. Persistencia y dominio
+- [ ] A1.1 Migración `20261130100000_atencion_institucional`: columnas de verificación, resultado y resumen en `incidentes` con CHECK; `asignaciones_incidente` con índice único parcial; `historial_incidente` con CHECK por acción. Actualizar `schema.prisma`.
+- [ ] A1.2 Dominio `operaciones/dominio/atencion.ts`: transiciones permitidas, `accionesPermitidas`, validación de cuerpos (motivo 10–500, resumen 10–300, estado esperado) y errores tipados.
+- [ ] A1.3 Pruebas unitarias del dominio: matriz de transiciones, acciones por papel/asignación y validaciones.
+
+### A2. Casos de uso y adaptador
+- [ ] A2.1 `ServicioAtencion` con asumir (inicio de revisión de la principal), transición, verificación, liberar, reasignar, lista de asignaciones y vista del operador; puertos de repositorio y de operadores.
+- [ ] A2.2 `PrismaAtencionAdapter`: bloqueo del incidente, asignación activa, inserciones del historial y lecturas, con traducción de 23505 a conflicto.
+- [ ] A2.3 Identidad: `OperadoresAtencion` (`describir`, `deSedes`) en puerto, adaptador y fachada.
+- [ ] A2.4 Pruebas de integración contra PostgreSQL: asunción concurrente (EQ-20), repetición idempotente, apoyo con responsable propio, transiciones válidas e inválidas, estado esperado, verificación sin cambio de estado, historial atómico (EQ-05) y reversión, cambio de principal por condición médica, reasignación válida/no válida, liberar.
+
+### A3. API y contrato
+- [ ] A3.1 `atencion.routes.ts` (operador y administrador) y cableado en `composicion.ts`.
+- [ ] A3.2 Bandeja: fila con verificación, resultado y responsable; resumen con atención (responsable, acciones e historial).
+- [ ] A3.3 Seguimiento: resultado, resumen ciudadano e hitos en el detalle del autor y en la vista del invitado.
+- [ ] A3.4 OpenAPI: rutas nuevas, esquemas y ejemplos; retirar la afirmación de «sin transiciones».
+- [ ] A3.5 Pruebas HTTP y de contrato: 401/403/404/409/400, CSRF, privacidad de hitos (sin operadores ni motivo interno) y del listado del administrador.
+
+### A4. Clientes
+- [ ] A4.1 Web: bloque «Atención» en el resumen (asumir, iniciar atención, verificación, cerrar, descartar) con diálogos, estados y 409; prioridad y responsable en la fila.
+- [ ] A4.2 Web: bloque «Responsables activos» del administrador con liberar y reasignar.
+- [ ] A4.3 Pruebas web afectadas.
+- [ ] A4.4 Flutter: hitos, resultado de cierre y resumen en Mis reportes y consulta con código; pruebas de widget.
+
+## B. Si alcanza: duplicados vinculados
+- [ ] B1 Migración `_duplicados` y dominio de vinculación (sin ciclos ni cadenas).
+- [ ] B2 Caso de uso y ruta `POST /operador/incidentes/{id}/vinculo`; bloqueo de transiciones del duplicado; estado efectivo en bandeja y seguimiento.
+- [ ] B3 Pruebas: cadena, vinculación cruzada simultánea, privacidad entre informantes, seguimiento coordinado; OpenAPI.
+- [ ] B4 Clientes: acción «Vincular como duplicado» en el panel e indicación de coordinación en la app.
+
+## C. Si alcanza: prioridad versionada con FIFO
+- [ ] C1 Migración `_prioridad`, configuración `prioridad-categoria-v1` y validación.
+- [ ] C2 Propuesta al enrutar y revisión con motivo (`POST /operador/incidentes/{id}/prioridad`).
+- [ ] C3 Pruebas: valores de la tabla, configuración inválida → SIN_EVALUAR, revisión auditada, FIFO sin cambios (EQ-16); OpenAPI.
+- [ ] C4 Panel: etiqueta con texto/icono/color y acción de revisión.
+
+## Z. Cierre
+- [ ] Z1 Suite completa con cobertura, validación OpenAPI y verificador de arquitectura, una vez.
+- [ ] Z2 Evidencia breve en `docs/validacion/p6-atencion.md` (comandos, resultados, pendientes) y estado P6 en `docs/comparacion-proyecto-incidencias.md`.
+- [ ] Z3 Recorrido en Android real (manual, responsable del proyecto).
+- [ ] Z4 Commits por capa, push, PR y CI.
