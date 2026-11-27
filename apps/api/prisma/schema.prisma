@@ -286,7 +286,44 @@ model Incidente {
   referencia   String   @unique
   estado       String   @default("REGISTRADO")
   registradoEn DateTime @default(now()) @map("registrado_en") @db.Timestamptz(3)
+  enrutamiento EnrutamientoIncidente?
   @@map("incidentes")
+}
+
+/// P4.2 (Operaciones): regla aplicada, condiciones y resultado del enrutamiento de un incidente.
+model EnrutamientoIncidente {
+  incidenteId             String    @id @map("incidente_id") @db.Uuid
+  eventoId                String    @unique @map("evento_id") @db.Uuid
+  versionRegla            String    @map("version_regla")
+  categoriaId             String    @map("categoria_id")
+  distritoId              String?   @map("distrito_id")
+  resultado               String
+  revisionMedicaPendiente Boolean   @map("revision_medica_pendiente")
+  faltantes               Json      @default("[]")
+  registradoEn            DateTime  @map("registrado_en") @db.Timestamptz(3)
+  creadoEn                DateTime  @default(now()) @map("creado_en") @db.Timestamptz(3)
+  actualizadoEn           DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(3)
+  incidente               Incidente @relation(fields: [incidenteId], references: [id], onDelete: Restrict)
+  participaciones         ParticipacionIncidente[]
+  @@index([registradoEn, incidenteId], map: "enrutamientos_pendientes_fifo")
+  @@map("enrutamientos_incidente")
+}
+
+/// P4.2 (Operaciones): participacion de una sede en un incidente; nunca se borra.
+model ParticipacionIncidente {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incidenteId  String   @map("incidente_id") @db.Uuid
+  sedeId       String   @map("sede_id") @db.Uuid
+  institucion  String
+  papel        String
+  origen       String
+  designadoPor String?  @map("designado_por") @db.Uuid
+  motivo       String?
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+  enrutamiento EnrutamientoIncidente @relation(fields: [incidenteId], references: [incidenteId], onDelete: Restrict)
+  @@unique([incidenteId, sedeId], map: "participaciones_una_por_sede")
+  @@index([sedeId, incidenteId], map: "participaciones_sede_incidente")
+  @@map("participaciones_incidente")
 }
 
 /// Originales del envio ciudadano (modulo Reportes, P4.1). Coherencia de modalidad y territorio con CHECK en la migracion.

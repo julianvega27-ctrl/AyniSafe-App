@@ -2,6 +2,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import type {
   DatosOperadorNuevo,
   DatosSedeNueva,
+  EstadoDesignacion,
   OrganizacionPort,
   TransaccionOrganizacion,
 } from '../aplicacion/puertos/organizacion.port';
@@ -432,6 +433,38 @@ export class PrismaOrganizacionAdapter implements OrganizacionPort {
         categorias: f.categorias,
         habilitadaAtencion: f.habilitadaAtencion,
       };
+    });
+  }
+
+  sedesElegibles(institucion: TipoInstitucion, distritoId: string, categoriaId: string): Promise<string[]> {
+    return this.ejecutar(async () => {
+      const filas = await this.prisma.$queryRaw<{ id: string }[]>`
+        SELECT s.id::text AS id
+          FROM sedes s
+          JOIN instituciones i ON i.id = s.institucion_id AND i.activa
+         WHERE s.institucion_id = ${institucion} AND s.activa AND s.habilitada_atencion
+           AND EXISTS (SELECT 1 FROM coberturas_sede c WHERE c.sede_id = s.id AND c.distrito_id = ${distritoId})
+           AND EXISTS (SELECT 1 FROM competencias_sede k WHERE k.sede_id = s.id AND k.categoria_id = ${categoriaId})
+           AND EXISTS (SELECT 1 FROM pertenencias_operador p JOIN usuarios u ON u.id = p.usuario_id
+                        WHERE p.sede_id = s.id AND u.rol = 'operador' AND u.estado = 'activo')
+         ORDER BY s.id`;
+      return filas.map((f) => f.id);
+    });
+  }
+
+  estadoDesignacion(sedeId: string): Promise<EstadoDesignacion | null> {
+    return this.ejecutar(async () => {
+      const filas = await this.prisma.$queryRaw<{
+        institucionId: TipoInstitucion; institucionActiva: boolean; sedeActiva: boolean;
+        habilitadaAtencion: boolean; operadoresActivos: number;
+      }[]>`
+        SELECT s.institucion_id AS "institucionId", i.activa AS "institucionActiva", s.activa AS "sedeActiva",
+               s.habilitada_atencion AS "habilitadaAtencion",
+               (SELECT count(*)::int FROM pertenencias_operador p JOIN usuarios u ON u.id = p.usuario_id
+                 WHERE p.sede_id = s.id AND u.rol = 'operador' AND u.estado = 'activo') AS "operadoresActivos"
+          FROM sedes s JOIN instituciones i ON i.id = s.institucion_id
+         WHERE s.id = ${sedeId}::uuid`;
+      return filas[0] ?? null;
     });
   }
 }

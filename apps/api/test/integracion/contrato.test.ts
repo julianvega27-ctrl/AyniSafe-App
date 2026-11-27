@@ -10,6 +10,8 @@ import { paqueteSintetico } from '../fixtures/territorio';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultas } from '../../src/modules/consultas';
 import { crearModuloReportes } from '../../src/modules/reportes';
+import { crearRouterEnrutamiento, type ServicioEnrutamiento } from '../../src/modules/operaciones';
+import { cookieInstitucional, crearSedeDePrueba, registrarIncidente } from './fixtures-enrutamiento';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import type { CuentasPort } from '../../src/modules/identidad/aplicacion/puertos/cuentas.port';
 import type { SesionesPort } from '../../src/modules/identidad/aplicacion/puertos/sesiones.port';
@@ -750,6 +752,127 @@ describe('respuestas reales conforme a openapi.yaml', () => {
       const r = metodo === 'get'
         ? await request(caida).get(U(ruta))
         : await request(caida).post(U(ruta)).set('Content-Type', 'application/json').send(JSON.stringify(cuerpo));
+      expect(r.status).toBe(503);
+      expect(r.text).not.toContain('secreto');
+      verificar(doc, metodo, r);
+    }
+  });
+
+  it('enrutamiento y bandeja (P4.2): cada estado documentado coincide con la respuesta real', async () => {
+    const PEN = '/admin/enrutamientos-pendientes';
+    const DES = '/admin/enrutamientos-pendientes/{incidenteId}/designaciones';
+    const REE = '/admin/enrutamientos-pendientes/{incidenteId}/reevaluar';
+    const BAN = '/operador/incidentes';
+    const RES = '/operador/incidentes/{id}';
+    const DET = '/ciudadano/incidentes/{referencia}';
+    const INV = '/publico/seguimiento';
+    const U = (r: string) => `/api/v1${r}`;
+    const arnes = crearArnes({ prisma, enrutar: true });
+    const { app, procesador } = arnes;
+    await new PrismaTerritorioAdapter(prisma).importar(paqueteSintetico().preparado, true);
+    const enrutar = async () => {
+      await procesador.esperarReposo();
+      await procesador.procesarPendientes();
+    };
+    const admin = await crearCuentaDePrueba(prisma, { rol: 'administrador' });
+    const cookieAdmin = await cookieInstitucional(app, admin.correo);
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['accidente-transito'], creadoPor: admin.id });
+    const samu = await crearSedeDePrueba(prisma, { institucion: 'samu', distritos: ['DIS-05'], creadoPor: admin.id });
+    const samuOff = await crearSedeDePrueba(prisma, { institucion: 'samu', habilitada: false, creadoPor: admin.id });
+    const cookieOp = await cookieInstitucional(app, pnp.operadores[0]!.correo);
+    const ciudadano = await crearCuentaDePrueba(prisma, { rol: 'ciudadano' });
+    const token = (await request(app).post(RUTA_LOGIN).send({ correo: ciudadano.correo, contrasena: CLAVE })).body.token as string;
+    const accidente = {
+      categoriaId: 'accidente-transito', descripcion: 'Choque de dos autos en la avenida', heridos: 'si',
+      ocurrencia: { modo: 'ahora', instante: new Date(Date.now() - 60_000).toISOString() }, punto: { latitud: 1, longitud: 1, origen: 'manual' },
+    };
+    const propio = (await request(app).post(U('/incidentes')).set('Authorization', `Bearer ${token}`).set('Content-Type', 'application/json')
+      .set('Idempotency-Key', randomUUID()).send(JSON.stringify(accidente))).body as { referencia: string };
+    const inv = await registrarIncidente(app, prisma, accidente);
+    await enrutar();
+    const idPropio = (await prisma.incidente.findUniqueOrThrow({ where: { referencia: propio.referencia } })).id;
+
+    // Bandeja del operador PNP (simultanea en el accidente).
+    verificar(BAN, 'get', await request(app).get(U(BAN)).set('Cookie', cookieOp)); // 200
+    verificar(BAN, 'get', await request(app).get(U(`${BAN}?cursor=@@`)).set('Cookie', cookieOp)); // 400
+    verificar(BAN, 'get', await request(app).get(U(BAN))); // 401
+    verificar(BAN, 'get', await request(app).get(U(BAN)).set('Cookie', cookieAdmin)); // 403
+    verificar(RES, 'get', await request(app).get(U(`${BAN}/${inv.id}`)).set('Cookie', cookieOp)); // 200
+    verificar(RES, 'get', await request(app).get(U(`${BAN}/${inv.id}?x=1`)).set('Cookie', cookieOp)); // 400
+    verificar(RES, 'get', await request(app).get(U(`${BAN}/${inv.id}`))); // 401
+    verificar(RES, 'get', await request(app).get(U(`${BAN}/${inv.id}`)).set('Cookie', cookieAdmin)); // 403
+    verificar(RES, 'get', await request(app).get(U(`${BAN}/${randomUUID()}`)).set('Cookie', cookieOp)); // 404
+
+    // Pendientes del administrador (falta SAMU principal en ambos accidentes).
+    const designar = (id: string, cuerpo: unknown, cookie = cookieAdmin, tipo = 'application/json') =>
+      request(app).post(U(`${PEN}/${id}/designaciones`)).set('Cookie', cookie).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', tipo).send(typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo));
+    const reevaluar = (id: string, cookie = cookieAdmin) =>
+      request(app).post(U(`${PEN}/${id}/reevaluar`)).set('Cookie', cookie).set('Origin', ORIGEN_WEB_PRUEBA);
+    const motivo = 'No hay sede SAMU con cobertura en el distrito';
+    verificar(PEN, 'get', await request(app).get(U(PEN)).set('Cookie', cookieAdmin)); // 200
+    verificar(PEN, 'get', await request(app).get(U(`${PEN}?cursor=@@`)).set('Cookie', cookieAdmin)); // 400
+    verificar(PEN, 'get', await request(app).get(U(PEN))); // 401
+    verificar(PEN, 'get', await request(app).get(U(PEN)).set('Cookie', cookieOp)); // 403
+    verificar(REE, 'post', await reevaluar(inv.id)); // 200 (sigue pendiente)
+    verificar(REE, 'post', await request(app).post(U(`${PEN}/${inv.id}/reevaluar`)).set('Cookie', cookieAdmin)
+      .set('Origin', ORIGEN_WEB_PRUEBA).set('Content-Type', 'application/json').send('{"a":1}')); // 400
+    verificar(REE, 'post', await request(app).post(U(`${PEN}/${inv.id}/reevaluar`)).set('Origin', ORIGEN_WEB_PRUEBA)); // 401
+    verificar(REE, 'post', await reevaluar(inv.id, cookieOp)); // 403
+    verificar(REE, 'post', await reevaluar(randomUUID())); // 404
+    verificar(DES, 'post', await designar(inv.id, { institucion: 'samu', sedeId: samuOff.id, motivo })); // 409
+    verificar(DES, 'post', await designar(inv.id, { institucion: 'samu', sedeId: samu.id, motivo: 'x' })); // 400
+    verificar(DES, 'post', await request(app).post(U(`${PEN}/${inv.id}/designaciones`)).set('Origin', ORIGEN_WEB_PRUEBA)
+      .set('Content-Type', 'application/json').send('{}')); // 401
+    verificar(DES, 'post', await designar(inv.id, { institucion: 'samu', sedeId: samu.id, motivo }, cookieOp)); // 403
+    verificar(DES, 'post', await designar(randomUUID(), { institucion: 'samu', sedeId: samu.id, motivo })); // 404
+    verificar(DES, 'post', await designar(inv.id, 'x', cookieAdmin, 'text/plain')); // 415
+    verificar(DES, 'post', await designar(inv.id, { institucion: 'samu', sedeId: samu.id, motivo: 'm'.repeat(5000) })); // 413
+    verificar(DES, 'post', await designar(inv.id, { institucion: 'samu', sedeId: samu.id, motivo })); // 201
+    verificar(REE, 'post', await reevaluar(inv.id)); // 409 (ya no pendiente)
+    verificar(DES, 'post', await designar(idPropio, { institucion: 'samu', sedeId: samu.id, motivo })); // 201
+
+    // Seguimiento con institucion responsable asignada.
+    verificar(DET, 'get', await request(app).get(U(`/ciudadano/incidentes/${propio.referencia}`)).set('Authorization', `Bearer ${token}`)); // 200
+    verificar(INV, 'post', await request(app).post(U(INV)).set('Content-Type', 'application/json')
+      .send(JSON.stringify({ referencia: inv.referencia, codigo: inv.codigo }))); // 200
+
+    // 503: Operaciones no disponible para el router de pendientes y la bandeja.
+    const falla = () => Promise.reject(new Error('secreto SQL'));
+    const servicioCaido = { pendientes: falla, designar: falla, reevaluar: falla } as unknown as ServicioEnrutamiento;
+    const caida = crearApp({
+      saltosProxyConfianza: 0,
+      identidad: arnes.modulo,
+      reportes: arnes.reportes,
+      consultas: crearModuloConsultas(undefined, {
+        repositorio: { leer: async () => null },
+        secretoLimitador: 'x'.repeat(40),
+        bandeja: {
+          ambito: { de: async () => ({ sedeId: pnp.id, distritos: ['DIS-01'], categorias: ['robo'], habilitadaAtencion: true }) },
+          participaciones: { bandeja: falla, participacionDe: falla },
+          originales: { resumenOperativo: falla },
+          categorias: { nombres: falla },
+          identificar: arnes.modulo.identificarSolicitante,
+          logger: arnes.logger,
+        },
+      }),
+      operaciones: crearRouterEnrutamiento(servicioCaido, {
+        identificar: arnes.modulo.identificarSolicitante,
+        origenWebPermitido: arnes.modulo.origenWebPermitido,
+        vista: { nombresCategorias: falla, nombreDistrito: () => null, motivoTerritorial: falla },
+        logger: arnes.logger,
+      }),
+    });
+    const casos = [
+      [BAN, 'get', request(caida).get(U(BAN)).set('Cookie', cookieOp)],
+      [RES, 'get', request(caida).get(U(`${BAN}/${inv.id}`)).set('Cookie', cookieOp)],
+      [PEN, 'get', request(caida).get(U(PEN)).set('Cookie', cookieAdmin)],
+      [DES, 'post', request(caida).post(U(`${PEN}/${inv.id}/designaciones`)).set('Cookie', cookieAdmin).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', 'application/json').send(JSON.stringify({ institucion: 'samu', sedeId: samu.id, motivo }))],
+      [REE, 'post', request(caida).post(U(`${PEN}/${inv.id}/reevaluar`)).set('Cookie', cookieAdmin).set('Origin', ORIGEN_WEB_PRUEBA)],
+    ] as const;
+    for (const [doc, metodo, pendiente] of casos) {
+      const r = await pendiente;
       expect(r.status).toBe(503);
       expect(r.text).not.toContain('secreto');
       verificar(doc, metodo, r);

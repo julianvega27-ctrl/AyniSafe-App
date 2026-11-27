@@ -63,7 +63,14 @@ export interface LimitadorSeguimientoPort {
   ): Promise<{ readonly permitido: boolean; readonly reintentarEnSegundos: number }>;
 }
 
+/** Puerto hacia Operaciones e Identidad: institucion principal con participacion (P4.2). */
+export interface ResponsablesSeguimientoPort {
+  deIncidentes(ids: readonly string[]): Promise<ReadonlyMap<string, { readonly id: string; readonly nombre: string }>>;
+}
+
 export interface DependenciasSeguimiento {
+  /** Sin el puerto (pruebas de P4.1), la institucion responsable se informa pendiente. */
+  readonly responsables?: ResponsablesSeguimientoPort;
   readonly envios: EnviosSeguimientoPort;
   readonly incidentes: IncidentesSeguimientoPort;
   readonly categorias: CategoriasSeguimientoPort;
@@ -108,8 +115,8 @@ const LIMITES_POR_DEFECTO = {
 
 /**
  * Seguimiento ciudadano (spec `consultas/seguimiento-ciudadano`). Compone originales de Reportes y estado
- * de Operaciones mediante sus fachadas, sin SQL entre modulos. Institucion responsable y actuaciones se
- * informan como pendientes hasta P4.2/P6.
+ * de Operaciones mediante sus fachadas, sin SQL entre modulos. La institucion responsable es la principal
+ * con participacion (P4.2), sin sede ni operadores; las actuaciones se informan pendientes hasta P6.
  */
 export class SeguimientoCiudadano {
   private readonly ahora: () => Date;
@@ -118,6 +125,11 @@ export class SeguimientoCiudadano {
   constructor(private readonly d: DependenciasSeguimiento) {
     this.ahora = d.ahora ?? (() => new Date());
     this.limites = d.limites ?? LIMITES_POR_DEFECTO;
+  }
+
+  private async responsable(incidenteId: string) {
+    const r = this.d.responsables ? (await this.d.responsables.deIncidentes([incidenteId])).get(incidenteId) : undefined;
+    return r ? { estado: 'asignada' as const, institucion: { id: r.id, nombre: r.nombre } } : INSTITUCION_PENDIENTE;
   }
 
   private async categoria(id: string, nombres?: ReadonlyMap<string, string>): Promise<CategoriaVista> {
@@ -169,7 +181,7 @@ export class SeguimientoCiudadano {
       descripcion: detalle.descripcion,
       ocurrencia: { modo: detalle.ocurrencia.modo, instante: detalle.ocurrencia.instante.toISOString() },
       respuestas: { heridos: detalle.heridos, atencionMedica: detalle.atencionMedica },
-      institucionResponsable: INSTITUCION_PENDIENTE,
+      institucionResponsable: await this.protegido(() => this.responsable(incidente.id)),
       actuaciones: [] as const,
     };
   }
@@ -199,7 +211,7 @@ export class SeguimientoCiudadano {
       categoria: await this.protegido(() => this.categoria(verificado.categoriaId)),
       estado: incidente.estado,
       recibidoEn: incidente.registradoEn.toISOString(),
-      institucionResponsable: INSTITUCION_PENDIENTE,
+      institucionResponsable: await this.protegido(() => this.responsable(incidente.id)),
       actuaciones: [] as const,
     };
   }

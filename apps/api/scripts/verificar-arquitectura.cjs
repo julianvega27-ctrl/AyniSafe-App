@@ -89,6 +89,31 @@ function verificar(root) {
       }
     }
   }
+  // Ciclos entre modulos (P4.2): un modulo que importa la fachada de otro no puede ser importado por
+  // este, directa ni transitivamente. Los puertos cableados en la composicion evitan esos ciclos.
+  const modulos = new Map();
+  for (const [file, edges] of graph) {
+    const source = role(file);
+    if (!source) continue;
+    for (const edge of edges) {
+      const target = edge.resolved && role(path.resolve(edge.resolved));
+      if (!target || target.module === source.module) continue;
+      if (!modulos.has(source.module)) modulos.set(source.module, new Map());
+      if (!modulos.get(source.module).has(target.module)) modulos.get(source.module).set(target.module, { file, edge });
+    }
+  }
+  const estado = new Map();
+  const visitar = (modulo, camino) => {
+    estado.set(modulo, 'visitando');
+    for (const [destino, origen] of modulos.get(modulo) || []) {
+      if (estado.get(destino) === 'visitando') {
+        const ciclo = [...camino.slice(camino.indexOf(destino)), modulo, destino];
+        infringements.push({ file: relative(origen.file), line: origen.edge.line, dependencia: origen.edge.specifier, regla: 'ciclo-entre-modulos', via: ciclo });
+      } else if (!estado.has(destino)) visitar(destino, [...camino, modulo]);
+    }
+    estado.set(modulo, 'visitado');
+  };
+  for (const modulo of [...modulos.keys()].sort()) if (!estado.has(modulo)) visitar(modulo, []);
   const unique = [...new Map(infringements.map((i) => [JSON.stringify(i), i])).values()];
   return { archivos: graph.size, infracciones: unique, limites };
 }

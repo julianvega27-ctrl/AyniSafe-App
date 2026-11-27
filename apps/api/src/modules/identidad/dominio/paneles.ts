@@ -8,20 +8,21 @@ export interface SeccionPanel {
 }
 
 /**
- * Secciones de cada panel segun la guia de UI (2.3). Solo estan disponibles las de organizacion del
- * administrador (P3.2): Instituciones y sedes, Operadores y Coberturas. Inicio es un resumen pendiente
- * (no un tablero de metricas) e Historial se limita al autorizado cuando exista.
+ * Secciones de cada panel segun la guia de UI (2.3). Disponibles: organizacion del administrador
+ * (P3.2: Instituciones y sedes, Operadores y Coberturas), Inicio del administrador limitado al bloque de
+ * enrutamiento pendiente y la bandeja Incidentes del operador (P4.2). El resto del resumen, el Inicio del
+ * operador e Historial siguen pendientes; no hay tableros de metricas de ejemplo.
  */
 const SECCIONES: Readonly<Record<RolInstitucional, readonly SeccionPanel[]>> = {
   operador: [
     { id: 'inicio', titulo: 'Inicio', disponible: false },
-    { id: 'incidentes', titulo: 'Incidentes', disponible: false },
+    { id: 'incidentes', titulo: 'Incidentes', disponible: true },
     { id: 'mapa', titulo: 'Mapa', disponible: false },
     { id: 'indicadores', titulo: 'Indicadores', disponible: false },
     { id: 'historial', titulo: 'Historial', disponible: false },
   ],
   administrador: [
-    { id: 'inicio', titulo: 'Inicio', disponible: false },
+    { id: 'inicio', titulo: 'Inicio', disponible: true },
     { id: 'instituciones-sedes', titulo: 'Instituciones y sedes', disponible: true },
     { id: 'operadores', titulo: 'Operadores', disponible: true },
     { id: 'coberturas', titulo: 'Coberturas', disponible: true },

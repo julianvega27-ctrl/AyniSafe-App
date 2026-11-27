@@ -13,6 +13,7 @@ import {
   AdministrarOrganizacionUseCase,
   AgregarOperadorUseCase,
   ConsultarAmbitoOperadorUseCase,
+  SedesEnrutamientoUseCase,
   CrearSedeConOperadorUseCase,
   ReenviarInvitacionUseCase,
 } from './aplicacion/organizacion.use-case';
@@ -105,6 +106,13 @@ export interface ModuloIdentidad {
   readonly invitarCuenta: InvitarCuentaUseCase;
   /** Contrato interno de ambito del operador (institucion, sede, distritos, categorias) para P4/P6. */
   readonly consultarAmbitoOperador: ConsultarAmbitoOperadorUseCase;
+  /** Contrato interno de sedes elegibles y designables para el enrutamiento (P4.2). */
+  readonly sedesEnrutamiento: SedesEnrutamientoUseCase;
+  /**
+   * Proteccion CSRF para mutaciones con cookie de otros modulos (P4.2): `Origin` igual al origen
+   * web configurado y `Sec-Fetch-Site` distinto de `cross-site`.
+   */
+  readonly origenWebPermitido: (origin: string | undefined, secFetchSite: string | undefined) => boolean;
   /**
    * Identifica al solicitante a partir de las cabeceras crudas Authorization y Cookie (P4.1), sin
    * exponer Express ni los internos de la sesion a otros modulos.
@@ -137,6 +145,7 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
   const invitarCuenta = new InvitarCuentaUseCase(deps.envios, deps.reloj);
   const despertarEnvios = (): void => gestorEnvios.despertar();
   const consultarAmbitoOperador = new ConsultarAmbitoOperadorUseCase(deps.organizacion);
+  const sedesEnrutamiento = new SedesEnrutamientoUseCase(deps.organizacion);
   const router = crearRutasAuth(
     {
       registrar: new RegistrarCiudadanoUseCase(deps.cuentas, deps.hash, deps.limitador, deps.reloj, deps.politicaLimites),
@@ -225,6 +234,8 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
     gestorEnvios,
     invitarCuenta,
     consultarAmbitoOperador,
+    sedesEnrutamiento,
+    origenWebPermitido: (origin, sitio) => origin === deps.web.origen && sitio !== 'cross-site',
     identificarSolicitante,
     limitador: deps.limitador,
   };

@@ -9,7 +9,15 @@ import {
   type SolicitudPrevia,
   type TerritorioEnvio,
 } from '../aplicacion/puertos/registro.port';
-import type { CursorHistorial, EnviosLecturaRepositorio, EnvioDetalleAutor, EnvioInvitadoVerificado, EnvioResumen } from '../aplicacion/lectura-envios';
+import type {
+  CursorHistorial,
+  DatosEnrutamientoEnvio,
+  EnviosLecturaRepositorio,
+  EnvioDetalleAutor,
+  EnvioInvitadoVerificado,
+  EnvioResumen,
+  EnvioResumenOperativo,
+} from '../aplicacion/lectura-envios';
 import type { Modalidad, ModoOcurrencia, RespuestaSamu } from '../dominio/envio';
 
 function esUnicidad(error: unknown): boolean {
@@ -136,6 +144,45 @@ export class PrismaEnviosAdapter implements EnviosRepositorio, EnviosLecturaRepo
       heridos: f.heridos as RespuestaSamu | null,
       atencionMedica: f.atencionMedica as RespuestaSamu | null,
     };
+  }
+
+  async datosEnrutamiento(incidenteId: string): Promise<DatosEnrutamientoEnvio | null> {
+    const f = await this.prisma.envioIncidente.findUnique({
+      where: { incidenteId },
+      select: {
+        categoriaId: true, recibidoEn: true, heridos: true, atencionMedica: true,
+        estadoTerritorial: true, distritoId: true, motivoTerritorial: true, versionTerritorial: true,
+      },
+    });
+    if (!f) return null;
+    return {
+      categoriaId: f.categoriaId,
+      territorio: aTerritorio(f),
+      heridos: f.heridos as RespuestaSamu | null,
+      atencionMedica: f.atencionMedica as RespuestaSamu | null,
+      recibidoEn: f.recibidoEn,
+    };
+  }
+
+  async resumenOperativo(ids: readonly string[]): Promise<readonly EnvioResumenOperativo[]> {
+    const filas = await this.prisma.envioIncidente.findMany({
+      where: { incidenteId: { in: [...ids] } },
+      select: {
+        incidenteId: true, categoriaId: true, recibidoEn: true, descripcion: true, ocurrenciaModo: true, ocurridoEn: true,
+        heridos: true, atencionMedica: true,
+        estadoTerritorial: true, distritoId: true, motivoTerritorial: true, versionTerritorial: true,
+      },
+    });
+    return filas.map((f) => ({
+      incidenteId: f.incidenteId,
+      categoriaId: f.categoriaId,
+      descripcion: f.descripcion,
+      ocurrencia: { modo: f.ocurrenciaModo as ModoOcurrencia, instante: f.ocurridoEn },
+      territorio: aTerritorio(f),
+      heridos: f.heridos as RespuestaSamu | null,
+      atencionMedica: f.atencionMedica as RespuestaSamu | null,
+      recibidoEn: f.recibidoEn,
+    }));
   }
 
   async huellaCodigoDe(incidenteId: string): Promise<(EnvioInvitadoVerificado & { readonly codigoHuella: string }) | null> {

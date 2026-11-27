@@ -1,4 +1,4 @@
-import express, { type Express } from 'express';
+import express, { type Express, type Router } from 'express';
 import type { ModuloConsultas } from './modules/consultas';
 import type { ModuloIdentidad } from './modules/identidad';
 import type { ModuloReportes } from './modules/reportes';
@@ -9,6 +9,8 @@ export interface OpcionesApp {
   readonly identidad: ModuloIdentidad;
   readonly consultas: ModuloConsultas;
   readonly reportes: ModuloReportes;
+  /** Rutas de Operaciones (P4.2: enrutamientos pendientes del administrador). */
+  readonly operaciones?: Router;
 }
 
 /** Composicion general del backend. */
@@ -22,6 +24,7 @@ export function crearApp(opciones: OpcionesApp): Express {
   app.use('/api/v1', opciones.consultas.router);
   // Catalogo publico de categorias (Reportes).
   app.use('/api/v1', opciones.reportes.router);
+  if (opciones.operaciones) app.use('/api/v1', opciones.operaciones);
   // Paginas de respaldo del enlace del correo y assetlinks.json (fuera de /api/v1).
   app.use(opciones.identidad.routerPublico);
   return app;

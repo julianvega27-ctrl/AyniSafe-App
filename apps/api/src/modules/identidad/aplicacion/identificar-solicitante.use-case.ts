@@ -6,13 +6,13 @@ import type { ConsultarSesionUseCase } from './consultar-sesion.use-case';
  * Quien hace una solicitud, para capacidades de otros modulos que admiten envio anonimo (P4.1):
  * - `anonimo`: sin Authorization ni sesion institucional vigente;
  * - `ciudadano`: Bearer de un ciudadano activo; la identidad sale del servidor;
- * - `institucional`: cookie de una sesion vigente de operador o administrador;
+ * - `institucional`: cookie de una sesion vigente de operador o administrador, con su id y rol (P4.2);
  * - `invalido`: hay Authorization pero no corresponde a un ciudadano activo (no se degrada a anonimo).
  */
 export type Solicitante =
   | { readonly tipo: 'anonimo' }
   | { readonly tipo: 'ciudadano'; readonly usuarioId: string }
-  | { readonly tipo: 'institucional' }
+  | { readonly tipo: 'institucional'; readonly usuarioId: string; readonly rol: 'operador' | 'administrador' }
   | { readonly tipo: 'invalido' };
 
 export interface CredencialesSolicitud {
@@ -42,8 +42,8 @@ export class IdentificarSolicitanteUseCase {
     }
     if (credenciales.cookieInstitucional !== undefined) {
       try {
-        await this.institucional.ejecutar(credenciales.cookieInstitucional);
-        return { tipo: 'institucional' };
+        const sesion = await this.institucional.ejecutar(credenciales.cookieInstitucional);
+        return { tipo: 'institucional', usuarioId: sesion.usuario.id, rol: sesion.usuario.rol };
       } catch (e) {
         if (!(e instanceof NoAutenticadoError)) throw e;
       }

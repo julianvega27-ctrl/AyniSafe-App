@@ -87,6 +87,21 @@ export interface OrganizacionPort {
   cambiarEstadoOperador(id: string, estado: 'activo' | 'suspendido', ahora: Date): Promise<OperadorSede | null>;
   /** Ambito vigente del operador o nulo (ambito vacio) si la cuenta, sede o institucion no estan activas. */
   ambitoDeOperador(usuarioId: string): Promise<AmbitoOperador | null>;
+  /**
+   * Sedes elegibles para enrutar (P4.2): activas y habilitadas de una institucion activa, con
+   * cobertura del distrito, competencia sobre la categoria y al menos un operador activo.
+   */
+  sedesElegibles(institucion: TipoInstitucion, distritoId: string, categoriaId: string): Promise<string[]>;
+  /** Estado de una sede para una designacion administrativa; nulo si la sede no existe. */
+  estadoDesignacion(sedeId: string): Promise<EstadoDesignacion | null>;
+}
+
+export interface EstadoDesignacion {
+  readonly institucionId: TipoInstitucion;
+  readonly institucionActiva: boolean;
+  readonly sedeActiva: boolean;
+  readonly habilitadaAtencion: boolean;
+  readonly operadoresActivos: number;
 }
 
 /**
