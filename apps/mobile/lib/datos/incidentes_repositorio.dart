@@ -1,5 +1,10 @@
+import 'dart:typed_data';
+
 import 'cliente_http.dart';
 import 'evaluacion.dart';
+import 'evidencias.dart';
+
+export 'evidencias.dart';
 
 /// Categoría del catálogo público (`/publico/categorias`).
 class CategoriaIncidente {
@@ -67,6 +72,7 @@ class ComprobanteIncidente {
     required this.modalidad,
     required this.territorio,
     this.codigoSeguimiento,
+    this.permisoEvidencias,
   });
 
   final String referencia;
@@ -75,6 +81,9 @@ class ComprobanteIncidente {
   final String modalidad;
   final TerritorioIncidente territorio;
   final String? codigoSeguimiento;
+
+  /// Solo invitado (P5.2): permiso de carga de fotos. Nunca se muestra.
+  final PermisoCarga? permisoEvidencias;
 
   static ComprobanteIncidente? desdeJson(Object? json) {
     if (json is! Map<String, dynamic>) return null;
@@ -100,6 +109,7 @@ class ComprobanteIncidente {
       modalidad: modalidad,
       territorio: territorio,
       codigoSeguimiento: codigo is String ? codigo : null,
+      permisoEvidencias: PermisoCarga.desdeJson(json['permisoEvidencias']),
     );
   }
 }
@@ -231,6 +241,7 @@ class DetalleIncidente {
     required this.ocurridoEn,
     required this.institucionResponsable,
     this.evaluacion,
+    this.evidencias = const [],
   });
   final ResumenIncidente resumen;
   final String descripcion;
@@ -239,6 +250,9 @@ class DetalleIncidente {
 
   /// Evaluación propia (P5.1); null si el incidente no tiene evaluación.
   final EvaluacionPropia? evaluacion;
+
+  /// Fotos propias disponibles (P5.2).
+  final List<EvidenciaVista> evidencias;
   bool get institucionPendiente => institucionResponsable.pendiente;
 
   static DetalleIncidente? desdeJson(Object? json) {
@@ -261,6 +275,7 @@ class DetalleIncidente {
       ocurridoEn: instante,
       institucionResponsable: InstitucionResponsable.desdeJson(institucion),
       evaluacion: EvaluacionPropia.desdeJson(json['evaluacion']),
+      evidencias: EvidenciaVista.listaDesdeJson(json['evidencias']),
     );
   }
 }
@@ -544,6 +559,80 @@ class IncidentesRepositorio {
         return const AclaracionCerrada();
       default:
         return const AclaracionNoDisponible();
+    }
+  }
+
+  /// Sube una foto a un incidente ya registrado (P5.2). Con [token] como autor; sin él, con el
+  /// [permiso] de carga del invitado. La misma [claveIdempotencia] en un reintento no duplica la foto.
+  Future<ResultadoFoto> adjuntarFoto({
+    required String referencia,
+    required Uint8List bytes,
+    required String tipo,
+    required String claveIdempotencia,
+    String? token,
+    String? permiso,
+  }) async {
+    final RespuestaApi r;
+    try {
+      r = await _http.enviarArchivo(
+        '/incidentes/${Uri.encodeComponent(referencia)}/evidencias',
+        campo: 'foto',
+        bytes: bytes,
+        tipo: tipo,
+        token: token,
+        cabeceras: {
+          'Idempotency-Key': claveIdempotencia,
+          'X-Permiso-Evidencias': ?permiso,
+        },
+      );
+    } on Exception {
+      return const FotoReintentable();
+    }
+    final codigo = r.cuerpo?['error'] is Map<String, dynamic>
+        ? (r.cuerpo!['error'] as Map<String, dynamic>)['code']
+        : null;
+    switch (r.estado) {
+      case 200 || 201:
+        final e = EvidenciaVista.desdeJson(r.cuerpo);
+        return e == null ? const FotoReintentable() : FotoAdjuntada(e);
+      case 401:
+        return const FotoSesionInvalida();
+      case 404:
+        return const FotoNoAdmitida();
+      case 409 when codigo == 'EVIDENCE_LIMIT':
+        return const FotoRechazada(MotivoRechazoFoto.limite);
+      case 413:
+        return const FotoRechazada(MotivoRechazoFoto.grande);
+      case 415 || 422:
+        return const FotoRechazada(MotivoRechazoFoto.formato);
+      case 429:
+        return FotoLimiteFrecuencia(
+          int.tryParse(r.cabeceras['retry-after'] ?? '') ?? 60,
+        );
+      default:
+        return const FotoReintentable();
+    }
+  }
+
+  /// Bytes de una foto propia (P5.2). Se guardan solo en memoria mientras se muestran.
+  Future<Consulta<Uint8List>> fotoPropia(
+    String token,
+    String referencia,
+    String evidenciaId,
+  ) async {
+    try {
+      final (estado, bytes, _) = await _http.obtenerBytes(
+        '/ciudadano/incidentes/${Uri.encodeComponent(referencia)}/evidencias/${Uri.encodeComponent(evidenciaId)}/contenido',
+        token: token,
+      );
+      return switch (estado) {
+        200 => ConsultaObtenida(bytes),
+        401 => const ConsultaSesionInvalida(),
+        404 => const ConsultaNoEncontrada(),
+        _ => const ConsultaNoDisponible(),
+      };
+    } on Exception {
+      return const ConsultaSinConexion();
     }
   }
 

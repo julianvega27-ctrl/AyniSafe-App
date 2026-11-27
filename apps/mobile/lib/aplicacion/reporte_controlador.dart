@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../datos/consultas_guardadas.dart';
 import '../datos/incidentes_repositorio.dart';
+import '../datos/selector_fotos.dart';
 import '../datos/ubicacion.dart';
 import 'aviso.dart';
 import '../datos/evaluacion.dart';
@@ -54,6 +55,26 @@ final class EnvioListo extends EstadoEnvio {
   final bool codigoGuardado;
 }
 
+/// Estado de una foto elegida (P5.2).
+enum EstadoFoto { lista, subiendo, adjuntada, fallida, rechazada, noAdmitida }
+
+/// Foto del formulario. Vive solo en memoria; `clave` se reutiliza en los reintentos de su carga.
+class FotoReporte {
+  FotoReporte({required this.bytes, required this.tipo, required this.clave});
+  final Uint8List bytes;
+  final String tipo;
+  final String clave;
+  EstadoFoto estado = EstadoFoto.lista;
+
+  /// Explicación del estado (fallo, rechazo o plazo), con texto para la persona.
+  String? mensaje;
+
+  bool get terminada =>
+      estado == EstadoFoto.adjuntada ||
+      estado == EstadoFoto.rechazada ||
+      estado == EstadoFoto.noAdmitida;
+}
+
 /// Formulario de reporte (P4.1). Conserva todo lo escrito ante cualquier error. Cada intento usa una
 /// clave de idempotencia que se crea al enviar y se reutiliza en los reintentos del mismo contenido;
 /// editar cualquier dato descarta la clave y el contenido congelado.
@@ -66,7 +87,10 @@ class ReporteControlador extends ChangeNotifier {
     required this._nuevaClave,
     this.cuandoSesionInvalida,
     DateTime Function()? ahora,
-  }) : _ahora = ahora ?? DateTime.now;
+    this._selector,
+    PermisosCarga? permisos,
+  }) : _ahora = ahora ?? DateTime.now,
+       _permisos = permisos ?? PermisosCargaEnMemoria();
 
   final IncidentesRepositorio _repositorio;
   final UbicacionPuerto _ubicacion;
@@ -75,6 +99,8 @@ class ReporteControlador extends ChangeNotifier {
   final String Function() _nuevaClave;
   final DateTime Function() _ahora;
   final VoidCallback? cuandoSesionInvalida;
+  final SelectorFotos? _selector;
+  final PermisosCarga _permisos;
 
   bool get esInvitado => _obtenerToken() == null;
 
@@ -106,6 +132,14 @@ class ReporteControlador extends ChangeNotifier {
   Respuesta? consciente;
   Respuesta? sangrado;
   String telefono = '';
+
+  // --- Fotos (P5.2). No forman parte del cuerpo del registro: no cambian su clave.
+  final List<FotoReporte> fotos = [];
+
+  /// Aviso de la sección de fotos (permiso denegado, tamaño o formato).
+  String? avisoFotos;
+  bool get puedeAgregarFoto => fotos.length < maxFotos && _selector != null;
+  bool get subiendoFotos => fotos.any((f) => f.estado == EstadoFoto.subiendo);
 
   bool get preguntaHeridos =>
       categoriaId != null && categoriasConHeridos.contains(categoriaId);
@@ -181,6 +215,129 @@ class ReporteControlador extends ChangeNotifier {
     consciente: consciente,
     sangrado: sangrado,
   );
+
+  /// Pide una foto a la cámara o la galería y la valida localmente (formato y 5 MB).
+  Future<void> agregarFoto(OrigenFoto origen) async {
+    final selector = _selector;
+    if (selector == null || !puedeAgregarFoto) return;
+    avisoFotos = null;
+    final r = await selector.elegir(origen);
+    switch (r) {
+      case FotoElegida(:final bytes):
+        final tipo = tipoDeImagen(bytes);
+        if (tipo == null) {
+          avisoFotos = 'Esa imagen no es JPEG, PNG ni WebP. Elige otra o envía sin ella.';
+        } else if (bytes.length > maxBytesFoto) {
+          avisoFotos = 'La foto supera 5 MB incluso comprimida. Elige otra o envía sin ella.';
+        } else if (fotos.length < maxFotos) {
+          fotos.add(FotoReporte(bytes: bytes, tipo: tipo, clave: _nuevaClave()));
+        }
+      case SeleccionCancelada():
+        break;
+      case SeleccionDenegada():
+        avisoFotos = origen == OrigenFoto.camara
+            ? 'No diste permiso para usar la cámara. Puedes elegir de la galería o enviar sin fotos.'
+            : 'No diste permiso para ver tus fotos. Puedes usar la cámara o enviar sin fotos.';
+      case SeleccionFallida():
+        avisoFotos = 'No pudimos preparar la foto. Inténtalo de nuevo o envía sin ella.';
+    }
+    notifyListeners();
+  }
+
+  void quitarFoto(int indice) {
+    if (indice < 0 || indice >= fotos.length || estado is! EnvioEditando) return;
+    fotos.removeAt(indice);
+    avisoFotos = null;
+    notifyListeners();
+  }
+
+  /// Sube las fotos pendientes o fallidas, una a una, con la clave de cada una.
+  Future<void> _subirFotos(ComprobanteIncidente c) async {
+    if (fotos.isEmpty) return;
+    final token = _obtenerToken();
+    PermisoCarga? permiso;
+    if (token == null) {
+      try {
+        permiso = await _permisos.leer(c.referencia);
+      } on PermisosCargaFallo {
+        permiso = null;
+      }
+      permiso ??= c.permisoEvidencias;
+    }
+    for (final f in fotos) {
+      if (f.estado != EstadoFoto.lista && f.estado != EstadoFoto.fallida) continue;
+      if (token == null && (permiso == null || !_ahora().isBefore(permiso.venceEn))) {
+        f.estado = EstadoFoto.noAdmitida;
+        f.mensaje = 'Pasó el plazo para adjuntar fotos a este reporte. El reporte sigue registrado.';
+        continue;
+      }
+      f.estado = EstadoFoto.subiendo;
+      f.mensaje = null;
+      notifyListeners();
+      final r = await _repositorio.adjuntarFoto(
+        referencia: c.referencia,
+        bytes: f.bytes,
+        tipo: f.tipo,
+        claveIdempotencia: f.clave,
+        token: token,
+        permiso: token == null ? permiso!.valor : null,
+      );
+      switch (r) {
+        case FotoAdjuntada():
+          f.estado = EstadoFoto.adjuntada;
+        case FotoRechazada(:final motivo):
+          f.estado = EstadoFoto.rechazada;
+          f.mensaje = switch (motivo) {
+            MotivoRechazoFoto.grande => 'El servidor la rechazó porque supera 5 MB.',
+            MotivoRechazoFoto.formato => 'El servidor no la reconoció como JPEG, PNG o WebP.',
+            MotivoRechazoFoto.limite => 'El reporte ya tiene 3 fotos.',
+          };
+        case FotoNoAdmitida():
+          f.estado = EstadoFoto.noAdmitida;
+          f.mensaje = 'Ya no se pueden adjuntar fotos a este reporte. El reporte sigue registrado.';
+        case FotoSesionInvalida():
+          f.estado = EstadoFoto.fallida;
+          f.mensaje = 'Tu sesión ya no es válida. Inicia sesión y reintenta.';
+          cuandoSesionInvalida?.call();
+        case FotoLimiteFrecuencia(:final segundos):
+          f.estado = EstadoFoto.fallida;
+          f.mensaje = textoDeEspera(segundos, _ahora());
+        case FotoReintentable():
+          f.estado = EstadoFoto.fallida;
+          f.mensaje = 'No se pudo adjuntar por ahora. Puedes reintentar o continuar sin esta foto.';
+      }
+      notifyListeners();
+    }
+    await _olvidarPermisoSiTermino(c.referencia);
+    notifyListeners();
+  }
+
+  /// Reintenta las fotos fallidas con su misma clave.
+  Future<void> reintentarFotos() async {
+    final e = estado;
+    if (e is! EnvioListo || subiendoFotos) return;
+    await _subirFotos(e.comprobante);
+  }
+
+  /// Continúa sin una foto fallida: deja de intentarlo y, si ya no queda ninguna, borra el permiso.
+  Future<void> descartarFoto(int indice) async {
+    final e = estado;
+    if (e is! EnvioListo || indice < 0 || indice >= fotos.length) return;
+    if (fotos[indice].estado != EstadoFoto.fallida) return;
+    fotos.removeAt(indice);
+    await _olvidarPermisoSiTermino(e.comprobante.referencia);
+    notifyListeners();
+  }
+
+  Future<void> _olvidarPermisoSiTermino(String referencia) async {
+    if (fotos.every((f) => f.terminada)) {
+      try {
+        await _permisos.olvidar(referencia);
+      } on PermisosCargaFallo {
+        // Sin almacenamiento seguro el permiso vence solo a las 24 h.
+      }
+    }
+  }
 
   /// Pide el permiso solo ahora (al pulsar «Usar mi ubicación»).
   Future<void> usarMiUbicacion() async {
@@ -336,7 +493,18 @@ class ReporteControlador extends ChangeNotifier {
         }
         _clave = null;
         _cuerpoEnCurso = null;
+        // El permiso de carga se guarda solo si hay fotos por subir; nunca se muestra.
+        final permiso = comprobante.permisoEvidencias;
+        if (permiso != null && fotos.isNotEmpty) {
+          try {
+            await _permisos.guardar(comprobante.referencia, permiso);
+          } on PermisosCargaFallo {
+            // Las fotos se suben igual con el permiso en memoria.
+          }
+        }
         estado = EnvioListo(comprobante, codigoGuardado: guardado);
+        notifyListeners();
+        await _subirFotos(comprobante);
       case EnvioIncierto():
         estado = const EnvioEditando();
         aviso = const Aviso(
@@ -389,6 +557,12 @@ class ReporteControlador extends ChangeNotifier {
     atencionMedica = null;
     _limpiarEvaluacion();
     telefono = '';
+    final anterior = estado;
+    if (anterior is EnvioListo) {
+      _permisos.olvidar(anterior.comprobante.referencia).catchError((_) {});
+    }
+    fotos.clear();
+    avisoFotos = null;
     errores = const {};
     aviso = null;
     avisoUbicacion = null;

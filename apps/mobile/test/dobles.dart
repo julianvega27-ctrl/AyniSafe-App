@@ -86,7 +86,10 @@ class ApiFalsa {
             req.url.path,
             req.url.query,
             Map.of(req.headers),
-            req.body,
+            // Las fotos (multipart) son binarias: se registran sin decodificar como UTF-8.
+            (req.headers['content-type'] ?? '').startsWith('multipart/')
+                ? latin1.decode(req.bodyBytes)
+                : req.body,
           ),
         );
         return manejador(req);
