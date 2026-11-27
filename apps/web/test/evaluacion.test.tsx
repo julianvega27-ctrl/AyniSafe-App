@@ -37,6 +37,7 @@ const resumen = (extra: Partial<ResumenIncidente> = {}): ResumenIncidente => ({
   },
   accesoSanitario: false,
   otrasInstituciones: [],
+  evidencias: [],
   ...extra,
 });
 

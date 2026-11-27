@@ -130,6 +130,7 @@ describe('resumen del incidente', () => {
     condicionMedica: null,
     accesoSanitario: false,
     otrasInstituciones: ['samu'],
+    evidencias: [],
   };
 
   it('abre el resumen desde la fila y vuelve a la bandeja con las mismas filas', async () => {
