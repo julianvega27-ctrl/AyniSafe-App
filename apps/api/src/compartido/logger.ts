@@ -4,7 +4,7 @@
  * cabeceras, tokens, contrasenas, correos ni IP.
  */
 export interface EventoLog {
-  readonly evento: 'solicitud' | 'error_interno' | 'purga' | 'arranque' | 'envio_correo' | 'entrega_evento';
+  readonly evento: 'solicitud' | 'error_interno' | 'purga' | 'arranque' | 'envio_correo' | 'entrega_evento' | 'evidencia_no_disponible' | 'limpieza_evidencias';
   readonly requestId?: string;
   readonly metodo?: string;
   readonly ruta?: string;

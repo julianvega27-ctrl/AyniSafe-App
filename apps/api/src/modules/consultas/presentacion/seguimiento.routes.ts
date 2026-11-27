@@ -1,3 +1,4 @@
+import { enviarImagen } from './bandeja.routes';
 import { randomUUID } from 'node:crypto';
 import express, { type ErrorRequestHandler, type Request, type Response } from 'express';
 import type { Logger } from '../../../compartido/logger';
@@ -66,6 +67,16 @@ export function crearRouterSeguimiento(seguimiento: SeguimientoCiudadano, identi
       const usuarioId = await autor(req, res);
       if (!usuarioId) return;
       res.json(await seguimiento.historial(usuarioId, req.query.cursor));
+    })
+    .all(sinCache, SOLO_LECTURA('GET'));
+
+  router
+    .route('/ciudadano/incidentes/:referencia/evidencias/:evidenciaId/contenido')
+    .get(sinCache, async (req, res) => {
+      if (Object.keys(req.query).length) throw new ConsultaSeguimientoInvalidaError();
+      const usuarioId = await autor(req, res);
+      if (!usuarioId) return;
+      enviarImagen(res, await seguimiento.contenidoEvidenciaAutor(usuarioId, String(req.params.referencia), String(req.params.evidenciaId)));
     })
     .all(sinCache, SOLO_LECTURA('GET'));
 

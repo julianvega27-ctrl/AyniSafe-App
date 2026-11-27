@@ -25,6 +25,19 @@ function requestId(res: Response): string {
   return id;
 }
 
+/** Entrega de una foto autorizada: tipo real, sin cache ni sniffing, y aislada si se abre directamente. */
+export function enviarImagen(res: Response, r: { readonly bytes: Buffer; readonly tipo: string }): void {
+  res.set({
+    'Content-Type': r.tipo,
+    'Content-Length': String(r.bytes.length),
+    'Content-Disposition': 'inline',
+    'Content-Security-Policy': "sandbox; default-src 'none'",
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  res.status(200).end(r.bytes);
+}
+
 function responderError(res: Response, estado: number, code: string, message: string): void {
   res.status(estado).json({ error: { code, message, requestId: requestId(res) } });
 }
@@ -82,6 +95,15 @@ export function crearRouterBandeja(bandeja: BandejaInstitucional, identificar: I
     if (Object.keys(req.query).length) throw new ConsultaBandejaInvalidaError();
     res.json(await bandeja.evaluacion(res.locals.operadorId as string, String(req.params.id)));
   });
+
+  router
+    .route('/operador/incidentes/:id/evidencias/:evidenciaId/contenido')
+    .get(sinCache, operador, async (req, res) => {
+      if (Object.keys(req.query).length) throw new ConsultaBandejaInvalidaError();
+      const r = await bandeja.contenidoEvidencia(res.locals.operadorId as string, String(req.params.id), String(req.params.evidenciaId));
+      enviarImagen(res, r);
+    })
+    .all(sinCache, soloLectura);
 
   router
     .route('/operador/incidentes/:id')

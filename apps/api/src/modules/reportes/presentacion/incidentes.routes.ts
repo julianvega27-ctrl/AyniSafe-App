@@ -48,6 +48,9 @@ export function comprobanteHttp(c: Comprobante): Record<string, unknown> {
         ? { estado: 'resuelto', distrito: { id: c.territorio.distritoId, nombre: c.nombreDistrito } }
         : { estado: 'pendiente', motivo: c.territorio.motivo },
     ...(c.codigoSeguimiento ? { codigoSeguimiento: c.codigoSeguimiento } : {}),
+    ...(c.permisoEvidencias
+      ? { permisoEvidencias: { valor: c.permisoEvidencias.valor, venceEn: c.permisoEvidencias.venceEn.toISOString() } }
+      : {}),
   };
 }
 

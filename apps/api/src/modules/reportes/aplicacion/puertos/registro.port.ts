@@ -34,7 +34,7 @@ export interface IncidentesPort {
 /** Puerto hacia el limitador persistente de Identidad. */
 export interface LimitadorEnviosPort {
   consumir(
-    consumos: readonly { readonly tipo: 'incidente_invitado_ip'; readonly identificador: string; readonly maximo: number; readonly ventanaMs: number }[],
+    consumos: readonly { readonly tipo: 'incidente_invitado_ip' | 'carga_evidencia_ip'; readonly identificador: string; readonly maximo: number; readonly ventanaMs: number }[],
     ahora: Date,
   ): Promise<{ readonly permitido: boolean; readonly reintentarEnSegundos: number }>;
 }

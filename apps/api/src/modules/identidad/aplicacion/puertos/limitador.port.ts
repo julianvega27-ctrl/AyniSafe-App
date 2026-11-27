@@ -12,7 +12,9 @@ export type TipoLimite =
   // P4.1: limites de otros modulos que usan este limitador por la fachada de Identidad.
   | 'incidente_invitado_ip'
   | 'seguimiento_ref'
-  | 'seguimiento_ip';
+  | 'seguimiento_ip'
+  // P5.2: cargas de fotos con permiso de invitado.
+  | 'carga_evidencia_ip';
 
 export interface ConsumoLimite {
   readonly tipo: TipoLimite;

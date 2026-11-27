@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import request, { type Response } from 'supertest';
 import { PrismaTerritorioAdapter } from '../../src/modules/consultas/infraestructura/prisma-territorio.adapter';
 import { paqueteSintetico } from '../fixtures/territorio';
+import { jpegRuido } from '../fixtures/imagenes';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultas } from '../../src/modules/consultas';
 import { crearModuloReportes } from '../../src/modules/reportes';
@@ -50,9 +51,13 @@ function verificar(ruta: string, metodo: string, r: Response): void {
   const doc = operacion!.responses[String(r.status)];
   expectConContexto(doc, `${metodo.toUpperCase()} ${ruta} -> ${r.status} debe estar documentado`).toBeDefined();
   const esquema = doc!.content?.['application/json']?.schema;
+  const binarios = Object.keys(doc!.content ?? {}).filter((t) => t !== 'application/json');
   if (esquema) {
     const valido = ajv.validate(esquema, r.body);
     expectConContexto(valido, JSON.stringify(ajv.errors)).toBe(true);
+  } else if (binarios.length) {
+    // Contenido binario (fotos, P5.2): el tipo real debe estar documentado.
+    expectConContexto(binarios.includes(String(r.headers['content-type']).split(';')[0]!), `tipo ${r.headers['content-type']} documentado`).toBe(true);
   } else {
     expect(r.text).toBe('');
   }
@@ -976,6 +981,101 @@ describe('respuestas reales conforme a openapi.yaml', () => {
       await prisma.$executeRawUnsafe('DROP TRIGGER IF EXISTS falla_versiones ON versiones_evaluacion');
       await prisma.$executeRawUnsafe('DROP TRIGGER IF EXISTS falla_accesos ON accesos_evaluacion');
       await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS falla_contrato_p5()');
+    }
+  });
+
+  it('evidencias fotograficas (P5.2): cada estado documentado coincide con la respuesta real', async () => {
+    const CAR = '/incidentes/{referencia}/evidencias';
+    const COP = '/operador/incidentes/{id}/evidencias/{evidenciaId}/contenido';
+    const CCI = '/ciudadano/incidentes/{referencia}/evidencias/{evidenciaId}/contenido';
+    const RES = '/operador/incidentes/{id}';
+    const DET = '/ciudadano/incidentes/{referencia}';
+    const U = (r: string) => `/api/v1${r}`;
+    const arnes = crearArnes({ prisma, enrutar: true });
+    const { app, procesador, almacenEvidencias } = arnes;
+    await limpiarBd(prisma);
+    await new PrismaTerritorioAdapter(prisma).importar(paqueteSintetico().preparado, true);
+    const admin = await crearCuentaDePrueba(prisma, { rol: 'administrador' });
+    const cookieAdmin = await cookieInstitucional(app, admin.correo);
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo'], creadoPor: admin.id });
+    const cookiePnp = await cookieInstitucional(app, pnp.operadores[0]!.correo);
+    const ciudadano = await crearCuentaDePrueba(prisma, { rol: 'ciudadano' });
+    const token = (await request(app).post(RUTA_LOGIN).send({ correo: ciudadano.correo, contrasena: CLAVE })).body.token as string;
+    const robo = (extra: Record<string, unknown> = {}) => JSON.stringify({
+      categoriaId: 'robo', descripcion: 'Me arrebataron el celular en la esquina',
+      ocurrencia: { modo: 'ahora', instante: new Date(Date.now() - 60_000).toISOString() }, punto: { latitud: 1, longitud: 1, origen: 'manual' },
+      ...extra,
+    });
+    const conCuenta = await request(app).post(U('/incidentes')).set('Authorization', `Bearer ${token}`).set('Content-Type', 'application/json')
+      .set('Idempotency-Key', randomUUID()).send(robo());
+    const invitado = await request(app).post(U('/incidentes')).set('Content-Type', 'application/json')
+      .set('Idempotency-Key', randomUUID()).send(robo({ telefonoContacto: '987654321' }));
+    verificar('/incidentes', 'post', invitado); // 201 con permisoEvidencias
+    await procesador.esperarReposo();
+    await procesador.procesarPendientes();
+    const ref = conCuenta.body.referencia as string;
+    const inc = await prisma.incidente.findUniqueOrThrow({ where: { referencia: ref } });
+    const jpg = await jpegRuido(24, 24, 80, 5);
+    const subir = (referencia: string, o: { token?: string; permiso?: string; cookie?: string; clave?: string | null; archivo?: Buffer; tipo?: string } = { token }, a = app) => {
+      let q = request(a).post(U(`/incidentes/${referencia}/evidencias`));
+      if (o.token) q = q.set('Authorization', `Bearer ${o.token}`);
+      if (o.permiso) q = q.set('X-Permiso-Evidencias', o.permiso);
+      if (o.cookie) q = q.set('Cookie', o.cookie);
+      if (o.clave !== null) q = q.set('Idempotency-Key', o.clave ?? randomUUID());
+      return q.attach('foto', o.archivo ?? jpg, { filename: 'f.jpg', contentType: o.tipo ?? 'image/jpeg' });
+    };
+
+    const clave = randomUUID();
+    const nueva = await subir(ref, { token, clave });
+    verificar(CAR, 'post', nueva); // 201
+    verificar(CAR, 'post', await subir(ref, { token, clave })); // 200
+    verificar(CAR, 'post', await subir(ref, { token, clave: null })); // 400
+    verificar(CAR, 'post', await subir(ref, {})); // 401
+    verificar(CAR, 'post', await subir(ref, { cookie: cookiePnp })); // 403
+    verificar(CAR, 'post', await subir('INC-00000-00000', { token })); // 404
+    verificar(CAR, 'post', await subir(ref, { token, clave, archivo: await jpegRuido(24, 24, 80, 6) })); // 409
+    verificar(CAR, 'post', await subir(ref, { token, archivo: Buffer.alloc(5 * 1024 * 1024 + 1, 1) })); // 413
+    verificar(CAR, 'post', await request(app).post(U(`/incidentes/${ref}/evidencias`)).set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', randomUUID()).set('Content-Type', 'application/json').send('{}')); // 415
+    verificar(CAR, 'post', await subir(ref, { token, archivo: Buffer.from('%PDF-1.4 falso') })); // 422
+    const estricto = crearArnes({ prisma, limiteCargasInvitado: { maximo: 1, ventanaMs: 60 * 60 * 1000 } });
+    const permiso = invitado.body.permisoEvidencias.valor as string;
+    expect((await subir(invitado.body.referencia, { permiso }, estricto.app)).status).toBe(201);
+    verificar(CAR, 'post', await subir(invitado.body.referencia, { permiso }, estricto.app)); // 429
+    const deshabilitado = crearArnes({ prisma, almacenEvidencias: null });
+    verificar(CAR, 'post', await subir(ref, { token }, deshabilitado.app)); // 503
+
+    const ev = nueva.body.id as string;
+    const cop = (id: string, e: string, cookie?: string, query = '') => {
+      const q = request(app).get(U(`/operador/incidentes/${id}/evidencias/${e}/contenido${query}`)).buffer(true);
+      return cookie ? q.set('Cookie', cookie) : q;
+    };
+    verificar(COP, 'get', await cop(inc.id, ev, cookiePnp)); // 200
+    verificar(COP, 'get', await cop(inc.id, ev, cookiePnp, '?x=1')); // 400
+    verificar(COP, 'get', await cop(inc.id, ev)); // 401
+    verificar(COP, 'get', await cop(inc.id, ev, cookieAdmin)); // 403
+    verificar(COP, 'get', await cop(inc.id, randomUUID(), cookiePnp)); // 404
+    verificar(RES, 'get', await request(app).get(U(`/operador/incidentes/${inc.id}`)).set('Cookie', cookiePnp)); // 200 con evidencias
+
+    const cci = (referencia: string, e: string, auth: { token?: string; cookie?: string } = { token }, query = '') => {
+      let q = request(app).get(U(`/ciudadano/incidentes/${referencia}/evidencias/${e}/contenido${query}`)).buffer(true);
+      if (auth.token) q = q.set('Authorization', `Bearer ${auth.token}`);
+      if (auth.cookie) q = q.set('Cookie', auth.cookie);
+      return q;
+    };
+    verificar(CCI, 'get', await cci(ref, ev)); // 200
+    verificar(CCI, 'get', await cci(ref, ev, { token }, '?x=1')); // 400
+    verificar(CCI, 'get', await cci(ref, ev, {})); // 401
+    verificar(CCI, 'get', await cci(ref, ev, { cookie: cookiePnp })); // 403
+    verificar(CCI, 'get', await cci(ref, randomUUID())); // 404
+    verificar(DET, 'get', await request(app).get(U(`/ciudadano/incidentes/${ref}`)).set('Authorization', `Bearer ${token}`)); // 200 con evidencias
+
+    almacenEvidencias.fallarObtener = true;
+    try {
+      verificar(COP, 'get', await cop(inc.id, ev, cookiePnp)); // 503
+      verificar(CCI, 'get', await cci(ref, ev)); // 503
+    } finally {
+      almacenEvidencias.fallarObtener = false;
     }
   });
 

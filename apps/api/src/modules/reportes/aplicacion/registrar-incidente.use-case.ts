@@ -21,6 +21,8 @@ import {
 import type { SecretosPort } from './puertos/secretos.port';
 import type { EvaluacionesRepositorio } from './puertos/evaluacion.port';
 import { CATEGORIAS_CON_EVALUACION, instantaneaInicial, samuRequerido } from '../dominio/evaluacion';
+import { venceCarga } from '../dominio/evidencia';
+import type { PermisosEvidenciaRepositorio } from './puertos/evidencias.port';
 
 /** Falta la cabecera Idempotency-Key o no es un UUID. */
 export class ClaveIdempotenciaRequeridaError extends Error {
@@ -66,6 +68,8 @@ export interface Comprobante {
   readonly nombreDistrito: string | null;
   /** Solo invitado: se muestra una unica vez y nunca se guarda en claro. */
   readonly codigoSeguimiento: string | null;
+  /** Solo invitado y dentro del plazo (P5.2): permiso de carga de fotos, mostrado una unica vez. */
+  readonly permisoEvidencias: { readonly valor: string; readonly venceEn: Date } | null;
 }
 
 export interface ResultadoRegistro {
@@ -83,6 +87,8 @@ export interface DependenciasRegistro {
   readonly territorio: TerritorioPort;
   readonly limitador: LimitadorEnviosPort;
   readonly secretos: SecretosPort;
+  /** Huella del permiso de carga del invitado, en la transaccion del registro (P5.2). */
+  readonly permisos: PermisosEvidenciaRepositorio;
   readonly eventos: PublicadorEventos;
   readonly unidadDeTrabajo: UnidadDeTrabajo;
   readonly ahora: () => Date;
@@ -131,6 +137,7 @@ export class RegistrarIncidenteUseCase {
 
     const territorio = await this.protegido(() => this.d.territorio.resolver(envio.punto.latitud, envio.punto.longitud));
     const codigo = solicitante.modalidad === 'invitado' ? this.d.secretos.nuevoCodigo() : null;
+    const permiso = solicitante.modalidad === 'invitado' ? this.d.secretos.nuevoPermisoEvidencias() : null;
 
     let incidente: IncidenteCreado;
     try {
@@ -146,6 +153,15 @@ export class RegistrarIncidenteUseCase {
           codigoHuella: codigo ? this.d.secretos.huellaCodigo(creado.id, normalizarCodigo(codigo)!) : null,
           recibidoEn: creado.registradoEn,
         });
+        if (permiso) {
+          await this.d.permisos.guardar(
+            tx,
+            creado.id,
+            this.d.secretos.huellaPermisoEvidencias(creado.id, permiso),
+            creado.registradoEn,
+            venceCarga(creado.registradoEn),
+          );
+        }
         if (CATEGORIAS_CON_EVALUACION.has(envio.categoriaId)) {
           await this.d.evaluaciones.crear(tx, {
             incidenteId: creado.id,
@@ -182,6 +198,7 @@ export class RegistrarIncidenteUseCase {
         territorio,
         nombreDistrito: territorio.distritoId ? this.d.territorio.nombreDistrito(territorio.distritoId) : null,
         codigoSeguimiento: codigo,
+        permisoEvidencias: permiso ? { valor: permiso, venceEn: venceCarga(incidente.registradoEn) } : null,
       },
     };
   }
@@ -195,10 +212,20 @@ export class RegistrarIncidenteUseCase {
     const estado = estados.get(previa.incidenteId);
     if (!guardado || !estado) throw new RegistroNoDisponibleError();
     let codigo: string | null = null;
+    let permiso: { valor: string; venceEn: Date } | null = null;
     if (guardado.modalidad === 'invitado') {
       codigo = this.d.secretos.nuevoCodigo();
       const huellaCodigo = this.d.secretos.huellaCodigo(previa.incidenteId, normalizarCodigo(codigo)!);
       await this.protegido(() => this.d.envios.rotarCodigo(previa.incidenteId, huellaCodigo, this.d.ahora()));
+      // El permiso nuevo invalida el anterior; vencido el plazo de carga ya no se emite.
+      const ahora = this.d.ahora();
+      const venceEn = venceCarga(estado.registradoEn);
+      if (ahora.getTime() < venceEn.getTime()) {
+        const valor = this.d.secretos.nuevoPermisoEvidencias();
+        const huellaPermiso = this.d.secretos.huellaPermisoEvidencias(previa.incidenteId, valor);
+        await this.protegido(() => this.d.permisos.guardar(null, previa.incidenteId, huellaPermiso, ahora, venceEn));
+        permiso = { valor, venceEn };
+      }
     }
     return {
       nuevo: false,
@@ -210,6 +237,7 @@ export class RegistrarIncidenteUseCase {
         territorio: guardado.territorio,
         nombreDistrito: guardado.territorio.distritoId ? this.d.territorio.nombreDistrito(guardado.territorio.distritoId) : null,
         codigoSeguimiento: codigo,
+        permisoEvidencias: permiso,
       },
     };
   }
