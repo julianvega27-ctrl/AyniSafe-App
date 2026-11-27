@@ -49,6 +49,14 @@ export function App() {
           </RutaProtegida>
         }
       />
+      <Route
+        path="/panel/operador/:seccion/:incidenteId"
+        element={
+          <RutaProtegida>
+            <PanelRol rol="operador" />
+          </RutaProtegida>
+        }
+      />
       <Route path="*" element={<NoEncontrada />} />
       </Route>
     </Routes>

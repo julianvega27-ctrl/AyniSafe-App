@@ -63,7 +63,7 @@ describe('restauracion de la sesion (refrescar el navegador)', () => {
 });
 
 describe('shell por rol', () => {
-  it('administrador: secciones de administracion; solo las de organizacion disponibles, sin datos de ejemplo', async () => {
+  it('administrador: secciones de administracion; Inicio (pendientes) y organizacion disponibles, sin datos de ejemplo', async () => {
     instalarApi(servidorFalso({ sesion: admin }).manejador);
     renderizarApp('/panel');
     await screen.findByRole('heading', { name: 'Panel del administrador' });
@@ -79,21 +79,23 @@ describe('shell por rol', () => {
       'Contenido y contactos',
       'Historial',
     ]);
-    // P3.2: Instituciones y sedes, Operadores y Coberturas estan construidas; el resto sigue pendiente.
+    // P3.2: organizacion; P4.2: Inicio con solo el bloque de enrutamiento pendiente. El resto sigue pendiente.
     items.forEach((item, n) => {
-      if ([1, 2, 3].includes(n)) expect(item).not.toHaveTextContent('Aún no disponible');
+      if ([0, 1, 2, 3].includes(n)) expect(item).not.toHaveTextContent('Aún no disponible');
       else expect(item).toHaveTextContent('Aún no disponible');
     });
-    // Inicio es el destino activo: explica que esta pendiente, sin cifras ni tablero de ejemplo.
+    // Inicio es el destino activo: solo pendientes reales; el resumen se declara no disponible, sin cifras.
     expect(within(nav).getByRole('link', { name: /^Inicio/ })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('heading', { name: 'Inicio', level: 2 })).toBeInTheDocument();
-    expect(screen.getByText(/no se muestran cifras ni indicadores de ejemplo/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Enrutamiento pendiente', level: 2 })).toBeInTheDocument();
+    expect(await screen.findByText('No hay casos sin asignar.')).toBeInTheDocument();
+    expect(screen.getByText('Resumen administrativo aún no disponible')).toBeInTheDocument();
+    expect(screen.getByText(/No se muestran cifras de ejemplo/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Cuenta de Ana Torres/ })).toHaveTextContent('Administrador');
     expect(document.body.textContent).not.toMatch(/\d{2,}\s*(reportes|incidentes)/i);
     expect(document.body.textContent).not.toMatch(/DEMO/);
   });
 
-  it('operador: Inicio, Incidentes, Mapa, Indicadores e Historial, no disponibles', async () => {
+  it('operador: Inicio, Incidentes, Mapa, Indicadores e Historial; solo Incidentes disponible', async () => {
     instalarApi(servidorFalso({ sesion: operador }).manejador);
     renderizarApp('/panel');
     await screen.findByRole('heading', { name: 'Panel del operador' });
@@ -105,6 +107,10 @@ describe('shell por rol', () => {
       'Indicadores',
       'Historial',
     ]);
+    within(nav).getAllByRole('listitem').forEach((item, n) => {
+      if (n === 1) expect(item).not.toHaveTextContent('Aún no disponible');
+      else expect(item).toHaveTextContent('Aún no disponible');
+    });
   });
 
   it('seleccionar Historial abre su explicacion pendiente sin consultar servicios futuros', async () => {
@@ -122,13 +128,13 @@ describe('shell por rol', () => {
   it('una seccion inexistente vuelve a Inicio del rol', async () => {
     instalarApi(servidorFalso({ sesion: admin }).manejador);
     renderizarApp('/panel/administrador/no-existe');
-    expect(await screen.findByRole('heading', { name: 'Inicio', level: 2 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Enrutamiento pendiente', level: 2 })).toBeInTheDocument();
   });
 
   it('campana: anuncia «Aún no disponible», sin contador ni solicitudes de avisos', async () => {
     const { llamadas } = instalarApi(servidorFalso({ sesion: admin }).manejador);
     renderizarApp('/panel');
-    await screen.findByRole('heading', { name: 'Inicio', level: 2 });
+    await screen.findByRole('heading', { name: 'Enrutamiento pendiente', level: 2 });
     const campana = screen.getByRole('button', { name: 'Avisos: aún no disponible' });
     expect(campana).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(campana);
@@ -144,7 +150,7 @@ describe('shell por rol', () => {
   it('menu de cuenta operable con teclado: identidad autorizada, Escape devuelve el foco', async () => {
     instalarApi(servidorFalso({ sesion: admin }).manejador);
     renderizarApp('/panel');
-    await screen.findByRole('heading', { name: 'Inicio', level: 2 });
+    await screen.findByRole('heading', { name: 'Enrutamiento pendiente', level: 2 });
     const cuenta = screen.getByRole('button', { name: /^Cuenta de Ana Torres/ });
     cuenta.focus();
     await userEvent.keyboard('{Enter}');
@@ -202,7 +208,7 @@ describe('cierre de sesion', () => {
     const s = servidorFalso({ sesion: admin });
     const { llamadas } = instalarApi(s.manejador);
     renderizarApp('/panel');
-    await screen.findByRole('heading', { name: 'Inicio', level: 2 });
+    await screen.findByRole('heading', { name: 'Enrutamiento pendiente', level: 2 });
     await userEvent.click(screen.getByRole('button', { name: /^Cuenta de Ana Torres/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     expect(await screen.findByRole('heading', { name: 'Finalidad' })).toBeInTheDocument();
@@ -220,7 +226,7 @@ describe('cierre de sesion', () => {
     let sinRed = true;
     instalarApi((l) => (l.metodo === 'DELETE' && sinRed ? 'red' : s.manejador(l)));
     renderizarApp('/panel');
-    await screen.findByRole('heading', { name: 'Inicio', level: 2 });
+    await screen.findByRole('heading', { name: 'Enrutamiento pendiente', level: 2 });
     await userEvent.click(screen.getByRole('button', { name: /^Cuenta de Ana Torres/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     const alerta = await screen.findByRole('alert');

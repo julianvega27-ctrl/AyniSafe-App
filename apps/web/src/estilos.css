@@ -23,6 +23,9 @@
   --color-aviso-texto: #92400E;
   --color-error-fondo: #FFF0ED;
   --color-error-texto: #9E453F;
+  --color-prioridad-pendiente-texto: #475569;
+  --color-prioridad-pendiente-fondo: #F1F5F9;
+  --color-prioridad-pendiente-borde: #CBD5E1;
   --espacio: 8px;
   --radio: 9px;
   --altura-minima: 48px;
