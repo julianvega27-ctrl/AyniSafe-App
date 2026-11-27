@@ -179,8 +179,8 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   modulosCreados.add(modulo);
   clientesCreados.add(prisma);
   let procesadorCreado: ProcesadorEntregas | undefined;
-  const enrutamiento = enrutamientoDe(prisma, modulo, () => reportes!, () => procesadorCreado?.despertar());
   const atencion = atencionDe(prisma, modulo);
+  const enrutamiento = enrutamientoDe(prisma, modulo, () => reportes!, () => procesadorCreado?.despertar(), atencion);
   const consultas = crearModuloConsultasConPrisma(
     prisma,
     SECRETO_PRUEBA,

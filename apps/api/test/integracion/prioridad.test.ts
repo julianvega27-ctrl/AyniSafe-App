@@ -35,7 +35,7 @@ describe('prioridad versionada', () => {
   });
 
   it('el responsable eleva con motivo, queda auditado y la bandeja conserva el orden FIFO (EQ-16)', async () => {
-    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo', 'actividad-sospechosa'] });
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo', 'actividad-sospechosa'], operadores: ['activo', 'activo'] });
     const viejo = await registrarIncidente(app, prisma);
     const nuevo = await registrarIncidente(app, prisma, { categoriaId: 'actividad-sospechosa', descripcion: 'Personas merodeando autos' });
     await enrutarTodo();

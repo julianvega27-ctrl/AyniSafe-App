@@ -11,7 +11,8 @@ import { activarTerritorio, cookieInstitucional, crearSedeDePrueba, PUNTO_DIS01 
  */
 const { app, prisma, procesador, logger } = crearArnes({ enrutar: true });
 const MOTIVO = 'CENTINELA-MOTIVO confirmado en el lugar';
-const SANITARIO = /CENTINELA|signosVida|consciente|sangrado|no_observados|"motivo"/;
+// P6: el historial operativo trae la clave "motivo" (nula o de atencion); se detecta un motivo con valor.
+const SANITARIO = /CENTINELA|signosVida|consciente|sangrado|no_observados|"motivo":"/;
 
 let caso: {
   id: string;

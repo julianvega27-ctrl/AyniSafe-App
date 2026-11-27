@@ -40,7 +40,8 @@ async function eventoRegistrado(id: string): Promise<EventoPersistido> {
 
 describe('enrutamiento por la matriz', () => {
   it('robo con su sede PNP queda ENRUTADO, con evento EnrutamientoResuelto y en REGISTRADO', async () => {
-    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo'] });
+    // Dos operadores: el enrutamiento no cambia el estado; la asignacion automatica (P6 grupo D) solo aplica al operador unico.
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo'], operadores: ['activo', 'activo'] });
     const inc = await registrarIncidente(con.app, prisma);
     await enrutarTodo();
     const { e, p } = await enrutamientoDe(inc.id);

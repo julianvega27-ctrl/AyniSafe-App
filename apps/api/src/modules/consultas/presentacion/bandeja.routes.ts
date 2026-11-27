@@ -85,8 +85,14 @@ export function crearRouterBandeja(bandeja: BandejaInstitucional, identificar: I
   router
     .route('/operador/incidentes')
     .get(sinCache, operador, async (req, res) => {
-      if (Object.keys(req.query).some((k) => k !== 'cursor') || Array.isArray(req.query.cursor)) throw new ConsultaBandejaInvalidaError();
-      res.json(await bandeja.listar(res.locals.operadorId as string, req.query.cursor));
+      if (
+        Object.keys(req.query).some((k) => k !== 'cursor' && k !== 'responsable') ||
+        Array.isArray(req.query.cursor) ||
+        Array.isArray(req.query.responsable)
+      ) {
+        throw new ConsultaBandejaInvalidaError();
+      }
+      res.json(await bandeja.listar(res.locals.operadorId as string, req.query.cursor, req.query.responsable));
     })
     .all(sinCache, soloLectura);
 

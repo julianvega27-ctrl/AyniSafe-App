@@ -7,6 +7,7 @@ import { PrismaIncidentesAdapter } from './infraestructura/prisma-incidentes.ada
 import { PrismaEnrutamientosAdapter } from './infraestructura/prisma-enrutamientos.adapter';
 import {
   ServicioEnrutamiento,
+  type DependenciasEnrutamiento,
   type DatosEnrutamientoPort,
   type SedesEnrutamientoPort,
 } from './aplicacion/enrutamiento';
@@ -139,6 +140,7 @@ export function crearEnrutamientoConPrisma(
     readonly datos: DatosEnrutamientoPort;
     readonly sedes: SedesEnrutamientoPort;
     readonly despertarEntregas?: () => void;
+    readonly alCambiarPrincipal?: DependenciasEnrutamiento['alCambiarPrincipal'];
   },
 ): ServicioEnrutamiento {
   return new ServicioEnrutamiento({
@@ -148,5 +150,6 @@ export function crearEnrutamientoConPrisma(
     unidadDeTrabajo: new PrismaUnidadDeTrabajo(prisma),
     eventos: new PrismaPublicadorEventos(),
     ...(puertos.despertarEntregas ? { despertarEntregas: puertos.despertarEntregas } : {}),
+    ...(puertos.alCambiarPrincipal ? { alCambiarPrincipal: puertos.alCambiarPrincipal } : {}),
   });
 }

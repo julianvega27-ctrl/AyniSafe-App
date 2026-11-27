@@ -47,8 +47,8 @@ Grupos verticales por prioridad. Durante la implementación se ejecutan solo las
 - [x] Z4 Commits por capa, push, PR y CI.
 
 ## D. Ajuste tras la prueba manual (decisión del responsable, 27/11/2026)
-- [ ] D1 Documento 11 §2, RF56, guía UI y plan de integración: asignación automática al operador único.
-- [ ] D2 Migración y `autoAsignarPrincipal` en enrutar, designar, reevaluar y condición médica; pruebas de integración (uno/varios operadores, SAMU a principal).
-- [ ] D3 Filtro `responsable` en la bandeja (API, OpenAPI y pruebas).
+- [x] D1 Documento 11 §2, RF56, guía UI y plan de integración: asignación automática al operador único.
+- [x] D2 Migración y `autoAsignarPrincipal` en enrutar, designar, reevaluar y condición médica; pruebas de integración (uno/varios operadores, SAMU a principal).
+- [x] D3 Filtro `responsable` en la bandeja (API, OpenAPI y pruebas).
 - [ ] D4 Web: bloque «Atención» guiado (recorrido de estados, acción principal, control plegable, historial plegado, vista previa del ciudadano al cerrar) y filtros segmentados; pruebas.
 - [ ] D5 Suite completa, migración de `ayni_safe_dev`, evidencia y CI.

@@ -70,7 +70,8 @@ describe('asumir caso (EQ-20)', () => {
   });
 
   it('la principal inicia la revision; el apoyo asume con responsable propio sin cambiar estado', async () => {
-    const samu = await crearSedeDePrueba(prisma, { institucion: 'samu', categorias: ['accidente-transito'] });
+    // Dos operadores SAMU: sin asignacion automatica (grupo D), la toma es manual.
+    const samu = await crearSedeDePrueba(prisma, { institucion: 'samu', categorias: ['accidente-transito'], operadores: ['activo', 'activo'] });
     const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['accidente-transito'] });
     const inc = await registrarIncidente(app, prisma, { categoriaId: 'accidente-transito', descripcion: 'Choque con heridos en la avenida', heridos: 'si' });
     await enrutarTodo();
@@ -285,5 +286,69 @@ describe('integridad en la BD', () => {
     await expect(prisma.asignacionIncidente.create({
       data: { incidenteId: inc.id, institucion: 'pnp', operadorId: actual.operadorId, sedeId: actual.sedeId, origen: 'asumida' },
     })).rejects.toThrow();
+  });
+});
+
+describe('asignacion automatica al operador unico (grupo D)', () => {
+  it('con un solo operador activo en la unica sede principal, asigna y pasa a revision con actor sistema', async () => {
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo'], operadores: ['activo', 'suspendido'] });
+    const inc = await registrarIncidente(app, prisma);
+    await enrutarTodo();
+    const a = await prisma.asignacionIncidente.findFirstOrThrow({ where: { incidenteId: inc.id, activa: true } });
+    expect(a).toMatchObject({ operadorId: pnp.operadores[0]!.id, origen: 'automatica', institucion: 'pnp' });
+    expect((await prisma.incidente.findUniqueOrThrow({ where: { id: inc.id } })).estado).toBe('EN_REVISION');
+    const h = await historial(inc.id);
+    expect(h.map((x) => [x.accion, x.actorTipo, x.actorUsuarioId])).toEqual([
+      ['asumir', 'sistema', null],
+      ['transicion', 'sistema', null],
+    ]);
+    // El operador puede actuar sin tomar el caso.
+    const op = await cookieInstitucional(app, pnp.operadores[0]!.correo);
+    expect((await transicion(op, inc.id, { accion: 'iniciar_atencion', estadoEsperado: 'EN_REVISION' })).status).toBe(200);
+  });
+
+  it('con varios operadores activos no asigna; con dos sedes principales tampoco', async () => {
+    await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo'], operadores: ['activo', 'activo'] });
+    const inc = await registrarIncidente(app, prisma);
+    await enrutarTodo();
+    expect(await prisma.asignacionIncidente.count({ where: { incidenteId: inc.id } })).toBe(0);
+    expect((await prisma.incidente.findUniqueOrThrow({ where: { id: inc.id } })).estado).toBe('REGISTRADO');
+    await limpiarBd(prisma);
+    await activarTerritorio(prisma);
+    await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo'] });
+    await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo'] });
+    const dos = await registrarIncidente(app, prisma);
+    await enrutarTodo();
+    expect(await prisma.asignacionIncidente.count({ where: { incidenteId: dos.id } })).toBe(0);
+  });
+
+  it('cuando SAMU pasa a principal con un operador unico, se le asigna y PNP conserva su asignacion', async () => {
+    const samu = await crearSedeDePrueba(prisma, { institucion: 'samu', categorias: ['accidente-transito'] });
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['accidente-transito'] });
+    const inc = await registrarIncidente(app, prisma, { categoriaId: 'accidente-transito', descripcion: 'Choque de dos autos en la avenida', heridos: 'no_se' });
+    await enrutarTodo();
+    expect((await prisma.asignacionIncidente.findFirstOrThrow({ where: { incidenteId: inc.id, institucion: 'pnp' } })).origen).toBe('automatica');
+    const opPnp = await cookieInstitucional(app, pnp.operadores[0]!.correo);
+    expect((await post(opPnp, `${BASE}/${inc.id}/evaluacion`, { heridos: 'si', motivo: MOTIVO })).status).toBe(200);
+    const activas = await prisma.asignacionIncidente.findMany({ where: { incidenteId: inc.id, activa: true }, orderBy: { institucion: 'asc' } });
+    expect(activas.map((x) => [x.institucion, x.operadorId, x.origen])).toEqual([
+      ['pnp', pnp.operadores[0]!.id, 'automatica'],
+      ['samu', samu.operadores[0]!.id, 'automatica'],
+    ]);
+  });
+});
+
+describe('filtro de responsable en la bandeja (grupo D)', () => {
+  it('sin_tomar y mios filtran en el backend conservando FIFO; un valor no admitido es 400', async () => {
+    const { inc, a, b } = await escenarioRobo();
+    const otro = await registrarIncidente(app, prisma);
+    await enrutarTodo();
+    await asumir(a, inc.id);
+    const ids = async (cookie: string, q: string) => (await request(app).get(`${BASE}${q}`).set('Cookie', cookie)).body.elementos.map((e: { id: string }) => e.id);
+    expect(await ids(a, '?responsable=mios')).toEqual([inc.id]);
+    expect(await ids(b, '?responsable=mios')).toEqual([]);
+    expect(await ids(b, '?responsable=sin_tomar')).toEqual([otro.id]);
+    expect(await ids(a, '')).toEqual([inc.id, otro.id]);
+    expect((await request(app).get(`${BASE}?responsable=todos`).set('Cookie', a)).status).toBe(400);
   });
 });

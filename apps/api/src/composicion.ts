@@ -182,7 +182,7 @@ export function opcionesBandeja(
       },
     },
     participaciones: {
-      bandeja: (ambito, despuesDe, limite) => enrutamiento.bandeja(ambito, despuesDe, limite),
+      bandeja: (ambito, despuesDe, limite, filtro) => enrutamiento.bandeja(ambito, despuesDe, limite, filtro),
       participacionDe: (ambito, id) => enrutamiento.participacionDe(ambito, id),
     },
     originales: {
@@ -230,6 +230,8 @@ export function enrutamientoDe(
   identidad: ModuloIdentidad,
   obtenerReportes: () => ModuloReportes,
   despertarEntregas: () => void,
+  /** P6 grupo D: asignacion automatica al operador unico de la principal. */
+  atencion?: ServicioAtencion,
 ): ServicioEnrutamiento {
   return crearEnrutamientoConPrisma(prisma, {
     datos: {
@@ -256,6 +258,7 @@ export function enrutamientoDe(
       designable: (sedeId, institucion) => identidad.sedesEnrutamiento.designable(sedeId, institucion),
     },
     despertarEntregas,
+    ...(atencion ? { alCambiarPrincipal: (tx, incidenteId) => atencion.autoAsignarPrincipal(tx, incidenteId) } : {}),
   });
 }
 

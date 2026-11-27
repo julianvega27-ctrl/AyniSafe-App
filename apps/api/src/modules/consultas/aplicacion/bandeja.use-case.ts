@@ -73,6 +73,7 @@ export interface ParticipacionesBandejaPort {
     ambito: { readonly sedeId: string; readonly distritos: readonly string[]; readonly categorias: readonly string[] },
     despuesDe: { readonly registradoEn: Date; readonly incidenteId: string } | null,
     limite: number,
+    filtro?: { readonly tipo: 'sin_tomar' | 'mios'; readonly usuarioId: string } | null,
   ): Promise<readonly FilaOperaciones[]>;
   participacionDe(
     ambito: { readonly sedeId: string; readonly distritos: readonly string[]; readonly categorias: readonly string[] },
@@ -176,14 +177,17 @@ export class BandejaInstitucional {
     };
   }
 
-  async listar(usuarioId: string, cursorCrudo: unknown) {
+  async listar(usuarioId: string, cursorCrudo: unknown, responsableCrudo?: unknown) {
     const cursor = cursorCrudo === undefined ? null : decodificarCursorFifo(cursorCrudo);
     if (cursorCrudo !== undefined && !cursor) throw new ConsultaBandejaInvalidaError();
+    if (responsableCrudo !== undefined && responsableCrudo !== 'sin_tomar' && responsableCrudo !== 'mios') throw new ConsultaBandejaInvalidaError();
+    const filtro = responsableCrudo === undefined ? null : { tipo: responsableCrudo as 'sin_tomar' | 'mios', usuarioId };
     const ambito = await this.ambito(usuarioId);
     const filas = await this.d.participaciones.bandeja(
       ambito,
       cursor ? { registradoEn: cursor.instante, incidenteId: cursor.id } : null,
       PAGINA_BANDEJA + 1,
+      filtro,
     );
     const pagina = filas.slice(0, PAGINA_BANDEJA);
     const categorias = await this.d.categorias.nombres();

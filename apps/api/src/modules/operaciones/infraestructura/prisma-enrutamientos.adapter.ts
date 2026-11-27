@@ -5,6 +5,7 @@ import type {
   AmbitoBandeja,
   CursorFifo,
   FilaBandeja,
+  FiltroResponsable,
   ParticipacionVisible,
   EnrutamientoGuardado,
   EnrutamientosRepositorio,
@@ -168,10 +169,17 @@ export class PrismaEnrutamientosAdapter implements EnrutamientosRepositorio {
     return filas.map((f) => ({ ...aEnrutamiento(f), referencia: f.referencia }));
   }
 
-  async bandeja(ambito: AmbitoBandeja, despuesDe: CursorFifo | null, limite: number): Promise<readonly FilaBandeja[]> {
+  async bandeja(ambito: AmbitoBandeja, despuesDe: CursorFifo | null, limite: number, filtro: FiltroResponsable | null = null): Promise<readonly FilaBandeja[]> {
     const filas = await this.prisma.$queryRawUnsafe<FilaBandejaSql[]>(
       `${SELECT_BANDEJA}
          AND ($4::timestamptz IS NULL OR (e.registrado_en, e.incidente_id) > ($4::timestamptz, $5::uuid))
+         AND ($7::text IS NULL
+           OR ($7 = 'sin_tomar' AND i.estado <> 'CERRADO' AND i.principal_id IS NULL
+               AND NOT EXISTS (SELECT 1 FROM asignaciones_incidente a
+                                WHERE a.incidente_id = p.incidente_id AND a.institucion = p.institucion AND a.activa))
+           OR ($7 = 'mios' AND EXISTS (SELECT 1 FROM asignaciones_incidente a
+                                WHERE a.incidente_id = p.incidente_id AND a.institucion = p.institucion AND a.activa
+                                  AND a.operador_id = $8::uuid)))
        ORDER BY e.registrado_en, e.incidente_id
        LIMIT $6`,
       ambito.sedeId,
@@ -180,6 +188,8 @@ export class PrismaEnrutamientosAdapter implements EnrutamientosRepositorio {
       despuesDe?.registradoEn ?? null,
       despuesDe?.incidenteId ?? null,
       limite,
+      filtro?.tipo ?? null,
+      filtro?.usuarioId ?? null,
     );
     return filas.map(aFilaBandeja);
   }

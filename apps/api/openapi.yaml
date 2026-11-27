@@ -1447,10 +1447,15 @@ paths:
         Solo lectura (P4.2). Incidentes con participacion de la sede del operador dentro de su ambito vigente
         (distrito y categoria del enrutamiento cubiertos por la sede; las participaciones designadas por el
         administrador son excepcion limitada al caso). Orden de llegada, del mas antiguo al mas reciente, con
-        desempate por identificador, en paginas de 50. La prioridad es `SIN_EVALUAR` hasta P6 y no reordena.
-        Sin telefono, coordenadas, codigo, autor, otras sedes ni operadores. Unico parametro admitido: `cursor`.
+        desempate por identificador, en paginas de 50. La prioridad (P6) no reordena.
+        Sin telefono, coordenadas, codigo, autor, otras sedes ni operadores. Parametros admitidos: `cursor` y `responsable`.
       security: [{ cookieAuth: [] }]
       parameters:
+        - name: responsable
+          in: query
+          required: false
+          description: P6. `sin_tomar`, casos abiertos de tu institucion sin responsable activo; `mios`, casos que tienes asignados. No cambia el orden FIFO.
+          schema: { type: string, enum: [sin_tomar, mios] }
         - name: cursor
           in: query
           required: false
@@ -3125,7 +3130,7 @@ components:
             properties:
               accion: { enum: [asumir, transicion, verificacion, liberar, reasignar, vincular, prioridad] }
               institucion: { $ref: '#/components/schemas/TipoInstitucionDestino' }
-              actorTipo: { enum: [operador, administrador] }
+              actorTipo: { enum: [operador, administrador, sistema] }
               valorAnterior: { type: [string, 'null'] }
               valorNuevo: { type: [string, 'null'] }
               motivo: { type: [string, 'null'] }

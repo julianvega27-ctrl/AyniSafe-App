@@ -28,9 +28,9 @@ async function main(): Promise<void> {
   });
   // Enrutamiento (P4.2): se compone antes que Consultas, que lo usa en la bandeja y el seguimiento.
   let procesadorEntregas: ProcesadorEntregas | undefined;
-  const enrutamiento = enrutamientoDe(prisma, identidad, () => reportes!, () => procesadorEntregas?.despertar());
-  // Atencion institucional (P6): asignaciones, transiciones e historial.
+  // Atencion institucional (P6): asignaciones, transiciones e historial; asigna al operador unico al enrutar.
   const atencion = atencionDe(prisma, identidad);
+  const enrutamiento = enrutamientoDe(prisma, identidad, () => reportes!, () => procesadorEntregas?.despertar(), atencion);
   // Si la fuente de contenido publico no cumple el esquema, el arranque falla aqui.
   const consultas = crearModuloConsultasConPrisma(
     prisma,

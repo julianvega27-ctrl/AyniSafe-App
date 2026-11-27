@@ -70,7 +70,8 @@ describe('bandeja FIFO', () => {
 
   it('la fila tiene solo los campos permitidos, con la prioridad propuesta por la categoria', async () => {
     await crearSedeDePrueba(prisma, { institucion: 'samu', categorias: ['accidente-transito'] });
-    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['accidente-transito'] });
+    // Dos operadores PNP: sin asignacion automatica (P6 grupo D), el caso sigue REGISTRADO.
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['accidente-transito'], operadores: ['activo', 'activo'] });
     const inc = await registrarIncidente(app, prisma, { categoriaId: 'accidente-transito', descripcion: 'Choque de dos autos en la avenida', heridos: 'no_se' });
     await enrutarTodo();
     const fila = (await bandeja(await operadorDe(pnp))).body.elementos[0];

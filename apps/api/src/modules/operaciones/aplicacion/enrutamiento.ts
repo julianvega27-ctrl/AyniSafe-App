@@ -72,6 +72,12 @@ export interface PendienteFila extends EnrutamientoGuardado {
   readonly referencia: string;
 }
 
+/** Filtro de la bandeja por responsable activo de la institucion del operador (P6 grupo D). */
+export interface FiltroResponsable {
+  readonly tipo: 'sin_tomar' | 'mios';
+  readonly usuarioId: string;
+}
+
 export interface CursorFifo {
   readonly registradoEn: Date;
   readonly incidenteId: string;
@@ -136,7 +142,7 @@ export interface EnrutamientosRepositorio {
    * Participaciones de la sede visibles con su ambito vigente: por regla, el distrito y la categoria
    * del enrutamiento deben estar en el ambito; las designadas son excepcion limitada al caso.
    */
-  bandeja(ambito: AmbitoBandeja, despuesDe: CursorFifo | null, limite: number): Promise<readonly FilaBandeja[]>;
+  bandeja(ambito: AmbitoBandeja, despuesDe: CursorFifo | null, limite: number, filtro?: FiltroResponsable | null): Promise<readonly FilaBandeja[]>;
   participacionDe(ambito: AmbitoBandeja, incidenteId: string): Promise<ParticipacionVisible | null>;
   /** Institucion principal con participacion de cada incidente (ausente si falta). */
   principales(ids: readonly string[]): Promise<ReadonlyMap<string, InstitucionDestino>>;
@@ -243,6 +249,11 @@ export interface DependenciasEnrutamiento {
   readonly eventos: PublicadorEventos;
   /** Llamar tras confirmar un evento nuevo (despierta el procesador de entregas). */
   readonly despertarEntregas?: () => void;
+  /**
+   * P6 grupo D: en la misma transaccion, tras incorporar o cambiar participaciones, asigna el caso al
+   * operador unico de la principal cuando corresponde (atencion institucional).
+   */
+  readonly alCambiarPrincipal?: (tx: ContextoTransaccional, incidenteId: string) => Promise<unknown>;
 }
 
 export class ServicioEnrutamiento {
@@ -293,6 +304,7 @@ export class ServicioEnrutamiento {
       // Prioridad inicial por categoria (RF12); sin configuracion valida queda SIN_EVALUAR.
       const propuesta = propuestaPrioridad(datos.categoriaId);
       if (propuesta) await this.d.repositorio.proponerPrioridad(tx, incidenteId, propuesta.valor, propuesta.version);
+      await this.d.alCambiarPrincipal?.(tx, incidenteId);
       await this.publicar(tx, incidenteId, plan.resultado, 'regla');
       return true;
     });
@@ -369,6 +381,7 @@ export class ServicioEnrutamiento {
       antes,
       despues,
     });
+    await this.d.alCambiarPrincipal?.(tx, cambio.incidenteId);
     await this.publicar(tx, cambio.incidenteId, despues.resultado, 'condicion_medica');
     return { samuIncorporado: plan.incorporar.some((d) => d.institucion === 'samu') };
   }
@@ -390,6 +403,7 @@ export class ServicioEnrutamiento {
       if (insertadas === 0) throw new ConflictoEnrutamientoError('FALTANTE_INEXISTENTE');
       const faltantes = actual.faltantes.filter((f) => f !== faltante);
       await this.d.repositorio.actualizarFaltantes(tx, incidenteId, faltantes);
+      await this.d.alCambiarPrincipal?.(tx, incidenteId);
       await this.publicar(tx, incidenteId, resultadoDe(faltantes), 'designacion');
       return { ...actual, faltantes, resultado: resultadoDe(faltantes) };
     });
@@ -418,6 +432,7 @@ export class ServicioEnrutamiento {
       }
       await this.d.repositorio.insertarParticipaciones(tx, incidenteId, nuevas);
       await this.d.repositorio.actualizarFaltantes(tx, incidenteId, faltantes);
+      await this.d.alCambiarPrincipal?.(tx, incidenteId);
       await this.publicar(tx, incidenteId, resultadoDe(faltantes), 'reevaluacion');
       return { ...actual, faltantes, resultado: resultadoDe(faltantes) };
     });
@@ -430,8 +445,8 @@ export class ServicioEnrutamiento {
   }
 
   /** Bandeja FIFO de la sede dentro de su ambito vigente (la consulta Consultas). */
-  bandeja(ambito: AmbitoBandeja, despuesDe: CursorFifo | null, limite: number): Promise<readonly FilaBandeja[]> {
-    return this.d.repositorio.bandeja(ambito, despuesDe, limite);
+  bandeja(ambito: AmbitoBandeja, despuesDe: CursorFifo | null, limite: number, filtro?: FiltroResponsable | null): Promise<readonly FilaBandeja[]> {
+    return this.d.repositorio.bandeja(ambito, despuesDe, limite, filtro ?? null);
   }
 
   /** Null si el identificador no es valido o el incidente no es visible para la sede. */

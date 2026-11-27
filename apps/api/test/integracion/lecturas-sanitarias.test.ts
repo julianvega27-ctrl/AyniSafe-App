@@ -60,7 +60,8 @@ const precisar = (id: string, cookie: string, cuerpo: unknown) =>
   request(app).post(`/api/v1/operador/incidentes/${id}/evaluacion`).set('Cookie', cookie).set('Origin', ORIGEN_WEB_PRUEBA).send(cuerpo as object);
 const resumen = (id: string, cookie: string) => request(app).get(`/api/v1/operador/incidentes/${id}`).set('Cookie', cookie);
 const detalle = (id: string, cookie: string) => request(app).get(`/api/v1/operador/incidentes/${id}/evaluacion`).set('Cookie', cookie);
-const DATOS_SANITARIOS = /signosVida|consciente|sangrado|motivo|Confirmado|Informe de la unidad/;
+// P6: el historial operativo trae la clave "motivo" (nula o de atencion); se detecta un motivo con valor.
+const DATOS_SANITARIOS = /signosVida|consciente|sangrado|"motivo":"|Confirmado|Informe de la unidad/;
 
 describe('resumen del operador (6.1)', () => {
   it('PNP recibe la condicion vigente sin observaciones ni motivos, con la respuesta original conservada', async () => {

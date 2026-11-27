@@ -68,6 +68,15 @@ export class PrismaAtencionAdapter implements AtencionRepositorio {
     return filas.map((f) => f.sede_id);
   }
 
+  async principalUnica(tx: ContextoTransaccional, incidenteId: string) {
+    const filas = await clienteDe(tx).$queryRaw<{ institucion: string; sedes: string[] }[]>`
+      SELECT institucion, array_agg(DISTINCT sede_id::text ORDER BY sede_id::text) AS sedes
+        FROM participaciones_incidente
+       WHERE incidente_id = ${incidenteId}::uuid AND papel = 'principal'
+       GROUP BY institucion`;
+    return filas.length === 1 ? { institucion: filas[0]!.institucion as InstitucionDestino, sedes: filas[0]!.sedes } : null;
+  }
+
   async activa(tx: ContextoTransaccional, incidenteId: string, institucion: InstitucionDestino): Promise<Asignacion | null> {
     const filas = await clienteDe(tx).$queryRawUnsafe<FilaAsignacion[]>(
       `SELECT ${COLUMNAS_ASIGNACION} FROM asignaciones_incidente

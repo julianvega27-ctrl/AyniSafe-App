@@ -38,7 +38,8 @@ describe('institucion responsable', () => {
   });
 
   it('con la principal participando: tipo y nombre, sin sede ni operadores (invitado y autor)', async () => {
-    const samu = await crearSedeDePrueba(prisma, { institucion: 'samu', categorias: ['accidente-transito'] });
+    // Dos operadores SAMU: sin asignacion automatica (P6 grupo D) no hay actuaciones todavia.
+    const samu = await crearSedeDePrueba(prisma, { institucion: 'samu', categorias: ['accidente-transito'], operadores: ['activo', 'activo'] });
     await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['accidente-transito'] });
     const inc = await registrarIncidente(app, prisma, ACCIDENTE);
     const token = await ciudadano();

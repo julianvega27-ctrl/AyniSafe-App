@@ -30,7 +30,7 @@ export interface Asignacion {
   readonly institucion: InstitucionDestino;
   readonly operadorId: string;
   readonly sedeId: string;
-  readonly origen: 'asumida' | 'reasignada';
+  readonly origen: 'asumida' | 'reasignada' | 'automatica';
   readonly asignadaEn: Date;
 }
 
@@ -48,8 +48,9 @@ export type AccionHistorial = 'asumir' | 'transicion' | 'verificacion' | 'libera
 export interface EntradaHistorial {
   readonly incidenteId: string;
   readonly accion: AccionHistorial;
-  readonly actorTipo: 'operador' | 'administrador';
-  readonly actorUsuarioId: string;
+  readonly actorTipo: 'operador' | 'administrador' | 'sistema';
+  /** Null solo para el actor «sistema» (asignacion automatica, P6 grupo D). */
+  readonly actorUsuarioId: string | null;
   readonly institucion: InstitucionDestino;
   readonly valorAnterior?: string | null;
   readonly valorNuevo?: string | null;
@@ -86,6 +87,8 @@ export interface AtencionRepositorio {
   /** Papel vigente de la institucion en el incidente (null si no participa). */
   papel(tx: ContextoTransaccional, incidenteId: string, institucion: InstitucionDestino): Promise<Papel | null>;
   sedesParticipantes(tx: ContextoTransaccional | null, incidenteId: string, institucion: InstitucionDestino): Promise<readonly string[]>;
+  /** Institucion principal y sus sedes participantes; null si no hay una unica institucion principal. */
+  principalUnica(tx: ContextoTransaccional, incidenteId: string): Promise<{ readonly institucion: InstitucionDestino; readonly sedes: readonly string[] } | null>;
   activa(tx: ContextoTransaccional, incidenteId: string, institucion: InstitucionDestino): Promise<Asignacion | null>;
   /** Null si ya existe una activa para la institucion (sin abortar la transaccion). */
   insertarAsignacion(tx: ContextoTransaccional, a: Omit<Asignacion, 'id' | 'asignadaEn'>): Promise<Asignacion | null>;
@@ -421,6 +424,55 @@ export class ServicioAtencion {
       });
       return { prioridad: valor, origen: 'revisada' as const };
     });
+  }
+
+  /**
+   * Asignacion automatica al operador unico (decision del 27/11/2026, documento 11 §2). Corre en la
+   * transaccion del enrutamiento cuando una institucion queda como principal: si participa con una
+   * sola sede y esa sede tiene exactamente un operador activo, se le asigna el caso y, si estaba
+   * REGISTRADO, pasa a EN_REVISION. Con varias sedes u operadores no hace nada (toma manual).
+   */
+  async autoAsignarPrincipal(tx: ContextoTransaccional, incidenteId: string): Promise<boolean> {
+    const inc = await this.d.repositorio.bloquear(tx, incidenteId);
+    if (!inc || inc.estado === 'CERRADO' || inc.principalId) return false;
+    const principal = await this.d.repositorio.principalUnica(tx, incidenteId);
+    if (!principal || principal.sedes.length !== 1) return false;
+    const sedeId = principal.sedes[0]!;
+    if (await this.d.repositorio.activa(tx, incidenteId, principal.institucion)) return false;
+    const operadores = (await this.d.operadores.deSedes([sedeId])).filter(
+      (o) => o.sedeId === sedeId && o.institucion === principal.institucion && o.cuentaActiva && o.sedeOperativa,
+    );
+    if (operadores.length !== 1) return false;
+    const operador = operadores[0]!;
+    const asignacion = await this.d.repositorio.insertarAsignacion(tx, {
+      incidenteId,
+      institucion: principal.institucion,
+      operadorId: operador.usuarioId,
+      sedeId,
+      origen: 'automatica',
+    });
+    if (!asignacion) return false;
+    await this.d.repositorio.registrar(tx, {
+      incidenteId,
+      accion: 'asumir',
+      actorTipo: 'sistema',
+      actorUsuarioId: null,
+      institucion: principal.institucion,
+      valorNuevo: operador.usuarioId,
+    });
+    if (inc.estado === 'REGISTRADO') {
+      await this.d.repositorio.cambiarEstado(tx, incidenteId, 'EN_REVISION');
+      await this.d.repositorio.registrar(tx, {
+        incidenteId,
+        accion: 'transicion',
+        actorTipo: 'sistema',
+        actorUsuarioId: null,
+        institucion: principal.institucion,
+        valorAnterior: 'REGISTRADO',
+        valorNuevo: 'EN_REVISION',
+      });
+    }
+    return true;
   }
 
   /** Resultado, resumen e hitos para el seguimiento ciudadano. */
