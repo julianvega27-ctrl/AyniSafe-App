@@ -77,6 +77,12 @@ export function crearRouterBandeja(bandeja: BandejaInstitucional, identificar: I
     })
     .all(sinCache, soloLectura);
 
+  // Solo GET: el POST de la misma ruta pertenece a Operaciones (precision de la condicion medica).
+  router.get('/operador/incidentes/:id/evaluacion', sinCache, operador, async (req, res) => {
+    if (Object.keys(req.query).length) throw new ConsultaBandejaInvalidaError();
+    res.json(await bandeja.evaluacion(res.locals.operadorId as string, String(req.params.id)));
+  });
+
   router
     .route('/operador/incidentes/:id')
     .get(sinCache, operador, async (req, res) => {

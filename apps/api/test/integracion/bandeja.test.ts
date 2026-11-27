@@ -94,7 +94,7 @@ describe('resumen por identificador', () => {
     const r = await resumen(await operadorDe(pnp), inc.id);
     expect(r.status).toBe(200);
     expect(Object.keys(r.body).sort()).toEqual([
-      'categoria', 'condicionMedicaPorConfirmar', 'descripcion', 'distrito', 'estado', 'id', 'ocurrencia', 'otrasInstituciones',
+      'accesoSanitario', 'categoria', 'condicionMedica', 'condicionMedicaPorConfirmar', 'descripcion', 'distrito', 'estado', 'id', 'ocurrencia', 'otrasInstituciones',
       'papel', 'prioridad', 'referencia', 'registradoEn', 'respuestasCiudadano', 'territorio',
     ]);
     expect(r.body).toMatchObject({

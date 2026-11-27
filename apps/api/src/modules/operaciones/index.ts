@@ -32,12 +32,14 @@ export {
   deduplicar,
   faltantesDesdeJson,
   planificar,
+  planificarCondicionMedica,
   resolverDestinatarios,
   resultadoDe,
   type Destinatario,
   type Faltante,
   type InstitucionDestino,
   type Papel,
+  type PlanCondicionMedica,
   type PlanEnrutamiento,
   type RespuestaMedica,
   type ResultadoEnrutamiento,
@@ -69,6 +71,11 @@ export {
   type OpcionesRutasEnrutamiento,
   type VistaPendientesPort,
 } from './presentacion/enrutamiento.routes';
+export {
+  crearRouterEvaluacionOperador,
+  type OpcionesRutaEvaluacionOperador,
+  type ResultadoAclaracionOperador,
+} from './presentacion/evaluacion-operador.routes';
 
 export interface ModuloOperaciones {
   readonly incidentes: ServicioIncidentes;

@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   const procesador = new ProcesadorEntregas(prisma, [enrutamiento.consumidor()], logger);
   procesadorEntregas = procesador;
   reportes = crearModuloReportesConPrisma(prisma, {
-    ...dependenciasRegistro(prisma, { identidad, consultas, operaciones }, () => procesador.despertar(), logger),
+    ...dependenciasRegistro(prisma, { identidad, consultas, operaciones, enrutamiento }, () => procesador.despertar(), logger),
     secretoSeguimiento,
   });
   const app = crearApp({

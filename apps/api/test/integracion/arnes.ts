@@ -188,7 +188,7 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   procesadorCreado = procesador;
   procesadoresCreados.add(procesador);
   reportes = crearModuloReportesConPrisma(prisma, {
-    ...dependenciasRegistro(prisma, { identidad: modulo, consultas, operaciones }, () => procesador.despertar(), logger),
+    ...dependenciasRegistro(prisma, { identidad: modulo, consultas, operaciones, enrutamiento }, () => procesador.despertar(), logger),
     secretoSeguimiento: SECRETO_SEGUIMIENTO_PRUEBA,
     limiteInvitado: opciones.limiteInvitado ?? { maximo: 100000, ventanaMs: 60 * 60 * 1000 },
   });

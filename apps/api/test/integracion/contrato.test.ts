@@ -879,6 +879,106 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     }
   });
 
+  it('evaluacion rapida (P5.1): cada estado documentado coincide con la respuesta real', async () => {
+    const CIU = '/ciudadano/incidentes/{referencia}/evaluacion';
+    const OPE = '/operador/incidentes/{id}/evaluacion';
+    const RES = '/operador/incidentes/{id}';
+    const DET = '/ciudadano/incidentes/{referencia}';
+    const U = (r: string) => `/api/v1${r}`;
+    const arnes = crearArnes({ prisma, enrutar: true });
+    const { app, procesador } = arnes;
+    await limpiarBd(prisma);
+    await new PrismaTerritorioAdapter(prisma).importar(paqueteSintetico().preparado, true);
+    const admin = await crearCuentaDePrueba(prisma, { rol: 'administrador' });
+    const cookieAdmin = await cookieInstitucional(app, admin.correo);
+    const samu = await crearSedeDePrueba(prisma, { institucion: 'samu', categorias: ['accidente-transito'], creadoPor: admin.id });
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['accidente-transito'], creadoPor: admin.id });
+    const cookieSamu = await cookieInstitucional(app, samu.operadores[0]!.correo);
+    const cookiePnp = await cookieInstitucional(app, pnp.operadores[0]!.correo);
+    const ciudadano = await crearCuentaDePrueba(prisma, { rol: 'ciudadano' });
+    const token = (await request(app).post(RUTA_LOGIN).send({ correo: ciudadano.correo, contrasena: CLAVE })).body.token as string;
+    const accidente = (extra: Record<string, unknown> = {}) => ({
+      categoriaId: 'accidente-transito', descripcion: 'Choque de dos autos en la avenida', heridos: 'no_se',
+      ocurrencia: { modo: 'ahora', instante: new Date(Date.now() - 60_000).toISOString() }, punto: { latitud: 1, longitud: 1, origen: 'manual' },
+      ...extra,
+    });
+    const registrar = async (cuerpo: unknown) => {
+      const r = await request(app).post(U('/incidentes')).set('Authorization', `Bearer ${token}`).set('Content-Type', 'application/json')
+        .set('Idempotency-Key', randomUUID()).send(JSON.stringify(cuerpo));
+      verificar('/incidentes', 'post', r); // 201 con evaluacion
+      return (await prisma.incidente.findUniqueOrThrow({ where: { referencia: r.body.referencia } }));
+    };
+    const inc = await registrar(accidente());
+    const cerrado = await registrar(accidente({ heridos: 'si', evaluacion: { cantidadHeridos: 2, personaPrincipal: { consciente: 'si' } } }));
+    await prisma.incidente.update({ where: { id: cerrado.id }, data: { estado: 'CERRADO' } });
+    await procesador.esperarReposo();
+    await procesador.procesarPendientes();
+
+    const ciu = (ref: string, cuerpo: unknown, auth: { token?: string; cookie?: string } = { token }) => {
+      let r = request(app).post(U(`/ciudadano/incidentes/${ref}/evaluacion`)).set('Content-Type', 'application/json');
+      if (auth.token) r = r.set('Authorization', `Bearer ${auth.token}`);
+      if (auth.cookie) r = r.set('Cookie', auth.cookie);
+      return r.send(JSON.stringify(cuerpo));
+    };
+    const ope = (id: string, cuerpo: unknown, cookie = cookiePnp, tipo = 'application/json') =>
+      request(app).post(U(`/operador/incidentes/${id}/evaluacion`)).set('Cookie', cookie).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', tipo).send(typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo));
+    const motivo = 'Confirmado por llamada al lugar';
+
+    // Autor con cuenta.
+    verificar(CIU, 'post', await ciu(inc.referencia, { heridos: 'si', cantidadHeridos: 2 })); // 200
+    verificar(CIU, 'post', await ciu(inc.referencia, { heridos: 'quizas' })); // 400
+    verificar(CIU, 'post', await ciu(inc.referencia, { heridos: 'si' }, {})); // 401
+    verificar(CIU, 'post', await ciu(inc.referencia, { heridos: 'si' }, { cookie: cookiePnp })); // 403
+    verificar(CIU, 'post', await ciu('INC-00000-00000', { heridos: 'si' })); // 404
+    verificar(CIU, 'post', await ciu(cerrado.referencia, { heridos: 'no' })); // 409
+    verificar(DET, 'get', await request(app).get(U(`/ciudadano/incidentes/${inc.referencia}`)).set('Authorization', `Bearer ${token}`)); // 200 con evaluacion
+
+    // Operador: precision PNP y observaciones SAMU.
+    verificar(OPE, 'post', await ope(inc.id, { atencionMedica: 'si', motivo })); // 200
+    verificar(OPE, 'post', await ope(inc.id, { personaPrincipal: { consciente: 'si' }, motivo })); // 400 (PNP)
+    verificar(OPE, 'post', await request(app).post(U(`/operador/incidentes/${inc.id}/evaluacion`)).set('Origin', ORIGEN_WEB_PRUEBA)
+      .set('Content-Type', 'application/json').send('{}')); // 401
+    verificar(OPE, 'post', await ope(inc.id, { heridos: 'si', motivo }, cookieAdmin)); // 403
+    verificar(OPE, 'post', await ope(randomUUID(), { heridos: 'si', motivo })); // 404
+    verificar(OPE, 'post', await ope(cerrado.id, { heridos: 'no', motivo })); // 409
+    verificar(OPE, 'post', await ope(inc.id, 'x', cookiePnp, 'text/plain')); // 415
+    verificar(OPE, 'post', await ope(inc.id, { personaPrincipal: { sangrado: 'si' }, motivo }, cookieSamu)); // 200 SAMU
+    verificar(RES, 'get', await request(app).get(U(`/operador/incidentes/${inc.id}`)).set('Cookie', cookiePnp)); // 200 con condicion
+    verificar(RES, 'get', await request(app).get(U(`/operador/incidentes/${inc.id}`)).set('Cookie', cookieSamu)); // 200 con acceso
+
+    // Detalle sanitario.
+    verificar(OPE, 'get', await request(app).get(U(`/operador/incidentes/${inc.id}/evaluacion`)).set('Cookie', cookieSamu)); // 200
+    verificar(OPE, 'get', await request(app).get(U(`/operador/incidentes/${inc.id}/evaluacion?x=1`)).set('Cookie', cookieSamu)); // 400
+    verificar(OPE, 'get', await request(app).get(U(`/operador/incidentes/${inc.id}/evaluacion`))); // 401
+    verificar(OPE, 'get', await request(app).get(U(`/operador/incidentes/${inc.id}/evaluacion`)).set('Cookie', cookieAdmin)); // 403
+    verificar(OPE, 'get', await request(app).get(U(`/operador/incidentes/${inc.id}/evaluacion`)).set('Cookie', cookiePnp)); // 404
+
+    // 503: la escritura de versiones y del registro de accesos falla (triggers temporales).
+    await prisma.$executeRawUnsafe(
+      `CREATE OR REPLACE FUNCTION falla_contrato_p5() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'secreto SQL'; END $$`,
+    );
+    await prisma.$executeRawUnsafe('CREATE TRIGGER falla_versiones BEFORE INSERT ON versiones_evaluacion FOR EACH ROW EXECUTE FUNCTION falla_contrato_p5()');
+    await prisma.$executeRawUnsafe('CREATE TRIGGER falla_accesos BEFORE INSERT ON accesos_evaluacion FOR EACH ROW EXECUTE FUNCTION falla_contrato_p5()');
+    try {
+      const casos = [
+        [CIU, 'post', ciu(inc.referencia, { heridos: 'no' })],
+        [OPE, 'post', ope(inc.id, { heridos: 'no', motivo })],
+        [OPE, 'get', request(app).get(U(`/operador/incidentes/${inc.id}/evaluacion`)).set('Cookie', cookieSamu)],
+      ] as const;
+      for (const [doc, metodo, pendiente] of casos) {
+        const r = await pendiente;
+        expect(r.status).toBe(503);
+        expect(r.text).not.toContain('secreto');
+        verificar(doc, metodo, r);
+      }
+    } finally {
+      await prisma.$executeRawUnsafe('DROP TRIGGER IF EXISTS falla_versiones ON versiones_evaluacion');
+      await prisma.$executeRawUnsafe('DROP TRIGGER IF EXISTS falla_accesos ON accesos_evaluacion');
+      await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS falla_contrato_p5()');
+    }
+  });
+
   it('todos los estados documentados fueron ejercitados y ninguna respuesta real quedo sin documentar', () => {
     const documentados = new Set<string>();
     for (const [ruta, metodos] of Object.entries(api.paths)) {

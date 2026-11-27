@@ -3,7 +3,9 @@ import type { ContextoTransaccional, UnidadDeTrabajo } from '../../../compartido
 import {
   INSTITUCIONES_DESTINO,
   planificar,
+  planificarCondicionMedica,
   resolverDestinatarios,
+  VERSION_MATRIZ,
   resultadoDe,
   type Faltante,
   type InstitucionDestino,
@@ -27,6 +29,14 @@ export interface DatosEnrutamientoPort {
     readonly heridos: RespuestaMedica;
     readonly atencionMedica: RespuestaMedica;
   } | null>;
+  /**
+   * Condicion medica vigente (evaluacion de Reportes, P5.1) con su cabecera bloqueada en la
+   * transaccion del llamador. Null si el incidente no tiene evaluacion. Orden: evaluacion, enrutamiento.
+   */
+  condicionBloqueada?(tx: ContextoTransaccional, incidenteId: string): Promise<{
+    readonly heridos: RespuestaMedica;
+    readonly atencionMedica: RespuestaMedica;
+  } | null>;
 }
 
 /** Sedes de Identidad. `designable` devuelve los requisitos incumplidos (vacio si es designable). */
@@ -35,7 +45,7 @@ export interface SedesEnrutamientoPort {
   designable(sedeId: string, institucion: InstitucionDestino): Promise<readonly string[]>;
 }
 
-export type OrigenParticipacion = 'regla' | 'designacion' | 'reevaluacion';
+export type OrigenParticipacion = 'regla' | 'designacion' | 'reevaluacion' | 'condicion_medica';
 
 export interface NuevaParticipacion {
   readonly sedeId: string;
@@ -84,6 +94,8 @@ export interface FilaBandeja {
   readonly revisionMedicaPendiente: boolean;
   readonly papel: Papel;
   readonly origen: OrigenParticipacion;
+  /** Institucion de la sede del operador (P5.1: autoriza el detalle sanitario de SAMU). */
+  readonly institucion: InstitucionDestino;
 }
 
 export interface ParticipacionVisible extends FilaBandeja {
@@ -116,6 +128,45 @@ export interface EnrutamientosRepositorio {
   participacionDe(ambito: AmbitoBandeja, incidenteId: string): Promise<ParticipacionVisible | null>;
   /** Institucion principal con participacion de cada incidente (ausente si falta). */
   principales(ids: readonly string[]): Promise<ReadonlyMap<string, InstitucionDestino>>;
+  /** Institucion y papel de cada participacion (P5.1). */
+  participaciones(tx: ContextoTransaccional, incidenteId: string): Promise<readonly { readonly institucion: InstitucionDestino; readonly papel: Papel }[]>;
+  /** Cambia el papel de todas las participaciones de una institucion en el incidente. */
+  actualizarPapel(tx: ContextoTransaccional, incidenteId: string, institucion: InstitucionDestino, papel: Papel): Promise<void>;
+  actualizarRevisionMedica(tx: ContextoTransaccional, incidenteId: string, pendiente: boolean): Promise<void>;
+  registrarCambio(tx: ContextoTransaccional, cambio: CambioEnrutamiento): Promise<void>;
+}
+
+/** Estado auditable de los destinatarios, sin datos sanitarios. */
+export interface EstadoDestinatarios {
+  readonly destinatarios: readonly { readonly institucion: InstitucionDestino; readonly papel: Papel }[];
+  readonly revisionMedicaPendiente: boolean;
+  readonly resultado: ResultadoEnrutamiento;
+}
+
+export interface CambioEnrutamiento {
+  readonly incidenteId: string;
+  readonly versionEvaluacion: number;
+  readonly actorTipo: 'ciudadano' | 'operador';
+  readonly actorUsuarioId: string | null;
+  readonly antes: EstadoDestinatarios;
+  readonly despues: EstadoDestinatarios;
+}
+
+/** Condicion medica vigente tras una version nueva de la evaluacion (contrato hacia Reportes). */
+export interface CambioCondicionMedica {
+  readonly incidenteId: string;
+  readonly heridos: RespuestaMedica;
+  readonly atencionMedica: RespuestaMedica;
+  readonly versionEvaluacion: number;
+  readonly actor: { readonly tipo: 'ciudadano' | 'operador'; readonly usuarioId: string | null };
+}
+
+/** La version de regla guardada no es la que el servicio sabe aplicar. */
+export class VersionReglaDesconocidaError extends Error {
+  constructor() {
+    super('Version de regla de enrutamiento desconocida');
+    this.name = 'VersionReglaDesconocidaError';
+  }
 }
 
 export const CONSUMIDOR_ENRUTAMIENTO = 'operaciones.enrutamiento';
@@ -199,15 +250,18 @@ export class ServicioEnrutamiento {
     if (await this.d.repositorio.existe(incidenteId)) return;
     const datos = await this.d.datos.de(incidenteId);
     if (!datos) throw new IncidenteSinOriginalesError();
-    const resolucion = resolverDestinatarios(datos.categoriaId, datos.heridos, datos.atencionMedica);
-    const sedes = new Map<InstitucionDestino, readonly string[]>();
-    if (datos.distritoId !== null) {
-      for (const d of resolucion.destinatarios) {
-        sedes.set(d.institucion, await this.d.sedes.elegibles(d.institucion, datos.distritoId, datos.categoriaId));
-      }
-    }
-    const plan = planificar(resolucion.destinatarios, datos.distritoId, sedes);
+    let condicion: { heridos: RespuestaMedica; atencionMedica: RespuestaMedica } = {
+      heridos: datos.heridos,
+      atencionMedica: datos.atencionMedica,
+    };
+    let { resolucion, plan } = await this.planear(datos.categoriaId, datos.distritoId, condicion);
     const nuevo = await this.d.unidadDeTrabajo.enTransaccion(async (tx) => {
+      // Bloquea la evaluacion antes de insertar: una aclaracion concurrente espera o ya esta confirmada.
+      const vigente = await this.d.datos.condicionBloqueada?.(tx, incidenteId);
+      if (vigente && (vigente.heridos !== condicion.heridos || vigente.atencionMedica !== condicion.atencionMedica)) {
+        condicion = vigente;
+        ({ resolucion, plan } = await this.planear(datos.categoriaId, datos.distritoId, condicion));
+      }
       const insertado = await this.d.repositorio.insertar(tx, {
         incidenteId,
         eventoId: evento.id,
@@ -228,6 +282,80 @@ export class ServicioEnrutamiento {
       return true;
     });
     if (nuevo) this.d.despertarEntregas?.();
+  }
+
+  private async planear(categoriaId: string, distritoId: string | null, c: { heridos: RespuestaMedica; atencionMedica: RespuestaMedica }) {
+    const resolucion = resolverDestinatarios(categoriaId, c.heridos, c.atencionMedica);
+    const sedes = new Map<InstitucionDestino, readonly string[]>();
+    if (distritoId !== null) {
+      for (const d of resolucion.destinatarios) {
+        sedes.set(d.institucion, await this.d.sedes.elegibles(d.institucion, distritoId, categoriaId));
+      }
+    }
+    return { resolucion, plan: planificar(resolucion.destinatarios, distritoId, sedes) };
+  }
+
+  /**
+   * Recalcula el enrutamiento con la condicion medica vigente en la transaccion de la aclaracion
+   * (P5.1, design decision 4). Sin enrutamiento todavia, no hace nada: el consumidor usara la
+   * condicion vigente. Solo incorpora o eleva destinatarios; nunca retira participaciones.
+   */
+  async aplicarCondicionMedica(tx: ContextoTransaccional, cambio: CambioCondicionMedica): Promise<{ readonly samuIncorporado: boolean }> {
+    const actual = await this.d.repositorio.bloquear(tx, cambio.incidenteId);
+    if (!actual) return { samuIncorporado: false };
+    if (actual.versionRegla !== VERSION_MATRIZ) throw new VersionReglaDesconocidaError();
+    const objetivo = resolverDestinatarios(actual.categoriaId, cambio.heridos, cambio.atencionMedica);
+    const participaciones = await this.d.repositorio.participaciones(tx, cambio.incidenteId);
+    const presentes = new Map<InstitucionDestino, Papel>();
+    for (const p of participaciones) presentes.set(p.institucion, p.papel);
+    for (const f of actual.faltantes) if (!presentes.has(f.institucion)) presentes.set(f.institucion, f.papel);
+
+    const plan = planificarCondicionMedica(presentes, objetivo);
+    let faltantes: Faltante[] = actual.faltantes.map((f) => {
+      const nuevo = plan.cambiosPapel.find((c) => c.institucion === f.institucion);
+      return nuevo ? { ...f, papel: nuevo.papel } : f;
+    });
+    const nuevas: NuevaParticipacion[] = [];
+    for (const d of plan.incorporar) {
+      const sedes = actual.distritoId === null
+        ? []
+        : [...new Set(await this.d.sedes.elegibles(d.institucion, actual.distritoId, actual.categoriaId))];
+      if (sedes.length === 0) {
+        faltantes = [...faltantes, { ...d, motivo: actual.distritoId === null ? 'sin_distrito' : 'sin_sede_elegible' }];
+      }
+      for (const sedeId of sedes) nuevas.push({ sedeId, institucion: d.institucion, papel: d.papel, origen: 'condicion_medica' });
+    }
+    const despuesPresentes = new Map(presentes);
+    for (const d of [...plan.cambiosPapel, ...plan.incorporar]) despuesPresentes.set(d.institucion, d.papel);
+    const estado = (m: ReadonlyMap<InstitucionDestino, Papel>, revision: boolean, resultado: ResultadoEnrutamiento): EstadoDestinatarios => ({
+      destinatarios: [...m.entries()]
+        .map(([institucion, papel]) => ({ institucion, papel }))
+        .sort((a, b) => a.institucion.localeCompare(b.institucion)),
+      revisionMedicaPendiente: revision,
+      resultado,
+    });
+    const antes = estado(presentes, actual.revisionMedicaPendiente, actual.resultado);
+    const despues = estado(despuesPresentes, objetivo.revisionMedicaPendiente, resultadoDe(faltantes));
+    if (JSON.stringify(antes) === JSON.stringify(despues)) return { samuIncorporado: false };
+
+    await this.d.repositorio.insertarParticipaciones(tx, cambio.incidenteId, nuevas);
+    for (const c of plan.cambiosPapel) await this.d.repositorio.actualizarPapel(tx, cambio.incidenteId, c.institucion, c.papel);
+    if (JSON.stringify(faltantes) !== JSON.stringify(actual.faltantes)) {
+      await this.d.repositorio.actualizarFaltantes(tx, cambio.incidenteId, faltantes);
+    }
+    if (objetivo.revisionMedicaPendiente !== actual.revisionMedicaPendiente) {
+      await this.d.repositorio.actualizarRevisionMedica(tx, cambio.incidenteId, objetivo.revisionMedicaPendiente);
+    }
+    await this.d.repositorio.registrarCambio(tx, {
+      incidenteId: cambio.incidenteId,
+      versionEvaluacion: cambio.versionEvaluacion,
+      actorTipo: cambio.actor.tipo,
+      actorUsuarioId: cambio.actor.usuarioId,
+      antes,
+      despues,
+    });
+    await this.publicar(tx, cambio.incidenteId, despues.resultado, 'condicion_medica');
+    return { samuIncorporado: plan.incorporar.some((d) => d.institucion === 'samu') };
   }
 
   /** Designacion administrativa de una sede para un faltante (RF35). */

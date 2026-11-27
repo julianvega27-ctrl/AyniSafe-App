@@ -1,4 +1,10 @@
 import { aCrockford, normalizarCrockford } from '../../../compartido/crockford';
+import {
+  CATEGORIAS_CON_ATENCION_MEDICA,
+  CATEGORIAS_CON_EVALUACION,
+  validarEvaluacionEnvio,
+  type EvaluacionEnvio,
+} from './evaluacion';
 
 /**
  * Envio ciudadano de un incidente (P4.1): reglas puras de validacion de los datos originales.
@@ -10,9 +16,12 @@ export type RespuestaSamu = 'si' | 'no' | 'no_se';
 export type OrigenPunto = 'gps' | 'manual';
 export type ModoOcurrencia = 'ahora' | 'antes';
 
-/** Categorias que preguntan «¿Hay heridos?» y «¿Se necesita atención médica?» (RF57, doc. 09 §5). */
-export const CATEGORIAS_HERIDOS: ReadonlySet<string> = new Set(['accidente-transito', 'agresion', 'pelea', 'violencia']);
-export const CATEGORIAS_ATENCION_MEDICA: ReadonlySet<string> = new Set(['accidente-transito']);
+/**
+ * Categorias que preguntan «¿Hay heridos?» y «¿Se necesita atención médica?» (RF57, doc. 09 §5).
+ * Emergencia medica pregunta heridos desde P5.1 (decision del 26/11/2026).
+ */
+export const CATEGORIAS_HERIDOS: ReadonlySet<string> = CATEGORIAS_CON_EVALUACION;
+export const CATEGORIAS_ATENCION_MEDICA: ReadonlySet<string> = CATEGORIAS_CON_ATENCION_MEDICA;
 
 export const DESCRIPCION_MIN = 5;
 export const DESCRIPCION_MAX = 1000;
@@ -46,6 +55,8 @@ export interface EnvioValido {
   readonly atencionMedica: RespuestaSamu | null;
   /** Solo en modalidad invitado; normalizado. */
   readonly telefonoContacto: string | null;
+  /** Evaluacion rapida enviada (P5.1); null si el cuerpo no la incluye. */
+  readonly evaluacion: EvaluacionEnvio | null;
 }
 
 export type ErroresPorCampo = Record<string, string>;
@@ -58,7 +69,7 @@ export class ValidacionEnvioError extends Error {
   }
 }
 
-const CAMPOS = ['categoriaId', 'descripcion', 'ocurrencia', 'punto', 'heridos', 'atencionMedica', 'telefonoContacto'] as const;
+const CAMPOS = ['categoriaId', 'descripcion', 'ocurrencia', 'punto', 'heridos', 'atencionMedica', 'telefonoContacto', 'evaluacion'] as const;
 const RESPUESTAS: readonly RespuestaSamu[] = ['si', 'no', 'no_se'];
 /** ISO 8601 con zona; hasta 9 decimales de segundo (Dart emite microsegundos). */
 const INSTANTE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})$/;
@@ -166,6 +177,7 @@ export function validarEnvio(
   // Con categoria invalida no se puede decidir si la pregunta aplica: se informa solo la categoria.
   const heridos = validarRespuesta(objeto, 'heridos', !categoriaId || CATEGORIAS_HERIDOS.has(categoriaId), campos);
   const atencionMedica = validarRespuesta(objeto, 'atencionMedica', !categoriaId || CATEGORIAS_ATENCION_MEDICA.has(categoriaId), campos);
+  const evaluacion = validarEvaluacionEnvio(objeto.evaluacion, categoriaId, heridos, atencionMedica, campos);
 
   let telefonoContacto: string | null = null;
   if (modalidad === 'cuenta') {
@@ -179,13 +191,14 @@ export function validarEnvio(
   if (Object.keys(campos).length > 0 || !categoriaId || !descripcion || !ocurrencia || !punto) {
     throw new ValidacionEnvioError(campos);
   }
-  return { categoriaId, descripcion, ocurrencia, punto, heridos, atencionMedica, telefonoContacto };
+  return { categoriaId, descripcion, ocurrencia, punto, heridos, atencionMedica, telefonoContacto, evaluacion };
 }
 
 /**
  * Representacion canonica del contenido para la huella de idempotencia: claves en orden fijo e
  * instante en UTC. Dos cuerpos equivalentes (orden de claves, espacios de la descripcion, formato
- * del telefono o zona horaria) producen el mismo texto.
+ * del telefono o zona horaria) producen el mismo texto. La evaluacion se anade al final solo si
+ * viene en el cuerpo: los envios sin evaluacion conservan la huella de P4.
  */
 export function contenidoCanonico(modalidad: Modalidad, e: EnvioValido): string {
   return JSON.stringify([
@@ -201,6 +214,14 @@ export function contenidoCanonico(modalidad: Modalidad, e: EnvioValido): string 
     e.heridos,
     e.atencionMedica,
     e.telefonoContacto,
+    ...(e.evaluacion
+      ? [[
+          e.evaluacion.cantidadHeridos,
+          e.evaluacion.personaPrincipal.signosVida,
+          e.evaluacion.personaPrincipal.consciente,
+          e.evaluacion.personaPrincipal.sangrado,
+        ]]
+      : []),
   ]);
 }
 

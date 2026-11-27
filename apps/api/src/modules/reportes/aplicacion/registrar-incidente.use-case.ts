@@ -19,6 +19,8 @@ import {
   type TerritorioPort,
 } from './puertos/registro.port';
 import type { SecretosPort } from './puertos/secretos.port';
+import type { EvaluacionesRepositorio } from './puertos/evaluacion.port';
+import { CATEGORIAS_CON_EVALUACION, instantaneaInicial, samuRequerido } from '../dominio/evaluacion';
 
 /** Falta la cabecera Idempotency-Key o no es un UUID. */
 export class ClaveIdempotenciaRequeridaError extends Error {
@@ -75,6 +77,8 @@ export interface ResultadoRegistro {
 export interface DependenciasRegistro {
   readonly categorias: Pick<ConsultarCategorias, 'idsActivos'>;
   readonly envios: EnviosRepositorio;
+  /** Version 1 de la evaluacion en la transaccion del registro (P5.1). */
+  readonly evaluaciones: Pick<EvaluacionesRepositorio, 'crear'>;
   readonly incidentes: IncidentesPort;
   readonly territorio: TerritorioPort;
   readonly limitador: LimitadorEnviosPort;
@@ -91,7 +95,8 @@ const LIMITE_INVITADO_POR_DEFECTO = { maximo: 10, ventanaMs: 60 * 60 * 1000 };
 
 /**
  * Registro del envio ciudadano (design §3). Crea en una sola transaccion el incidente (Operaciones),
- * la clave de idempotencia y los originales (Reportes) y el evento IncidenteRegistrado. No espera a
+ * la clave de idempotencia, los originales y la version 1 de la evaluacion (Reportes) y el evento
+ * IncidenteRegistrado. No espera a
  * consumidores ni a avisos: tras el commit solo despierta el procesador de entregas.
  */
 export class RegistrarIncidenteUseCase {
@@ -141,6 +146,15 @@ export class RegistrarIncidenteUseCase {
           codigoHuella: codigo ? this.d.secretos.huellaCodigo(creado.id, normalizarCodigo(codigo)!) : null,
           recibidoEn: creado.registradoEn,
         });
+        if (CATEGORIAS_CON_EVALUACION.has(envio.categoriaId)) {
+          await this.d.evaluaciones.crear(tx, {
+            incidenteId: creado.id,
+            instantanea: instantaneaInicial(envio.heridos, envio.atencionMedica, envio.evaluacion),
+            samuRequerido: samuRequerido(envio.categoriaId, envio.heridos, envio.atencionMedica),
+            actorUsuarioId: solicitante.modalidad === 'cuenta' ? solicitante.usuarioId : null,
+            creadaEn: creado.registradoEn,
+          });
+        }
         await this.d.eventos.publicar(tx, {
           tipo: 'IncidenteRegistrado',
           version: 1,
