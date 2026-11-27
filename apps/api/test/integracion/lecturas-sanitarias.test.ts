@@ -205,7 +205,7 @@ describe('evaluacion del autor (6.3)', () => {
 
   it('un incidente cerrado no permite aclarar ni pide completar', async () => {
     const { inc, autor } = await escenario({ heridos: 'si' });
-    await prisma.incidente.update({ where: { id: inc.id }, data: { estado: 'CERRADO' } });
+    await prisma.incidente.update({ where: { id: inc.id }, data: { estado: 'CERRADO', resultado: 'DESCARTADO', resumenCiudadano: 'Cierre de prueba del caso.', cerradoEn: new Date() } });
     expect((await detalleAutor(inc.referencia, autor.token)).body.evaluacion).toMatchObject({ puedeAclarar: false, solicitudCompletar: false });
   });
 

@@ -87,7 +87,7 @@ describe('POST /ciudadano/incidentes/{referencia}/evaluacion (4.3)', () => {
   it('incidente cerrado responde 409 sin crear version', async () => {
     const c = await ciudadano();
     const inc = await reporteDe(c.token, { heridos: 'no_se' });
-    await prisma.incidente.update({ where: { id: inc.id }, data: { estado: 'CERRADO' } });
+    await prisma.incidente.update({ where: { id: inc.id }, data: { estado: 'CERRADO', resultado: 'DESCARTADO', resumenCiudadano: 'Cierre de prueba del caso.', cerradoEn: new Date() } });
     const r = await aclararCiudadano(inc.referencia, c.token, { heridos: 'si' });
     expect(r.status).toBe(409);
     expect(r.body.error.code).toBe('EVALUACION_CERRADA');
@@ -200,7 +200,7 @@ describe('POST /operador/incidentes/{id}/evaluacion (5.4)', () => {
     expect(repetida.status).toBe(200);
     expect(repetida.body.version).toBe(2);
     expect(await prisma.versionEvaluacion.count()).toBe(2);
-    await prisma.incidente.update({ where: { id: inc.id }, data: { estado: 'CERRADO' } });
+    await prisma.incidente.update({ where: { id: inc.id }, data: { estado: 'CERRADO', resultado: 'DESCARTADO', resumenCiudadano: 'Cierre de prueba del caso.', cerradoEn: new Date() } });
     const cerrado = await aclararOperador(inc.id, cookiePnp, { heridos: 'no', motivo: MOTIVO });
     expect(cerrado.status).toBe(409);
     expect(logger.texto()).not.toContain('Confirmado');

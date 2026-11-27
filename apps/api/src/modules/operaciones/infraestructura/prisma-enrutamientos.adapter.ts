@@ -25,6 +25,9 @@ interface FilaBandejaSql {
   readonly papel: string;
   readonly origen: string;
   readonly institucion: string;
+  readonly verificacion: string;
+  readonly resultado_cierre: string | null;
+  readonly responsable_id: string | null;
 }
 
 const aFilaBandeja = (f: FilaBandejaSql): FilaBandeja => ({
@@ -38,12 +41,18 @@ const aFilaBandeja = (f: FilaBandejaSql): FilaBandeja => ({
   papel: f.papel as Papel,
   origen: f.origen as OrigenParticipacion,
   institucion: f.institucion as InstitucionDestino,
+  verificacion: f.verificacion,
+  resultadoCierre: f.resultado_cierre,
+  responsableId: f.responsable_id,
 });
 
 // Visibilidad por ambito vigente: $1 sede, $2 distritos, $3 categorias.
 const SELECT_BANDEJA = `
   SELECT p.incidente_id, i.referencia, i.estado, e.registrado_en, e.categoria_id, e.distrito_id,
-         e.revision_medica_pendiente, p.papel, p.origen, p.institucion
+         e.revision_medica_pendiente, p.papel, p.origen, p.institucion,
+         i.verificacion, i.resultado AS resultado_cierre,
+         (SELECT a.operador_id::text FROM asignaciones_incidente a
+           WHERE a.incidente_id = p.incidente_id AND a.institucion = p.institucion AND a.activa) AS responsable_id
     FROM participaciones_incidente p
     JOIN enrutamientos_incidente e ON e.incidente_id = p.incidente_id
     JOIN incidentes i ON i.id = p.incidente_id

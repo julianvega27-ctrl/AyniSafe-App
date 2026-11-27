@@ -96,6 +96,10 @@ export interface FilaBandeja {
   readonly origen: OrigenParticipacion;
   /** Institucion de la sede del operador (P5.1: autoriza el detalle sanitario de SAMU). */
   readonly institucion: InstitucionDestino;
+  /** P6: verificacion, resultado de cierre y responsable activo de la institucion de la sede. */
+  readonly verificacion?: string;
+  readonly resultadoCierre?: string | null;
+  readonly responsableId?: string | null;
 }
 
 export interface ParticipacionVisible extends FilaBandeja {

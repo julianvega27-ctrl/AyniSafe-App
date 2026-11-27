@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: AyniSafe API - Identidad, organización, contenido público, territorio y categorías
-  version: 0.7.0
+  version: 0.8.0
   description: |
     Contrato del modulo Identidad: registro, inicio de sesion, consulta y cierre de sesion del
     ciudadano (entrega `registro-login-ciudadano`), mas recuperacion de contrasena y activacion de
@@ -50,7 +50,12 @@ info:
       de solo lectura.
     - Registro de incidentes P4.1 (`/incidentes`): invitado (sin Authorization, telefono obligatorio, codigo
       de seguimiento mostrado una sola vez) o ciudadano con Bearer. `Idempotency-Key` UUID obligatoria. El
-      backend resuelve el distrito y crea el incidente en REGISTRADO; no hay rutas para cambiar su estado.
+      backend resuelve el distrito y crea el incidente en REGISTRADO. El estado solo cambia por las rutas de
+      atencion P6 (asumir, iniciar atencion y cerrar).
+    - Atencion P6 (`/operador/incidentes/{id}/asumir|transiciones|verificacion`, `/admin/asignaciones`): una
+      asignacion activa por incidente e institucion (unicidad en la BD); solo el responsable de la principal
+      cambia el estado, verifica y cierra. Cada cambio guarda su historial en la misma transaccion. El
+      administrador libera o reasigna con motivo sin acceso al caso. Mutaciones con cookie y origen web.
     - Seguimiento P4.1: `/ciudadano/incidentes` (Bearer de ciudadano, solo lo propio) y `/publico/seguimiento`
       (invitado con referencia y codigo en el cuerpo, limites por referencia e IP, 404 uniforme).
     - Territorio P3.1: catálogo y límites públicos, resolución de puntos sin sesión ni persistencia de
@@ -76,6 +81,7 @@ tags:
   - name: Seguimiento
   - name: Enrutamiento
   - name: Bandeja
+  - name: Atencion
 paths:
   /auth/ciudadanos/registro:
     post:
@@ -1610,6 +1616,353 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+  /operador/incidentes/{id}/asumir:
+    post:
+      tags: [Atencion]
+      operationId: asumirCaso
+      summary: Asumir la participacion de la institucion del operador
+      description: |
+        Una asignacion activa por incidente e institucion (EQ-20): el segundo operador recibe 409 CASO_ASUMIDO y repetir
+        devuelve 200 con la misma asignacion. La primera asuncion de la principal pasa REGISTRADO a EN_REVISION en la
+        misma transaccion; nunca pasa a EN_ATENCION. Sin cuerpo.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: Asignacion vigente del mismo operador; no se duplica.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AsuncionRespuesta' }
+        '201':
+          description: Asignacion creada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AsuncionRespuesta' }
+        '400':
+          description: VALIDATION_ERROR, esta accion no admite cuerpo.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN (otro rol), FORBIDDEN_ORIGIN, SIN_AMBITO, ASIGNACION_REQUERIDA (falta asumir) o NO_PRINCIPAL.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '409':
+          description: CASO_ASUMIDO, ESTADO_CAMBIADO (con estadoActual), TRANSICION_NO_PERMITIDA, INCIDENTE_CERRADO, DESTINO_NO_VALIDO o ASIGNACION_INACTIVA.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}/transiciones:
+    post:
+      tags: [Atencion]
+      operationId: transicionarIncidente
+      summary: Iniciar atencion o cerrar como atendido o descartado
+      description: |
+        Solo el responsable activo de la principal. EN_REVISION a EN_ATENCION; EN_ATENCION a CERRADO/ATENDIDO;
+        REGISTRADO o EN_REVISION a CERRADO/DESCARTADO. Compara `estadoEsperado` con el estado vigente. Registra el
+        historial y el hito ciudadano en la misma transaccion. El motivo interno no se muestra al ciudadano.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransicionSolicitud' }
+      responses:
+        '200':
+          description: Estado tras la transicion.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoTransicion' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN (otro rol), FORBIDDEN_ORIGIN, SIN_AMBITO, ASIGNACION_REQUERIDA (falta asumir) o NO_PRINCIPAL.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '409':
+          description: CASO_ASUMIDO, ESTADO_CAMBIADO (con estadoActual), TRANSICION_NO_PERMITIDA, INCIDENTE_CERRADO, DESTINO_NO_VALIDO o ASIGNACION_INACTIVA.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '415': { $ref: '#/components/responses/TipoNoSoportado' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}/verificacion:
+    post:
+      tags: [Atencion]
+      operationId: verificarIncidente
+      summary: Registrar o corregir la verificacion del hecho
+      description: |
+        Verificacion separada del estado operativo: no cambia el estado, no publica ni se exige para cerrar. Solo el
+        responsable activo de la principal, con motivo y auditoria.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerificacionSolicitud' }
+      responses:
+        '200':
+          description: Verificacion vigente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoVerificacion' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN (otro rol), FORBIDDEN_ORIGIN, SIN_AMBITO, ASIGNACION_REQUERIDA (falta asumir) o NO_PRINCIPAL.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '409':
+          description: CASO_ASUMIDO, ESTADO_CAMBIADO (con estadoActual), TRANSICION_NO_PERMITIDA, INCIDENTE_CERRADO, DESTINO_NO_VALIDO o ASIGNACION_INACTIVA.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /admin/asignaciones:
+    get:
+      tags: [Atencion]
+      operationId: listarAsignacionesActivas
+      summary: Asignaciones activas de incidentes abiertos
+      description: |
+        Solo administradores. Marca las de cuentas o sedes que ya no pueden atender como pendientes de reasignacion.
+        Sin descripcion, contacto, ubicacion, evidencias ni datos sanitarios.
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Lista de asignaciones (puede estar vacia).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AsignacionesAdmin' }
+        '400':
+          description: VALIDATION_ERROR, parametros no admitidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN (no es administrador) o FORBIDDEN_ORIGIN.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /admin/asignaciones/{id}/candidatos:
+    get:
+      tags: [Atencion]
+      operationId: listarCandidatosReasignacion
+      summary: Operadores elegibles para reasignar
+      description: |
+        Operadores activos de sedes operativas de la misma institucion que participan en el incidente, sin el actual.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: Candidatos (puede estar vacia).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CandidatosReasignacion' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN (no es administrador) o FORBIDDEN_ORIGIN.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: NOT_FOUND, asignacion inexistente o ya inactiva.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /admin/asignaciones/{id}/liberar:
+    post:
+      tags: [Atencion]
+      operationId: liberarAsignacion
+      summary: Liberar una asignacion activa con motivo
+      description: |
+        Deja la institucion sin responsable activo para que otro operador asuma. No cambia el estado ni concede
+        permisos de atencion al administrador.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MotivoAdministrativo' }
+      responses:
+        '200':
+          description: Asignacion liberada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoLiberacion' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN (no es administrador) o FORBIDDEN_ORIGIN.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: NOT_FOUND, asignacion inexistente o ya inactiva.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: CASO_ASUMIDO, ESTADO_CAMBIADO (con estadoActual), TRANSICION_NO_PERMITIDA, INCIDENTE_CERRADO, DESTINO_NO_VALIDO o ASIGNACION_INACTIVA.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /admin/asignaciones/{id}/reasignar:
+    post:
+      tags: [Atencion]
+      operationId: reasignarAsignacion
+      summary: Reasignar a otro operador elegible con motivo
+      description: |
+        El destino debe ser un operador activo de una sede activa y habilitada de la misma institucion que participe
+        en el incidente (si no, 409 DESTINO_NO_VALIDO). El historial conserva al responsable anterior.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReasignacionSolicitud' }
+      responses:
+        '200':
+          description: Nueva asignacion activa.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoReasignacion' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN (no es administrador) o FORBIDDEN_ORIGIN.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: NOT_FOUND, asignacion inexistente o ya inactiva.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: CASO_ASUMIDO, ESTADO_CAMBIADO (con estadoActual), TRANSICION_NO_PERMITIDA, INCIDENTE_CERRADO, DESTINO_NO_VALIDO o ASIGNACION_INACTIVA.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
   /admin/enrutamientos-pendientes:
     get:
       tags: [Enrutamiento]
@@ -2529,7 +2882,7 @@ components:
         nombre: { type: [string, 'null'] }
     CamposFilaBandeja:
       type: object
-      required: [id, referencia, categoria, distrito, estado, registradoEn, papel, condicionMedicaPorConfirmar, prioridad]
+      required: [id, referencia, categoria, distrito, estado, registradoEn, papel, condicionMedicaPorConfirmar, verificacion, resultado, responsable, prioridad]
       properties:
         id: { type: string, format: uuid }
         referencia: { type: string }
@@ -2545,6 +2898,18 @@ components:
         condicionMedicaPorConfirmar:
           type: boolean
           description: Heridos o atencion medica desconocidos; pendiente de revision, no equivale a «no».
+        verificacion: { $ref: '#/components/schemas/Verificacion' }
+        resultado:
+          description: Resultado del cierre; null si no esta cerrado.
+          enum: [ATENDIDO, DESCARTADO, null]
+        responsable:
+          type: object
+          additionalProperties: false
+          required: [asignado, esUsted]
+          description: Responsable activo de la institucion del operador, sin nombre (P6).
+          properties:
+            asignado: { type: boolean }
+            esUsted: { type: boolean }
         prioridad: { const: SIN_EVALUAR }
     FilaBandejaOperador:
       allOf:
@@ -2565,7 +2930,7 @@ components:
         - { $ref: '#/components/schemas/CamposFilaBandeja' }
       type: object
       unevaluatedProperties: false
-      required: [descripcion, ocurrencia, territorio, respuestasCiudadano, condicionMedica, accesoSanitario, otrasInstituciones, evidencias]
+      required: [descripcion, ocurrencia, territorio, respuestasCiudadano, condicionMedica, accesoSanitario, otrasInstituciones, evidencias, atencion]
       properties:
         descripcion: { type: string }
         ocurrencia:
@@ -2600,6 +2965,206 @@ components:
           maxItems: 3
           description: Fotos disponibles (P5.2); las pendientes, fallidas o eliminadas no se listan.
           items: { $ref: '#/components/schemas/EvidenciaVista' }
+        atencion:
+          description: Atencion institucional (P6); null si no esta compuesta.
+          oneOf:
+            - { $ref: '#/components/schemas/AtencionOperador' }
+            - { type: 'null' }
+    Verificacion: { enum: [SIN_VERIFICAR, VERIFICADO, NO_VERIFICADO] }
+    EstadoIncidente: { type: string, enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
+    AtencionOperador:
+      type: object
+      additionalProperties: false
+      required: [responsable, institucionesConResponsable, accionesPermitidas, historial]
+      properties:
+        responsable:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [asignado, esUsted, nombre, desde]
+              description: El nombre solo se informa a operadores de la misma institucion.
+              properties:
+                asignado: { const: true }
+                esUsted: { type: boolean }
+                nombre: { type: [string, 'null'] }
+                desde: { type: string, format: date-time }
+            - type: object
+              additionalProperties: false
+              required: [asignado]
+              properties:
+                asignado: { const: false }
+        institucionesConResponsable:
+          type: array
+          items: { $ref: '#/components/schemas/TipoInstitucionDestino' }
+        accionesPermitidas:
+          type: array
+          description: Acciones que el operador puede ejecutar ahora; la API autoriza con la misma regla.
+          items: { enum: [asumir, iniciar_atencion, cerrar_atendido, descartar, verificar] }
+        historial:
+          type: array
+          description: Historial operativo sin actores; el motivo solo se muestra a la institucion que lo escribio.
+          items:
+            type: object
+            additionalProperties: false
+            required: [accion, institucion, actorTipo, valorAnterior, valorNuevo, motivo, instante]
+            properties:
+              accion: { enum: [asumir, transicion, verificacion, liberar, reasignar, vincular, prioridad] }
+              institucion: { $ref: '#/components/schemas/TipoInstitucionDestino' }
+              actorTipo: { enum: [operador, administrador] }
+              valorAnterior: { type: [string, 'null'] }
+              valorNuevo: { type: [string, 'null'] }
+              motivo: { type: [string, 'null'] }
+              instante: { type: string, format: date-time }
+    ActuacionCiudadana:
+      type: object
+      additionalProperties: false
+      required: [tipo, texto, instante]
+      description: Hito con texto fijo; sin operadores, sedes, verificacion ni motivo interno.
+      properties:
+        tipo: { enum: [EN_REVISION, EN_ATENCION, CERRADO] }
+        texto: { type: string }
+        instante: { type: string, format: date-time }
+    CierreCiudadano:
+      description: Resultado y resumen ciudadano del cierre; null si no esta cerrado.
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [resultado, resumenCiudadano]
+          properties:
+            resultado: { enum: [ATENDIDO, DESCARTADO] }
+            resumenCiudadano: { type: string }
+        - { type: 'null' }
+    AsignacionResumen:
+      type: object
+      additionalProperties: false
+      required: [id, institucion, desde]
+      properties:
+        id: { type: string, format: uuid }
+        institucion: { $ref: '#/components/schemas/TipoInstitucionDestino' }
+        desde: { type: string, format: date-time }
+    AsuncionRespuesta:
+      type: object
+      additionalProperties: false
+      required: [asignacion, estado]
+      properties:
+        asignacion: { $ref: '#/components/schemas/AsignacionResumen' }
+        estado: { $ref: '#/components/schemas/EstadoIncidente' }
+    TransicionSolicitud:
+      type: object
+      additionalProperties: false
+      required: [accion, estadoEsperado]
+      description: Para cerrar se exigen resultado, motivo interno (10 a 500) y resumen ciudadano (10 a 300).
+      properties:
+        accion: { enum: [iniciar_atencion, cerrar] }
+        estadoEsperado: { $ref: '#/components/schemas/EstadoIncidente' }
+        resultado: { enum: [ATENDIDO, DESCARTADO] }
+        motivo: { type: string, minLength: 10, maxLength: 500 }
+        resumenCiudadano: { type: string, minLength: 10, maxLength: 300 }
+      example: { accion: cerrar, estadoEsperado: EN_ATENCION, resultado: ATENDIDO, motivo: Unidad PNP atendio en el lugar, resumenCiudadano: La PNP acudio y atendio el caso. }
+    ResultadoTransicion:
+      type: object
+      additionalProperties: false
+      required: [estado, resultado]
+      properties:
+        estado: { $ref: '#/components/schemas/EstadoIncidente' }
+        resultado: { enum: [ATENDIDO, DESCARTADO, null] }
+    VerificacionSolicitud:
+      type: object
+      additionalProperties: false
+      required: [valor, motivo, estadoEsperado]
+      properties:
+        valor: { enum: [VERIFICADO, NO_VERIFICADO] }
+        motivo: { type: string, minLength: 10, maxLength: 500 }
+        estadoEsperado: { $ref: '#/components/schemas/EstadoIncidente' }
+    ResultadoVerificacion:
+      type: object
+      additionalProperties: false
+      required: [verificacion, estado]
+      properties:
+        verificacion: { $ref: '#/components/schemas/Verificacion' }
+        estado: { $ref: '#/components/schemas/EstadoIncidente' }
+    AsignacionesAdmin:
+      type: object
+      additionalProperties: false
+      required: [elementos]
+      properties:
+        elementos:
+          type: array
+          maxItems: 200
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, referencia, estado, institucion, sede, responsable, asignadaEn, requiereReasignacion]
+            description: Sin descripcion, contacto, ubicacion, evidencias ni datos sanitarios.
+            properties:
+              id: { type: string, format: uuid }
+              referencia: { type: string }
+              estado: { $ref: '#/components/schemas/EstadoIncidente' }
+              institucion: { $ref: '#/components/schemas/TipoInstitucionDestino' }
+              sede:
+                type: object
+                additionalProperties: false
+                required: [id, nombre]
+                properties:
+                  id: { type: string, format: uuid }
+                  nombre: { type: [string, 'null'] }
+              responsable:
+                type: object
+                additionalProperties: false
+                required: [id, nombre]
+                properties:
+                  id: { type: string, format: uuid }
+                  nombre: { type: [string, 'null'] }
+              asignadaEn: { type: string, format: date-time }
+              requiereReasignacion:
+                type: boolean
+                description: La cuenta o la sede del responsable ya no estan activas y habilitadas.
+    CandidatosReasignacion:
+      type: object
+      additionalProperties: false
+      required: [elementos]
+      properties:
+        elementos:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, nombre, sede]
+            properties:
+              id: { type: string, format: uuid }
+              nombre: { type: string }
+              sede:
+                type: object
+                additionalProperties: false
+                required: [id, nombre]
+                properties:
+                  id: { type: string, format: uuid }
+                  nombre: { type: string }
+    ResultadoLiberacion:
+      type: object
+      additionalProperties: false
+      required: [liberada]
+      properties:
+        liberada: { const: true }
+    ResultadoReasignacion:
+      type: object
+      additionalProperties: false
+      required: [asignacion]
+      properties:
+        asignacion: { $ref: '#/components/schemas/AsignacionResumen' }
+    MotivoAdministrativo:
+      type: object
+      additionalProperties: false
+      required: [motivo]
+      properties:
+        motivo: { type: string, minLength: 10, maxLength: 500 }
+    ReasignacionSolicitud:
+      type: object
+      additionalProperties: false
+      required: [operadorId, motivo]
+      properties:
+        operadorId: { type: string, format: uuid }
+        motivo: { type: string, minLength: 10, maxLength: 500 }
     EvidenciaVista:
       type: object
       additionalProperties: false
@@ -2694,7 +3259,7 @@ components:
     DetalleIncidenteAutor:
       type: object
       additionalProperties: false
-      required: [referencia, categoria, estado, recibidoEn, territorio, descripcion, ocurrencia, respuestas, evaluacion, institucionResponsable, actuaciones, evidencias]
+      required: [referencia, categoria, estado, recibidoEn, territorio, descripcion, ocurrencia, respuestas, evaluacion, institucionResponsable, actuaciones, cierre, coordinacion, evidencias]
       description: Sin coordenadas, telefono, notas internas, operadores ni datos de otros informantes.
       properties:
         referencia: { type: string }
@@ -2723,7 +3288,14 @@ components:
             - { $ref: '#/components/schemas/VistaEvaluacionAutor' }
             - { type: 'null' }
         institucionResponsable: { $ref: '#/components/schemas/InstitucionResponsable' }
-        actuaciones: { type: array, maxItems: 0 }
+        actuaciones:
+          type: array
+          description: Hitos en orden cronologico; vacio mientras no haya actuaciones (pendientes).
+          items: { $ref: '#/components/schemas/ActuacionCiudadana' }
+        cierre: { $ref: '#/components/schemas/CierreCiudadano' }
+        coordinacion:
+          description: Texto de coordinacion si el incidente es un duplicado vinculado; null en otro caso.
+          type: [string, 'null']
         evidencias:
           type: array
           maxItems: 3
@@ -2872,7 +3444,7 @@ components:
     VistaSeguimientoInvitado:
       type: object
       additionalProperties: false
-      required: [referencia, categoria, estado, recibidoEn, institucionResponsable, actuaciones]
+      required: [referencia, categoria, estado, recibidoEn, institucionResponsable, actuaciones, cierre, coordinacion]
       description: Solo estado y resumen ciudadano. Sin descripcion, punto, distrito, telefono ni respuestas sanitarias.
       properties:
         referencia: { type: string }
@@ -2880,7 +3452,14 @@ components:
         estado: { type: string, enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
         recibidoEn: { type: string, format: date-time }
         institucionResponsable: { $ref: '#/components/schemas/InstitucionResponsable' }
-        actuaciones: { type: array, maxItems: 0 }
+        actuaciones:
+          type: array
+          description: Hitos en orden cronologico; vacio mientras no haya actuaciones (pendientes).
+          items: { $ref: '#/components/schemas/ActuacionCiudadana' }
+        cierre: { $ref: '#/components/schemas/CierreCiudadano' }
+        coordinacion:
+          description: Texto de coordinacion si el incidente es un duplicado vinculado; null en otro caso.
+          type: [string, 'null']
     Error:
       type: object
       additionalProperties: false
@@ -2926,7 +3505,21 @@ components:
                 - INVALID_IMAGE
                 - EVIDENCE_STORAGE_UNAVAILABLE
                 - SIN_AMBITO
+                - CASO_ASUMIDO
+                - ESTADO_CAMBIADO
+                - TRANSICION_NO_PERMITIDA
+                - INCIDENTE_CERRADO
+                - DESTINO_NO_VALIDO
+                - ASIGNACION_INACTIVA
+                - INCIDENTE_VINCULADO
+                - VINCULO_NO_PERMITIDO
+                - ASIGNACION_REQUERIDA
+                - NO_PRINCIPAL
             message: { type: string }
+            estadoActual:
+              description: Solo en conflictos de atencion (P6). Estado vigente del incidente.
+              type: string
+              enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO]
             requisitos:
               type: array
               description: Solo en SEDE_NO_DESIGNABLE. Requisitos incumplidos de la sede.

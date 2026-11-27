@@ -25,7 +25,7 @@ import {
   validarConjunto,
 } from '../dominio/validacion-organizacion';
 import type { InvitarCuentaUseCase } from './invitar-cuenta.use-case';
-import type { CatalogoIdsPort, OrganizacionPort } from './puertos/organizacion.port';
+import type { CatalogoIdsPort, OperadorAtencionVista, OrganizacionPort } from './puertos/organizacion.port';
 import type { RelojPort } from './puertos/reloj.port';
 
 function exigir<T>(r: Resultado<T>): T {
@@ -282,6 +282,23 @@ export class SedesEnrutamientoUseCase {
   /** Nombres visibles de las instituciones (para el seguimiento ciudadano). */
   async nombresInstituciones(): Promise<ReadonlyMap<string, string>> {
     return new Map((await this.organizacion.listarInstituciones()).map((i) => [i.id, i.nombre]));
+  }
+}
+
+/**
+ * Contrato interno de operadores para la atencion de Operaciones (P6): descripcion por id y
+ * operadores de sedes participantes. Sin correo ni telefono.
+ */
+export class OperadoresAtencionUseCase {
+  constructor(private readonly organizacion: OrganizacionPort) {}
+
+  async describir(ids: readonly string[]): Promise<ReadonlyMap<string, OperadorAtencionVista>> {
+    const validos = [...new Set(ids)].filter(esUuid);
+    return new Map((await this.organizacion.describirOperadores(validos)).map((o) => [o.usuarioId, o]));
+  }
+
+  deSedes(sedeIds: readonly string[]): Promise<OperadorAtencionVista[]> {
+    return this.organizacion.operadoresDeSedes([...new Set(sedeIds)].filter(esUuid));
   }
 }
 

@@ -27,6 +27,18 @@ export interface FilaOperaciones {
   readonly papel: string;
   /** Institucion de la sede del operador (P5.1). */
   readonly institucion?: string;
+  /** P6: verificacion, resultado de cierre y responsable activo de la institucion. */
+  readonly verificacion?: string;
+  readonly resultadoCierre?: string | null;
+  readonly responsableId?: string | null;
+}
+
+/** Puerto hacia Operaciones: atencion del incidente para el resumen (P6). */
+export interface AtencionBandejaPort {
+  vista(
+    p: { readonly incidenteId: string; readonly institucion: string; readonly sedeId: string; readonly papel: string; readonly estado: string },
+    operadorId: string,
+  ): Promise<unknown>;
 }
 
 /** Condicion medica vigente (resumen de heridos de Reportes, P5.1), sin observaciones ni motivos. */
@@ -103,6 +115,8 @@ export interface DependenciasBandeja {
   readonly evaluacion?: EvaluacionBandejaPort;
   /** Evidencias fotograficas (P5.2). Sin ellas, el resumen informa una lista vacia. */
   readonly evidencias?: EvidenciasLecturaPort;
+  /** Atencion institucional (P6). Sin ella, el resumen no informa responsable ni acciones. */
+  readonly atencion?: AtencionBandejaPort;
 }
 
 export const PAGINA_BANDEJA = 50;
@@ -140,7 +154,7 @@ export class BandejaInstitucional {
     return { sedeId: a.sedeId, distritos: a.distritos, categorias: a.categorias };
   }
 
-  private fila(f: FilaOperaciones, categorias: ReadonlyMap<string, string>) {
+  private fila(f: FilaOperaciones, categorias: ReadonlyMap<string, string>, usuarioId: string) {
     return {
       id: f.incidenteId,
       referencia: f.referencia,
@@ -150,6 +164,9 @@ export class BandejaInstitucional {
       registradoEn: f.registradoEn.toISOString(),
       papel: f.papel,
       condicionMedicaPorConfirmar: f.revisionMedicaPendiente,
+      verificacion: f.verificacion ?? 'SIN_VERIFICAR',
+      resultado: f.resultadoCierre ?? null,
+      responsable: { asignado: Boolean(f.responsableId), esUsted: f.responsableId === usuarioId },
       prioridad: PRIORIDAD_SIN_EVALUAR,
     };
   }
@@ -167,7 +184,7 @@ export class BandejaInstitucional {
     const categorias = await this.d.categorias.nombres();
     const ultima = pagina.at(-1);
     return {
-      elementos: pagina.map((f) => this.fila(f, categorias)),
+      elementos: pagina.map((f) => this.fila(f, categorias, usuarioId)),
       siguiente: filas.length > PAGINA_BANDEJA && ultima ? codificarCursorFifo({ instante: ultima.registradoEn, id: ultima.incidenteId }) : null,
     };
   }
@@ -176,17 +193,20 @@ export class BandejaInstitucional {
     const ambito = await this.ambito(usuarioId);
     const p = await this.d.participaciones.participacionDe(ambito, incidenteId);
     if (!p) throw new IncidenteNoDisponibleError();
-    const [originales, categorias, condiciones, fotos] = await Promise.all([
+    const [originales, categorias, condiciones, fotos, atencion] = await Promise.all([
       this.d.originales.resumenOperativo([p.incidenteId]),
       this.d.categorias.nombres(),
       this.d.evaluacion ? this.d.evaluacion.condiciones([p.incidenteId]) : Promise.resolve(new Map<string, CondicionBandeja>()),
       this.d.evidencias ? this.d.evidencias.metadatos([p.incidenteId]) : Promise.resolve(new Map<string, readonly EvidenciaVista[]>()),
+      this.d.atencion && p.institucion
+        ? this.d.atencion.vista({ incidenteId: p.incidenteId, institucion: p.institucion, sedeId: ambito.sedeId, papel: p.papel, estado: p.estado }, usuarioId)
+        : Promise.resolve(null),
     ]);
     const o = originales.get(p.incidenteId);
     if (!o) throw new IncidenteNoDisponibleError();
     const c = condiciones.get(p.incidenteId);
     return {
-      ...this.fila(p, categorias),
+      ...this.fila(p, categorias, usuarioId),
       descripcion: o.descripcion,
       ocurrencia: { modo: o.ocurrencia.modo, instante: o.ocurrencia.instante.toISOString() },
       territorio: territorioVista(o.territorio),
@@ -207,6 +227,7 @@ export class BandejaInstitucional {
       accesoSanitario: c !== undefined && p.institucion === 'samu',
       otrasInstituciones: [...p.otrasInstituciones],
       evidencias: [...(fotos.get(p.incidenteId) ?? [])],
+      atencion,
     };
   }
 

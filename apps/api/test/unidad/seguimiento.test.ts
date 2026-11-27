@@ -76,7 +76,7 @@ describe('vistas con lista cerrada de campos', () => {
     const { s } = crear();
     const d = await s.detalleDeAutor(AUTOR, 'inc-7k3m9-q2txa');
     expect(Object.keys(d).sort()).toEqual([
-      'actuaciones', 'categoria', 'descripcion', 'estado', 'evaluacion', 'evidencias', 'institucionResponsable', 'ocurrencia', 'recibidoEn', 'referencia', 'respuestas', 'territorio',
+      'actuaciones', 'categoria', 'cierre', 'coordinacion', 'descripcion', 'estado', 'evaluacion', 'evidencias', 'institucionResponsable', 'ocurrencia', 'recibidoEn', 'referencia', 'respuestas', 'territorio',
     ]);
     expect(d.institucionResponsable).toEqual({ estado: 'pendiente' });
     expect(d.actuaciones).toEqual([]);
@@ -94,7 +94,7 @@ describe('vistas con lista cerrada de campos', () => {
   it('vista del invitado: sin descripcion, punto, distrito, telefono, respuestas sanitarias ni ids internos', async () => {
     const { s } = crear();
     const v = await s.vistaInvitado({ referencia: REF, codigo: 'AAAA-BBBB-CCCC-DDDD' }, '203.0.113.5');
-    expect(Object.keys(v).sort()).toEqual(['actuaciones', 'categoria', 'estado', 'institucionResponsable', 'recibidoEn', 'referencia']);
+    expect(Object.keys(v).sort()).toEqual(['actuaciones', 'categoria', 'cierre', 'coordinacion', 'estado', 'institucionResponsable', 'recibidoEn', 'referencia']);
     expect(JSON.stringify(v)).not.toContain(INC);
   });
 });

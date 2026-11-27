@@ -1,7 +1,7 @@
 import { crearApp } from './app';
 import { ProcesadorEntregas } from './compartido/eventos/procesador-entregas';
 import { LoggerConsola } from './compartido/logger';
-import { dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from './composicion';
+import { atencionDe, dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from './composicion';
 import { cargarConfigEvidencias, cargarEntorno, cargarSecretoSeguimiento } from './config/entorno';
 import { crearModuloConsultasConPrisma, idsDistritosPiloto } from './modules/consultas';
 import { crearModuloIdentidadConPrisma } from './modules/identidad';
@@ -29,12 +29,14 @@ async function main(): Promise<void> {
   // Enrutamiento (P4.2): se compone antes que Consultas, que lo usa en la bandeja y el seguimiento.
   let procesadorEntregas: ProcesadorEntregas | undefined;
   const enrutamiento = enrutamientoDe(prisma, identidad, () => reportes!, () => procesadorEntregas?.despertar());
+  // Atencion institucional (P6): asignaciones, transiciones e historial.
+  const atencion = atencionDe(prisma, identidad);
   // Si la fuente de contenido publico no cumple el esquema, el arranque falla aqui.
   const consultas = crearModuloConsultasConPrisma(
     prisma,
     entorno.secretoLimitador,
-    opcionesSeguimiento({ identidad, operaciones, enrutamiento }, () => reportes!, logger),
-    opcionesBandeja(identidad, enrutamiento, () => reportes!, logger),
+    opcionesSeguimiento({ identidad, operaciones, enrutamiento, atencion }, () => reportes!, logger),
+    opcionesBandeja(identidad, enrutamiento, () => reportes!, logger, atencion),
   );
   // Entregas de eventos (ADR-004). El enrutamiento (P4.2) recibe tambien los eventos anteriores a su
   // registro. Los avisos por usuario de P8 se registraran aqui sobre EnrutamientoResuelto.
@@ -53,7 +55,7 @@ async function main(): Promise<void> {
     identidad,
     consultas,
     reportes,
-    operaciones: routerOperaciones(enrutamiento, identidad, () => reportes!, logger),
+    operaciones: routerOperaciones(enrutamiento, identidad, () => reportes!, logger, atencion),
   });
 
   const servidor = app.listen(entorno.puerto, () => {

@@ -13,6 +13,7 @@ import {
   AdministrarOrganizacionUseCase,
   AgregarOperadorUseCase,
   ConsultarAmbitoOperadorUseCase,
+  OperadoresAtencionUseCase,
   SedesEnrutamientoUseCase,
   CrearSedeConOperadorUseCase,
   ReenviarInvitacionUseCase,
@@ -108,6 +109,8 @@ export interface ModuloIdentidad {
   readonly consultarAmbitoOperador: ConsultarAmbitoOperadorUseCase;
   /** Contrato interno de sedes elegibles y designables para el enrutamiento (P4.2). */
   readonly sedesEnrutamiento: SedesEnrutamientoUseCase;
+  /** Contrato interno de operadores para la atencion institucional (P6). */
+  readonly operadoresAtencion: OperadoresAtencionUseCase;
   /**
    * Proteccion CSRF para mutaciones con cookie de otros modulos (P4.2): `Origin` igual al origen
    * web configurado y `Sec-Fetch-Site` distinto de `cross-site`.
@@ -146,6 +149,7 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
   const despertarEnvios = (): void => gestorEnvios.despertar();
   const consultarAmbitoOperador = new ConsultarAmbitoOperadorUseCase(deps.organizacion);
   const sedesEnrutamiento = new SedesEnrutamientoUseCase(deps.organizacion);
+  const operadoresAtencion = new OperadoresAtencionUseCase(deps.organizacion);
   const router = crearRutasAuth(
     {
       registrar: new RegistrarCiudadanoUseCase(deps.cuentas, deps.hash, deps.limitador, deps.reloj, deps.politicaLimites),
@@ -235,6 +239,7 @@ export function crearModuloIdentidad(deps: DependenciasIdentidad): ModuloIdentid
     invitarCuenta,
     consultarAmbitoOperador,
     sedesEnrutamiento,
+    operadoresAtencion,
     origenWebPermitido: (origin, sitio) => origin === deps.web.origen && sitio !== 'cross-site',
     identificarSolicitante,
     limitador: deps.limitador,

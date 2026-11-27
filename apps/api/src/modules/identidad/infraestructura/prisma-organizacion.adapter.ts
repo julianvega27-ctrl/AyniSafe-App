@@ -3,6 +3,7 @@ import type {
   DatosOperadorNuevo,
   DatosSedeNueva,
   EstadoDesignacion,
+  OperadorAtencionVista,
   OrganizacionPort,
   TransaccionOrganizacion,
 } from '../aplicacion/puertos/organizacion.port';
@@ -433,6 +434,36 @@ export class PrismaOrganizacionAdapter implements OrganizacionPort {
         categorias: f.categorias,
         habilitadaAtencion: f.habilitadaAtencion,
       };
+    });
+  }
+
+  describirOperadores(ids: readonly string[]): Promise<OperadorAtencionVista[]> {
+    return this.operadoresAtencion('u.id = ANY($1::uuid[])', [...ids]);
+  }
+
+  operadoresDeSedes(sedeIds: readonly string[]): Promise<OperadorAtencionVista[]> {
+    return this.operadoresAtencion('p.sede_id = ANY($1::uuid[])', [...sedeIds]);
+  }
+
+  private operadoresAtencion(filtro: string, ids: string[]): Promise<OperadorAtencionVista[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.ejecutar(async () => {
+      const filas = await this.prisma.$queryRawUnsafe<{
+        usuarioId: string; nombre: string; sedeId: string; sedeNombre: string; institucion: TipoInstitucion;
+        cuentaActiva: boolean; sedeOperativa: boolean;
+      }[]>(
+        `SELECT u.id::text AS "usuarioId", u.nombre, s.id::text AS "sedeId", s.nombre AS "sedeNombre",
+                s.institucion_id AS institucion, (u.estado = 'activo') AS "cuentaActiva",
+                (s.activa AND s.habilitada_atencion AND i.activa) AS "sedeOperativa"
+           FROM usuarios u
+           JOIN pertenencias_operador p ON p.usuario_id = u.id
+           JOIN sedes s ON s.id = p.sede_id
+           JOIN instituciones i ON i.id = s.institucion_id
+          WHERE u.rol = 'operador' AND ${filtro}
+          ORDER BY u.nombre, u.id`,
+        ids,
+      );
+      return filas;
     });
   }
 

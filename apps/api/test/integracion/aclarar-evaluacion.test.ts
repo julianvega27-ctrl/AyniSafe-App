@@ -159,7 +159,7 @@ describe('AclararEvaluacion', () => {
 
     const id = await incidente({ heridos: 'no_se' });
     await expect(caso.ejecutar(id, ciudadano(), { heridos: 'quizas' })).rejects.toThrow(ValidacionEvaluacionError);
-    await prisma.incidente.update({ where: { id }, data: { estado: 'CERRADO' } });
+    await prisma.incidente.update({ where: { id }, data: { estado: 'CERRADO', resultado: 'DESCARTADO', resumenCiudadano: 'Cierre de prueba del caso.', cerradoEn: new Date() } });
     await expect(caso.ejecutar(id, ciudadano(), { heridos: 'si' })).rejects.toThrow(EvaluacionCerradaError);
   });
 });

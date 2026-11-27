@@ -286,8 +286,48 @@ model Incidente {
   referencia   String   @unique
   estado       String   @default("REGISTRADO")
   registradoEn DateTime @default(now()) @map("registrado_en") @db.Timestamptz(3)
+  /// P6: verificacion separada del estado y resultado de cierre (CHECK de coherencia en la migracion).
+  verificacion     String    @default("SIN_VERIFICAR")
+  resultado        String?
+  resumenCiudadano String?   @map("resumen_ciudadano")
+  cerradoEn        DateTime? @map("cerrado_en") @db.Timestamptz(3)
   enrutamiento EnrutamientoIncidente?
+  asignaciones AsignacionIncidente[]
+  historial    HistorialIncidente[]
   @@map("incidentes")
+}
+
+/// P6 (Operaciones): responsable de la participacion de una institucion. Una activa por incidente e
+/// institucion (indice unico parcial en la migracion). Nunca se borra.
+model AsignacionIncidente {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incidenteId String    @map("incidente_id") @db.Uuid
+  institucion String
+  operadorId  String    @map("operador_id") @db.Uuid
+  sedeId      String    @map("sede_id") @db.Uuid
+  origen      String
+  activa      Boolean   @default(true)
+  asignadaEn  DateTime  @default(now()) @map("asignada_en") @db.Timestamptz(3)
+  liberadaEn  DateTime? @map("liberada_en") @db.Timestamptz(3)
+  incidente   Incidente @relation(fields: [incidenteId], references: [id], onDelete: Restrict)
+  @@map("asignaciones_incidente")
+}
+
+/// P6 (Operaciones): historial operativo auditable (EQ-05); los hitos ciudadanos se derivan de las transiciones.
+model HistorialIncidente {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incidenteId    String    @map("incidente_id") @db.Uuid
+  accion         String
+  actorTipo      String    @map("actor_tipo")
+  actorUsuarioId String    @map("actor_usuario_id") @db.Uuid
+  institucion    String
+  valorAnterior  String?   @map("valor_anterior")
+  valorNuevo     String?   @map("valor_nuevo")
+  motivo         String?
+  creadoEn       DateTime  @default(dbgenerated("clock_timestamp()")) @map("creado_en") @db.Timestamptz(3)
+  incidente      Incidente @relation(fields: [incidenteId], references: [id], onDelete: Restrict)
+  @@index([incidenteId, creadoEn, id], map: "historial_incidente_orden")
+  @@map("historial_incidente")
 }
 
 /// P4.2 (Operaciones): regla aplicada, condiciones y resultado del enrutamiento de un incidente.

@@ -51,7 +51,7 @@ describe('institucion responsable', () => {
 
     const vista = await invitado(inc.referencia, inc.codigo);
     expect(vista.body.institucionResponsable).toEqual({ estado: 'asignada', institucion: { id: 'samu', nombre } });
-    expect(Object.keys(vista.body).sort()).toEqual(['actuaciones', 'categoria', 'estado', 'institucionResponsable', 'recibidoEn', 'referencia']);
+    expect(Object.keys(vista.body).sort()).toEqual(['actuaciones', 'categoria', 'cierre', 'coordinacion', 'estado', 'institucionResponsable', 'recibidoEn', 'referencia']);
     const texto = JSON.stringify(vista.body);
     expect(texto).not.toContain(samu.id);
     expect(texto).not.toContain(samu.operadores[0]!.id);

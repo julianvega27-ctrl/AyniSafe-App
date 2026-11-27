@@ -1,5 +1,9 @@
 import type { EvidenciasLecturaPort } from './bandeja.use-case';
 import {
+  actuacionesVista,
+  cierreVista,
+  TEXTO_COORDINADO,
+  type CierreSeguimiento,
   codificarCursor,
   decodificarCursor,
   INSTITUCION_PENDIENTE,
@@ -74,7 +78,15 @@ export interface EvaluacionAutorPort {
   vistaAutor(incidenteId: string, abierto: boolean): Promise<unknown | null>;
 }
 
+/** Puerto hacia Operaciones: estado efectivo, cierre e hitos (P6). */
+export interface AtencionSeguimientoPort {
+  cierres(ids: readonly string[]): Promise<ReadonlyMap<string, CierreSeguimiento>>;
+  nombresInstituciones(): Promise<ReadonlyMap<string, string>>;
+}
+
 export interface DependenciasSeguimiento {
+  /** Atencion institucional (P6). Sin ella, las actuaciones se informan pendientes. */
+  readonly atencion?: AtencionSeguimientoPort;
   /** Fotos propias del autor (P5.2). Nunca se usan en la vista del invitado. */
   readonly evidencias?: EvidenciasLecturaPort;
   /** Evaluacion propia en el detalle del autor (P5.1). Nunca se usa en la vista del invitado. */
@@ -142,6 +154,21 @@ export class SeguimientoCiudadano {
     return r ? { estado: 'asignada' as const, institucion: { id: r.id, nombre: r.nombre } } : INSTITUCION_PENDIENTE;
   }
 
+  /** Estado efectivo, actuaciones, cierre y coordinacion (P6); sin atencion, actuaciones pendientes. */
+  private async atencion(incidenteId: string, estado: string) {
+    if (!this.d.atencion) return { estado, actuaciones: [] as const, cierre: null, coordinacion: null };
+    const [c, nombres] = await Promise.all([
+      this.d.atencion.cierres([incidenteId]).then((m) => m.get(incidenteId)),
+      this.d.atencion.nombresInstituciones(),
+    ]);
+    return {
+      estado: c?.estado ?? estado,
+      actuaciones: actuacionesVista(c, nombres),
+      cierre: cierreVista(c),
+      coordinacion: c?.coordinado ? TEXTO_COORDINADO : null,
+    };
+  }
+
   private async categoria(id: string, nombres?: ReadonlyMap<string, string>): Promise<CategoriaVista> {
     const mapa = nombres ?? (await this.d.categorias.nombres());
     return { id, nombre: mapa.get(id) ?? null };
@@ -153,7 +180,12 @@ export class SeguimientoCiudadano {
     return this.protegido(async () => {
       const filas = await this.d.envios.listarDeAutor(usuarioId, despuesDe, PAGINA_HISTORIAL + 1);
       const pagina = filas.slice(0, PAGINA_HISTORIAL);
-      const [estados, nombres] = await Promise.all([this.d.incidentes.estados(pagina.map((f) => f.incidenteId)), this.d.categorias.nombres()]);
+      const ids = pagina.map((f) => f.incidenteId);
+      const [estados, nombres, cierres] = await Promise.all([
+        this.d.incidentes.estados(ids),
+        this.d.categorias.nombres(),
+        this.d.atencion ? this.d.atencion.cierres(ids) : Promise.resolve(new Map<string, CierreSeguimiento>()),
+      ]);
       const elementos = [];
       for (const f of pagina) {
         const e = estados.get(f.incidenteId);
@@ -161,7 +193,8 @@ export class SeguimientoCiudadano {
         elementos.push({
           referencia: e.referencia,
           categoria: await this.categoria(f.categoriaId, nombres),
-          estado: e.estado,
+          // Estado efectivo (P6): un duplicado vinculado refleja el de su principal.
+          estado: cierres.get(f.incidenteId)?.estado ?? e.estado,
           recibidoEn: e.registradoEn.toISOString(),
           territorio: territorioVista(f.territorio),
         });
@@ -182,10 +215,11 @@ export class SeguimientoCiudadano {
       return [inc, inc ? await this.d.envios.detalleDeAutor(usuarioId, inc.id) : null] as const;
     });
     if (!incidente || !detalle) throw new SeguimientoNoEncontradoError();
+    const atencion = await this.protegido(() => this.atencion(incidente.id, incidente.estado));
     return {
       referencia: incidente.referencia,
       categoria: await this.protegido(() => this.categoria(detalle.categoriaId)),
-      estado: incidente.estado,
+      estado: atencion.estado,
       recibidoEn: incidente.registradoEn.toISOString(),
       territorio: territorioVista(detalle.territorio),
       descripcion: detalle.descripcion,
@@ -195,7 +229,9 @@ export class SeguimientoCiudadano {
         ? await this.protegido(() => this.d.evaluacion!.vistaAutor(incidente.id, incidente.estado !== 'CERRADO'))
         : null,
       institucionResponsable: await this.protegido(() => this.responsable(incidente.id)),
-      actuaciones: [] as const,
+      actuaciones: atencion.actuaciones,
+      cierre: atencion.cierre,
+      coordinacion: atencion.coordinacion,
       evidencias: this.d.evidencias
         ? [...((await this.protegido(() => this.d.evidencias!.metadatos([incidente.id]))).get(incidente.id) ?? [])]
         : [],
@@ -235,13 +271,16 @@ export class SeguimientoCiudadano {
     // Siempre se verifica (tambien sin incidente) para igualar el trabajo de ambos casos.
     const verificado = await this.protegido(() => this.d.envios.verificarCodigo(incidente?.id ?? null, consulta.codigo));
     if (!incidente || !verificado) throw new SeguimientoNoEncontradoError();
+    const atencion = await this.protegido(() => this.atencion(incidente.id, incidente.estado));
     return {
       referencia: incidente.referencia,
       categoria: await this.protegido(() => this.categoria(verificado.categoriaId)),
-      estado: incidente.estado,
+      estado: atencion.estado,
       recibidoEn: incidente.registradoEn.toISOString(),
       institucionResponsable: await this.protegido(() => this.responsable(incidente.id)),
-      actuaciones: [] as const,
+      actuaciones: atencion.actuaciones,
+      cierre: atencion.cierre,
+      coordinacion: atencion.coordinacion,
     };
   }
 

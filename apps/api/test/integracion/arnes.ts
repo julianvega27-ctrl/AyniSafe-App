@@ -4,8 +4,8 @@ import type { Express } from 'express';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultasConPrisma, idsDistritosPiloto } from '../../src/modules/consultas';
 import { crearModuloReportesConPrisma, type ModuloReportes } from '../../src/modules/reportes';
-import { crearModuloOperacionesConPrisma, type ModuloOperaciones, type ServicioEnrutamiento } from '../../src/modules/operaciones';
-import { dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from '../../src/composicion';
+import { crearModuloOperacionesConPrisma, type ModuloOperaciones, type ServicioAtencion, type ServicioEnrutamiento } from '../../src/modules/operaciones';
+import { atencionDe, dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from '../../src/composicion';
 import type { ConsumidorEventos } from '../../src/compartido/eventos/eventos';
 import { ProcesadorEntregas } from '../../src/compartido/eventos/procesador-entregas';
 import { PrismaOrganizacionAdapter } from '../../src/modules/identidad/infraestructura/prisma-organizacion.adapter';
@@ -113,6 +113,7 @@ export interface Arnes {
   readonly operaciones: ModuloOperaciones;
   readonly procesador: ProcesadorEntregas;
   readonly enrutamiento: ServicioEnrutamiento;
+  readonly atencion: ServicioAtencion;
   readonly deps: DependenciasIdentidad;
   /** Adaptador de correo en memoria (salvo que se sobrescriba): no valida el proveedor real. */
   readonly correo: CorreoPruebaAdapter;
@@ -179,14 +180,15 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   clientesCreados.add(prisma);
   let procesadorCreado: ProcesadorEntregas | undefined;
   const enrutamiento = enrutamientoDe(prisma, modulo, () => reportes!, () => procesadorCreado?.despertar());
+  const atencion = atencionDe(prisma, modulo);
   const consultas = crearModuloConsultasConPrisma(
     prisma,
     SECRETO_PRUEBA,
     {
-      ...opcionesSeguimiento({ identidad: modulo, operaciones, enrutamiento }, () => reportes!, logger),
+      ...opcionesSeguimiento({ identidad: modulo, operaciones, enrutamiento, atencion }, () => reportes!, logger),
       ...(opciones.limitesSeguimiento ? { limites: opciones.limitesSeguimiento } : {}),
     },
-    opcionesBandeja(modulo, enrutamiento, () => reportes!, logger),
+    opcionesBandeja(modulo, enrutamiento, () => reportes!, logger, atencion),
   );
   const procesador = new ProcesadorEntregas(
     prisma,
@@ -210,9 +212,9 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     identidad: modulo,
     consultas,
     reportes,
-    operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger),
+    operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger, atencion),
   });
-  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, deps, correo, almacenEvidencias };
+  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, atencion, deps, correo, almacenEvidencias };
 }
 
 export async function limpiarBd(prisma: PrismaClient): Promise<void> {
