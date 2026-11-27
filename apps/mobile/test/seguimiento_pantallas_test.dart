@@ -32,6 +32,93 @@ Future<void> pulsar(WidgetTester tester, Finder f) async {
 }
 
 void main() {
+  for (final estado in ['pendiente', 'asignada', 'desconocido']) {
+    for (final invitado in [false, true]) {
+      testWidgets(
+        'responsable $estado en ${invitado ? "invitado" : "detalle propio"}, sin confirmar atención',
+        (tester) async {
+          final responsable = {
+            'estado': estado,
+            'institucion': {'id': 'samu', 'nombre': 'SAMU'},
+          };
+          final api = ApiFalsa()
+            ..siempre(
+              () => respuestaJson(200, {
+                ...vistaInvitado(),
+                'descripcion': 'Accidente informado por el ciudadano',
+                'ocurrencia': {
+                  'modo': 'ahora',
+                  'instante': '2026-11-26T14:59:00Z',
+                },
+                'territorio': {
+                  'estado': 'pendiente',
+                  'motivo': 'sin_cartografia',
+                },
+                'institucionResponsable': responsable,
+              }),
+            );
+          final guardadas = ConsultasGuardadasEnMemoria();
+          await guardadas.guardar(
+            ConsultaGuardada(
+              referencia: 'INC-7K3M9-Q2TXA',
+              codigo: 'AAAA-BBBB-CCCC-DDDD',
+              guardadaEn: DateTime.utc(2026, 11, 26),
+            ),
+          );
+          await tester.pumpWidget(
+            conTema(
+              invitado
+                  ? Scaffold(
+                      body: ConsultarCodigoPantalla(
+                        repositorio: api.incidentes,
+                        guardadas: guardadas,
+                      ),
+                    )
+                  : DetalleIncidentePantalla(
+                      repositorio: api.incidentes,
+                      referencia: 'INC-7K3M9-Q2TXA',
+                      obtenerToken: () => 'tok',
+                      cuandoSesionInvalida: () {},
+                    ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          if (invitado) await pulsar(tester, find.text('Ver seguimiento'));
+          final bloque = find
+              .descendant(
+                of: find.byType(BloquePendienteAtencion),
+                matching: find.byType(ListTile),
+              )
+              .first;
+          await tester.ensureVisible(bloque);
+          expect(
+            find.descendant(
+              of: bloque,
+              matching: find.text(
+                estado == 'asignada' ? 'SAMU' : 'Pendiente de asignación.',
+              ),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: bloque,
+              matching: find.byIcon(Icons.account_balance_outlined),
+            ),
+            findsOneWidget,
+          );
+          expect(find.text('Estado: Registrado'), findsOneWidget);
+          expect(find.textContaining('En atención'), findsNothing);
+          expect(find.textContaining('Recibido por'), findsNothing);
+          expect(
+            find.text('Aún no hay actuaciones registradas.'),
+            findsOneWidget,
+          );
+        },
+      );
+    }
+  }
+
   group('Mis reportes', () {
     testWidgets(
       'lista los propios del servidor, carga más con el cursor y abre el detalle con institución pendiente',
@@ -261,26 +348,39 @@ void main() {
     });
   });
 
-  testWidgets('al volver a Inicio se releen los últimos reportes (incluido uno recién enviado) sin rehacer Inicio', (tester) async {
-    final api = ApiFalsa();
-    final servidor = ServidorPerfil();
-    api.manejador = (req) async {
-      if (req.url.path.endsWith('/publico/contenido')) return respuestaJson(200, contenidoJson());
-      return servidor.responder(req);
-    };
-    final almacen = AlmacenamientoEnMemoria(SesionGuardada(token: tokenSesionPrueba, expiresAt: ahoraFijo.add(const Duration(hours: 10))));
-    final sesion = crearSesion(api, almacen);
-    await sesion.restaurar();
-    addTearDown(sesion.dispose);
-    await tester.pumpWidget(appDePrueba(api, sesion));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Aún no tienes reportes'), findsOneWidget);
-    servidor.incidentes = [elemento(7)];
-    Finder barra(String d) => find.descendant(of: find.byType(NavigationBar), matching: find.text(d));
-    await pulsar(tester, barra('Reportar'));
-    await pulsar(tester, barra('Inicio'));
-    expect(find.text('INC-AAAAA-AAA07'), findsOneWidget);
-  });
+  testWidgets(
+    'al volver a Inicio se releen los últimos reportes (incluido uno recién enviado) sin rehacer Inicio',
+    (tester) async {
+      final api = ApiFalsa();
+      final servidor = ServidorPerfil();
+      api.manejador = (req) async {
+        if (req.url.path.endsWith('/publico/contenido')) {
+          return respuestaJson(200, contenidoJson());
+        }
+        return servidor.responder(req);
+      };
+      final almacen = AlmacenamientoEnMemoria(
+        SesionGuardada(
+          token: tokenSesionPrueba,
+          expiresAt: ahoraFijo.add(const Duration(hours: 10)),
+        ),
+      );
+      final sesion = crearSesion(api, almacen);
+      await sesion.restaurar();
+      addTearDown(sesion.dispose);
+      await tester.pumpWidget(appDePrueba(api, sesion));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Aún no tienes reportes'), findsOneWidget);
+      servidor.incidentes = [elemento(7)];
+      Finder barra(String d) => find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text(d),
+      );
+      await pulsar(tester, barra('Reportar'));
+      await pulsar(tester, barra('Inicio'));
+      expect(find.text('INC-AAAAA-AAA07'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'las consultas guardadas siguen disponibles tras iniciar y cerrar sesión, sin aparecer en Mis reportes',

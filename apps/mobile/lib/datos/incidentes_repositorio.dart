@@ -188,18 +188,45 @@ class ResumenIncidente {
   }
 }
 
-/// Detalle privado del autor. Institución y actuaciones pendientes hasta P4.2/P6.
+/// Solo una asignación reconocida con nombre permite mostrar una responsable.
+class InstitucionResponsable {
+  const InstitucionResponsable({this.nombre});
+  final String? nombre;
+  bool get pendiente => nombre == null;
+
+  static InstitucionResponsable desdeJson(Object? json) {
+    if (json is Map<String, dynamic> && json['estado'] == 'asignada') {
+      final institucion = json['institucion'];
+      if (institucion is Map<String, dynamic> &&
+          const {
+            'pnp',
+            'bomberos',
+            'samu',
+            'serenazgo',
+          }.contains(institucion['id'])) {
+        final nombre = institucion['nombre'];
+        if (nombre is String && nombre.trim().isNotEmpty) {
+          return InstitucionResponsable(nombre: nombre.trim());
+        }
+      }
+    }
+    return const InstitucionResponsable();
+  }
+}
+
+/// Detalle privado del autor; las actuaciones llegan con P6.
 class DetalleIncidente {
   const DetalleIncidente({
     required this.resumen,
     required this.descripcion,
     required this.ocurridoEn,
-    required this.institucionPendiente,
+    required this.institucionResponsable,
   });
   final ResumenIncidente resumen;
   final String descripcion;
   final DateTime ocurridoEn;
-  final bool institucionPendiente;
+  final InstitucionResponsable institucionResponsable;
+  bool get institucionPendiente => institucionResponsable.pendiente;
 
   static DetalleIncidente? desdeJson(Object? json) {
     final resumen = ResumenIncidente.desdeJson(json);
@@ -219,7 +246,7 @@ class DetalleIncidente {
       resumen: resumen,
       descripcion: json['descripcion'] as String,
       ocurridoEn: instante,
-      institucionPendiente: institucion['estado'] == 'pendiente',
+      institucionResponsable: InstitucionResponsable.desdeJson(institucion),
     );
   }
 }
@@ -231,13 +258,14 @@ class VistaInvitado {
     required this.categoria,
     required this.estado,
     required this.recibidoEn,
-    required this.institucionPendiente,
+    required this.institucionResponsable,
   });
   final String referencia;
   final String categoria;
   final String estado;
   final DateTime recibidoEn;
-  final bool institucionPendiente;
+  final InstitucionResponsable institucionResponsable;
+  bool get institucionPendiente => institucionResponsable.pendiente;
 
   static VistaInvitado? desdeJson(Object? json) {
     if (json is! Map<String, dynamic>) return null;
@@ -261,7 +289,7 @@ class VistaInvitado {
       categoria: nombre,
       estado: json['estado'] as String,
       recibidoEn: recibido,
-      institucionPendiente: institucion['estado'] == 'pendiente',
+      institucionResponsable: InstitucionResponsable.desdeJson(institucion),
     );
   }
 }
