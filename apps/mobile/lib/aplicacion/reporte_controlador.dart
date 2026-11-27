@@ -4,31 +4,18 @@ import '../datos/consultas_guardadas.dart';
 import '../datos/incidentes_repositorio.dart';
 import '../datos/ubicacion.dart';
 import 'aviso.dart';
+import '../datos/evaluacion.dart';
+
+export '../datos/evaluacion.dart' show CantidadHeridos, Respuesta, SignosVida;
 
 /// Categorías que preguntan por heridos y por atención médica (RF57, documento 09 §5). Deben
-/// coincidir con el contrato de la API.
-const Set<String> categoriasConHeridos = {
-  'accidente-transito',
-  'agresion',
-  'pelea',
-  'violencia',
-};
+/// coincidir con el contrato de la API. Emergencia médica pregunta heridos desde P5.1.
+const Set<String> categoriasConHeridos = categoriasConEvaluacion;
 const Set<String> categoriasConAtencionMedica = {'accidente-transito'};
 
 const int descripcionMinima = 5;
 const int descripcionMaxima = 1000;
 final RegExp _telefonoValido = RegExp(r'^\+?[0-9]{7,15}$');
-
-/// Respuesta de una pregunta de selección única. `null` = sin respuesta (distinto de «No»).
-enum Respuesta {
-  si('si', 'Sí'),
-  no('no', 'No'),
-  noSe('no_se', 'No sé');
-
-  const Respuesta(this.valor, this.texto);
-  final String valor;
-  final String texto;
-}
 
 enum ModoOcurrencia { ahora, antes }
 
@@ -112,6 +99,12 @@ class ReporteControlador extends ChangeNotifier {
   ({double latitud, double longitud})? candidato;
   Respuesta? heridos;
   Respuesta? atencionMedica;
+
+  // Evaluación rápida para SAMU (P5.1). Se conserva al ocultar el bloque; solo se envía si aplica.
+  CantidadHeridos? cantidad;
+  SignosVida? signosVida;
+  Respuesta? consciente;
+  Respuesta? sangrado;
   String telefono = '';
 
   bool get preguntaHeridos =>
@@ -119,6 +112,11 @@ class ReporteControlador extends ChangeNotifier {
   bool get preguntaAtencion =>
       categoriaId != null && categoriasConAtencionMedica.contains(categoriaId);
   bool get esOtraEmergencia => categoriaId == 'otra-emergencia';
+
+  /// El bloque «Evaluación rápida para SAMU» aparece si SAMU interviene con las respuestas actuales.
+  bool get muestraEvaluacion =>
+      preguntaHeridos && samuInterviene(categoriaId, heridos, atencionMedica);
+  bool get muestraCantidad => muestraEvaluacion && heridos == Respuesta.si;
 
   // --- Mensajes
   Map<String, String> errores = const {};
@@ -149,9 +147,19 @@ class ReporteControlador extends ChangeNotifier {
     categoriaId = id;
     errores = {...errores}..remove('categoriaId');
     // Las preguntas de otra categoría no se envían ni se conservan.
-    if (!preguntaHeridos) heridos = null;
+    if (!preguntaHeridos) {
+      heridos = null;
+      _limpiarEvaluacion();
+    }
     if (!preguntaAtencion) atencionMedica = null;
   });
+
+  void _limpiarEvaluacion() {
+    cantidad = null;
+    signosVida = null;
+    consciente = null;
+    sangrado = null;
+  }
 
   void cambiarDescripcion(String texto) => _editar(() => descripcion = texto);
   void cambiarTelefono(String texto) => _editar(() => telefono = texto);
@@ -160,6 +168,19 @@ class ReporteControlador extends ChangeNotifier {
       _editar(() => instanteAntes = instante);
   void responderHeridos(Respuesta? r) => _editar(() => heridos = r);
   void responderAtencion(Respuesta? r) => _editar(() => atencionMedica = r);
+  void responderCantidad(CantidadHeridos? c) => _editar(() => cantidad = c);
+  void responderSignosVida(SignosVida? s) => _editar(() => signosVida = s);
+  void responderConsciente(Respuesta? r) => _editar(() => consciente = r);
+  void responderSangrado(Respuesta? r) => _editar(() => sangrado = r);
+
+  RespuestasEvaluacion get respuestasEvaluacion => RespuestasEvaluacion(
+    heridos: heridos,
+    atencionMedica: atencionMedica,
+    cantidad: cantidad,
+    signosVida: signosVida,
+    consciente: consciente,
+    sangrado: sangrado,
+  );
 
   /// Pide el permiso solo ahora (al pulsar «Usar mi ubicación»).
   Future<void> usarMiUbicacion() async {
@@ -249,6 +270,9 @@ class ReporteControlador extends ChangeNotifier {
   Map<String, Object?> _cuerpo() {
     final p = punto!;
     final instante = modo == ModoOcurrencia.ahora ? _ahora() : instanteAntes!;
+    final evaluacion = muestraEvaluacion
+        ? respuestasEvaluacion.cuerpoEnvio()
+        : null;
     return {
       'categoriaId': categoriaId,
       'descripcion': descripcion.trim(),
@@ -262,6 +286,7 @@ class ReporteControlador extends ChangeNotifier {
       if (preguntaHeridos && heridos != null) 'heridos': heridos!.valor,
       if (preguntaAtencion && atencionMedica != null)
         'atencionMedica': atencionMedica!.valor,
+      'evaluacion': ?evaluacion,
       if (esInvitado) 'telefonoContacto': telefono.trim(),
     };
   }
@@ -362,6 +387,7 @@ class ReporteControlador extends ChangeNotifier {
     candidato = null;
     heridos = null;
     atencionMedica = null;
+    _limpiarEvaluacion();
     telefono = '';
     errores = const {};
     aviso = null;

@@ -3,16 +3,19 @@ import 'package:flutter/material.dart';
 import '../../aplicacion/aviso.dart';
 import '../../aplicacion/reporte_controlador.dart';
 import '../../datos/incidentes_repositorio.dart';
+import '../componentes/bloque_evaluacion.dart';
 import '../componentes/boton_principal.dart';
 import '../componentes/campo_formulario.dart';
 import '../componentes/mensaje_accesible.dart';
+import '../componentes/pregunta_seleccion.dart';
 import '../componentes/selector_punto.dart';
 import '../componentes/tarjeta_mensaje.dart';
 import '../tema.dart';
 
 /// Formulario de reporte (composición de `screens/report.dart` del origen): título, categoría,
-/// descripción, cuándo, ubicación con mapa, preguntas para SAMU cuando aplican y teléfono solo del
-/// invitado. Sin fotos ni evaluación SAMU completa (P5). Todo lo escrito se conserva ante errores.
+/// descripción, cuándo, ubicación con mapa, preguntas para SAMU cuando aplican, evaluación rápida
+/// cuando SAMU interviene (P5.1) y teléfono solo del invitado. Sin fotos (P5.2). Todo lo escrito se
+/// conserva ante errores, también lo marcado en un bloque que se oculta.
 class ReportePantalla extends StatefulWidget {
   const ReportePantalla({
     super.key,
@@ -151,6 +154,18 @@ class _ReportePantallaState extends State<ReportePantalla> {
           if (_c.preguntaHeridos) ...[
             const SizedBox(height: Espaciado.s2),
             _preguntas(tema, enviando),
+          ],
+          if (_c.muestraEvaluacion) ...[
+            const SizedBox(height: Espaciado.s2),
+            BloqueEvaluacion(
+              respuestas: _c.respuestasEvaluacion,
+              mostrarCantidad: _c.muestraCantidad,
+              habilitado: !enviando,
+              alCambiarCantidad: _c.responderCantidad,
+              alCambiarSignosVida: _c.responderSignosVida,
+              alCambiarConsciente: _c.responderConsciente,
+              alCambiarSangrado: _c.responderSangrado,
+            ),
           ],
           if (_c.esInvitado) ...[
             const SizedBox(height: Espaciado.s2),
@@ -339,6 +354,8 @@ class _ReportePantallaState extends State<ReportePantalla> {
   Widget _preguntas(TextTheme tema, bool enviando) {
     return Card(
       key: const Key('preguntasSamu'),
+      // Sin contenedor semántico: el título es el único encabezado (antes se fusionaba toda la tarjeta).
+      semanticContainer: false,
       child: Padding(
         padding: const EdgeInsets.all(Espaciado.s2),
         child: Column(
@@ -353,15 +370,19 @@ class _ReportePantallaState extends State<ReportePantalla> {
             ),
             const Text('Responde lo que sepas. «No sé» no impide enviar.'),
             const SizedBox(height: Espaciado.s2),
-            _Pregunta(
+            PreguntaSeleccion<Respuesta>(
+              key: const Key('preguntaHeridos'),
               titulo: '¿Hay heridos?',
+              opciones: opcionesRespuesta,
               valor: _c.heridos,
               habilitada: !enviando,
               alResponder: _c.responderHeridos,
             ),
             if (_c.preguntaAtencion) ...[
               const SizedBox(height: Espaciado.s2),
-              _Pregunta(
+              PreguntaSeleccion<Respuesta>(
+                key: const Key('preguntaAtencion'),
+                opciones: opcionesRespuesta,
                 titulo: '¿Se necesita atención médica?',
                 valor: _c.atencionMedica,
                 habilitada: !enviando,
@@ -378,40 +399,6 @@ class _ReportePantallaState extends State<ReportePantalla> {
 String _fecha(DateTime d) {
   String dos(int n) => n.toString().padLeft(2, '0');
   return '${dos(d.day)}/${dos(d.month)}/${d.year} a las ${dos(d.hour)}:${dos(d.minute)}';
-}
-
-/// Pregunta de selección única Sí / No / No sé, sin opción preseleccionada (RF44).
-class _Pregunta extends StatelessWidget {
-  const _Pregunta({
-    required this.titulo,
-    required this.valor,
-    required this.habilitada,
-    required this.alResponder,
-  });
-  final String titulo;
-  final Respuesta? valor;
-  final bool habilitada;
-  final ValueChanged<Respuesta?> alResponder;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
-      const SizedBox(height: 4),
-      SegmentedButton<Respuesta>(
-        emptySelectionAllowed: true,
-        segments: [
-          for (final r in Respuesta.values)
-            ButtonSegment(value: r, label: Text(r.texto)),
-        ],
-        selected: {?valor},
-        onSelectionChanged: habilitada
-            ? (s) => alResponder(s.isEmpty ? null : s.first)
-            : null,
-      ),
-    ],
-  );
 }
 
 class _ErrorCampo extends StatelessWidget {

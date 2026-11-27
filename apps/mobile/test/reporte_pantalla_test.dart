@@ -29,6 +29,7 @@ class UbicacionFalsa implements UbicacionPuerto {
 final List<Map<String, Object?>> categoriasJson = [
   for (final (id, nombre) in const [
     ('accidente-transito', 'Accidente de tránsito'),
+    ('emergencia-medica', 'Emergencia médica'),
     ('otra-emergencia', 'Otra emergencia'),
     ('pelea', 'Pelea'),
     ('robo', 'Robo'),
@@ -252,6 +253,132 @@ void main() {
         expect(find.text('¿Hay heridos?'), findsNothing);
         await enviar(tester);
         expect(m.envios.single.json!.containsKey('heridos'), isFalse);
+      },
+    );
+  });
+
+  group('evaluación rápida para SAMU', () {
+    Finder opcion(String pregunta, String texto) => find.descendant(
+      of: find.byKey(Key(pregunta)),
+      matching: find.text(texto),
+    );
+
+    testWidgets('pelea con heridos Sí muestra el bloque sin opción marcada', (
+      tester,
+    ) async {
+      final m = Montaje(token: 'tok');
+      await tester.pumpWidget(m.widget());
+      await tester.pumpAndSettle();
+      await completarBasico(tester, categoria: 'Pelea');
+      expect(find.byKey(const Key('evaluacionSamu')), findsNothing);
+      await pulsar(tester, opcion('preguntaHeridos', 'Sí'));
+      expect(find.byKey(const Key('evaluacionSamu')), findsOneWidget);
+      expect(find.text('¿Cuántas personas heridas hay?'), findsOneWidget);
+      expect(m.controlador.respuestasEvaluacion.tieneObservaciones, isFalse);
+      expect(m.controlador.cantidad, isNull);
+    });
+
+    testWidgets(
+      'cambiar heridos a No oculta el bloque sin enviarlo y volver a Sí lo recupera',
+      (tester) async {
+        final m = Montaje(token: 'tok');
+        await tester.pumpWidget(m.widget());
+        await tester.pumpAndSettle();
+        await completarBasico(tester, categoria: 'Pelea');
+        await pulsar(tester, opcion('preguntaHeridos', 'Sí'));
+        await pulsar(tester, find.byKey(const Key('cantidad-2')));
+        await pulsar(tester, opcion('evaluacionConsciente', 'No'));
+        await pulsar(tester, opcion('preguntaHeridos', 'No'));
+        expect(find.byKey(const Key('evaluacionSamu')), findsNothing);
+        await pulsar(tester, opcion('preguntaHeridos', 'Sí'));
+        expect(m.controlador.consciente, Respuesta.no);
+        expect(m.controlador.cantidad, const CantidadHeridos.conocida(2));
+        await pulsar(tester, opcion('preguntaHeridos', 'No'));
+        await enviar(tester);
+        final cuerpo = m.envios.single.json!;
+        expect(cuerpo['heridos'], 'no');
+        expect(cuerpo.containsKey('evaluacion'), isFalse);
+      },
+    );
+
+    testWidgets('el cuerpo incluye solo los campos aplicables', (tester) async {
+      final m = Montaje(token: 'tok');
+      await tester.pumpWidget(m.widget());
+      await tester.pumpAndSettle();
+      await completarBasico(tester, categoria: 'Pelea');
+      await pulsar(tester, opcion('preguntaHeridos', 'Sí'));
+      await pulsar(tester, find.byKey(const Key('cantidad-otra')));
+      await pulsar(tester, find.byKey(const Key('cantidad-sumar')));
+      await pulsar(
+        tester,
+        opcion('evaluacionSignosVida', 'No se han observado'),
+      );
+      await enviar(tester);
+      expect(m.envios.single.json!['evaluacion'], {
+        'cantidadHeridos': 7,
+        'personaPrincipal': {'signosVida': 'no_observados'},
+      });
+    });
+
+    testWidgets(
+      'emergencia médica: el bloque aparece sin heridos y se envía sin responder',
+      (tester) async {
+        final m = Montaje(token: 'tok');
+        await tester.pumpWidget(m.widget());
+        await tester.pumpAndSettle();
+        await completarBasico(tester, categoria: 'Emergencia médica');
+        expect(find.text('¿Hay heridos?'), findsOneWidget);
+        expect(find.text('¿Se necesita atención médica?'), findsNothing);
+        expect(find.byKey(const Key('evaluacionSamu')), findsOneWidget);
+        expect(find.text('¿Cuántas personas heridas hay?'), findsNothing);
+        await enviar(tester);
+        final cuerpo = m.envios.single.json!;
+        expect(cuerpo.containsKey('heridos'), isFalse);
+        expect(cuerpo.containsKey('evaluacion'), isFalse);
+        expect(find.text('Reporte registrado'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'accidente con atención médica Sí y sin heridos: bloque sin cantidad',
+      (tester) async {
+        final m = Montaje(token: 'tok');
+        await tester.pumpWidget(m.widget());
+        await tester.pumpAndSettle();
+        await completarBasico(tester, categoria: 'Accidente de tránsito');
+        await pulsar(tester, opcion('preguntaAtencion', 'Sí'));
+        expect(find.byKey(const Key('evaluacionSamu')), findsOneWidget);
+        expect(find.text('¿Cuántas personas heridas hay?'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'resultado incierto: el reintento conserva la evaluación y la misma clave',
+      (tester) async {
+        final m = Montaje(token: 'tok');
+        var intentos = 0;
+        m.responderEnvio = (_) async {
+          intentos += 1;
+          if (intentos == 1) throw http.ClientException('sin red');
+          return respuestaJson(200, comprobante());
+        };
+        await tester.pumpWidget(m.widget());
+        await tester.pumpAndSettle();
+        await completarBasico(tester, categoria: 'Pelea');
+        await pulsar(tester, opcion('preguntaHeridos', 'Sí'));
+        await pulsar(tester, opcion('evaluacionSangrado', 'Sí'));
+        await enviar(tester);
+        expect(m.controlador.sangrado, Respuesta.si);
+        await enviar(tester, 'Reintentar envío');
+        expect(m.envios, hasLength(2));
+        expect(
+          m.envios[0].cabeceras['Idempotency-Key'],
+          m.envios[1].cabeceras['Idempotency-Key'],
+        );
+        // Sin cantidad elegida no se envía: el servidor la registra como desconocida, nunca como cero.
+        expect(m.envios[1].json!['evaluacion'], {
+          'personaPrincipal': {'sangrado': 'si'},
+        });
       },
     );
   });

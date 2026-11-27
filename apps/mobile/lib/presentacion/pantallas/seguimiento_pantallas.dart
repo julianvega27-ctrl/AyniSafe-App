@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../aplicacion/aviso.dart';
 import '../../datos/consultas_guardadas.dart';
+import '../../datos/evaluacion.dart';
 import '../../datos/incidentes_repositorio.dart';
 import '../componentes/boton_principal.dart';
 import '../componentes/campo_formulario.dart';
 import '../componentes/mensaje_accesible.dart';
 import '../componentes/tarjeta_mensaje.dart';
 import '../tema.dart';
+import 'aclarar_evaluacion_pantalla.dart';
 import 'reporte_pantalla.dart' show textoEstadoIncidente;
 
 String _fecha(DateTime d) {
@@ -77,6 +79,102 @@ class BloquePendienteAtencion extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// Evaluación propia del autor (P5.1): sus respuestas con el instante en que las informó, sin
+/// presentarlas como estado clínico actual, y la acción para completarlas o aclararlas.
+class SeccionEvaluacionPropia extends StatelessWidget {
+  const SeccionEvaluacionPropia({
+    super.key,
+    required this.evaluacion,
+    required this.preguntaAtencion,
+    required this.alAclarar,
+  });
+
+  final EvaluacionPropia evaluacion;
+  final bool preguntaAtencion;
+  final VoidCallback alAclarar;
+
+  static String _texto(Object? v) => switch (v) {
+    null => 'Sin respuesta',
+    final Respuesta r => r.texto,
+    final SignosVida s => s.texto,
+    final CantidadHeridos c => c.esNoSe ? 'No sé' : '${c.valor}',
+    _ => '$v',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context).textTheme;
+    final r = evaluacion.respuestas;
+    final filas = <(String, Object?)>[
+      ('¿Hay heridos?', r.heridos),
+      if (preguntaAtencion) ('¿Se necesita atención médica?', r.atencionMedica),
+      if (r.heridos == Respuesta.si) ('Personas heridas', r.cantidad),
+      ('Signos de vida', r.signosVida),
+      ('¿Está consciente?', r.consciente),
+      ('¿Hay sangrado visible?', r.sangrado),
+    ];
+    return Card(
+      key: const Key('evaluacionPropia'),
+      semanticContainer: false,
+      child: Padding(
+        padding: const EdgeInsets.all(Espaciado.s2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              header: true,
+              child: Text('Tu evaluación para SAMU', style: tema.titleMedium),
+            ),
+            Text(
+              'Informado el ${_fecha(evaluacion.informadaEn)}. Describe lo que observaste entonces, no el estado actual.',
+              style: tema.bodyMedium?.copyWith(color: Colores.textoSecundario),
+            ),
+            const SizedBox(height: Espaciado.s1),
+            for (final (pregunta, valor) in filas)
+              MergeSemantics(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: Text(pregunta)),
+                      const SizedBox(width: Espaciado.s1),
+                      Text(
+                        _texto(valor),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (evaluacion.solicitudCompletar) ...[
+              const SizedBox(height: Espaciado.s1),
+              const TarjetaMensaje(
+                icono: Icons.medical_services_outlined,
+                child: Text(
+                  'SAMU interviene en este caso. Si puedes, completa lo que sepas sobre la persona más afectada.',
+                ),
+              ),
+              const SizedBox(height: Espaciado.s1),
+              BotonPrincipal(
+                texto: 'Completar evaluación',
+                alPulsar: alAclarar,
+              ),
+            ] else if (evaluacion.puedeAclarar) ...[
+              const SizedBox(height: Espaciado.s1),
+              OutlinedButton.icon(
+                onPressed: alAclarar,
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Aclarar evaluación'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// «Mis reportes» con cuenta (composición de `mine.dart` del origen): historial propio del servidor,
@@ -268,6 +366,23 @@ class _DetalleIncidentePantallaState extends State<DetalleIncidentePantalla> {
     setState(() => _r = r);
   }
 
+  /// Abre la aclaración y recarga el detalle si se guardó.
+  Future<void> _aclarar(DetalleIncidente d, EvaluacionPropia ev) async {
+    final guardada = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AclararEvaluacionPantalla(
+          repositorio: widget.repositorio,
+          obtenerToken: widget.obtenerToken,
+          referencia: d.resumen.referencia,
+          categoriaId: d.resumen.categoriaId,
+          evaluacion: ev,
+          cuandoSesionInvalida: widget.cuandoSesionInvalida,
+        ),
+      ),
+    );
+    if (guardada == true && mounted) await _cargar();
+  }
+
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context).textTheme;
@@ -325,6 +440,13 @@ class _DetalleIncidentePantallaState extends State<DetalleIncidentePantalla> {
                   ),
                 ),
                 BloquePendienteAtencion(institucion: d.institucionResponsable),
+                if (d.evaluacion case final ev?)
+                  SeccionEvaluacionPropia(
+                    evaluacion: ev,
+                    preguntaAtencion:
+                        d.resumen.categoriaId == 'accidente-transito',
+                    alAclarar: () => _aclarar(d, ev),
+                  ),
               ],
               ConsultaNoEncontrada() => [
                 const MensajeAccesible(
