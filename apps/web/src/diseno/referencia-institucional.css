@@ -230,3 +230,25 @@
   .kv { grid-template-columns: 1fr; gap: 4px; }
   .kv dd { margin-bottom: 8px; }
 }
+
+/* Evaluación rápida (P5.1). Extiende .cards/.mini-card, .pill y .priority-badge del origen para
+   ordenar la condición médica y el historial; solo disposición y tokens existentes, sin colores nuevos. */
+.subtitulo-panel { margin: 20px 0 8px; font-size: 0.6875rem; letter-spacing: .08em; text-transform: uppercase; color: var(--color-texto-suave); font-weight: 800; }
+.panel-heading + .subtitulo-panel { margin-top: 8px; }
+.metadatos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-size: 0.8125rem; color: var(--color-texto-suave); }
+.cards.cards--respuestas { margin-top: 0; }
+.cards--respuestas .mini-card { flex: 1 1 9.5rem; min-width: 0; align-content: start; }
+/* Con texto ampliado las insignias se ajustan en varias líneas en lugar de desbordar la página. */
+.cards--respuestas .pill, .cards--respuestas .priority-badge, .linea-tiempo .pill { white-space: normal; overflow-wrap: anywhere; }
+.linea-tiempo > li { min-width: 0; }
+.cards--respuestas .mini-card > span:first-child { color: var(--color-texto); font-weight: 700; }
+.nota-panel, .app-shell .panel > p.nota-panel { margin: 16px 0 0; font-size: 0.75rem; color: var(--color-texto-suave); line-height: 1.5; }
+.linea-tiempo { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.linea-tiempo > li { position: relative; padding: 0 0 18px 26px; border-left: 2px solid var(--color-divisor); margin-left: 7px; display: grid; gap: 6px; }
+.linea-tiempo > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+.linea-tiempo > li::before { content: ''; position: absolute; left: -8px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--color-superficie); border: 3px solid var(--color-accion); }
+.linea-tiempo__titulo { font-size: 0.875rem; font-weight: 700; }
+.linea-tiempo__motivo { margin: 0; padding: 8px 12px; border-radius: 7px; background: var(--color-info-fondo); color: var(--color-info-texto); font-size: 0.8125rem; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .cards--respuestas .mini-card { flex-basis: 100%; }
+}

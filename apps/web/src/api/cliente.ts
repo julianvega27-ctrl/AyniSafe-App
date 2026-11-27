@@ -113,7 +113,73 @@ export interface ResumenIncidente extends FilaBandeja {
   readonly ocurrencia: { readonly modo: 'ahora' | 'antes'; readonly instante: string };
   readonly territorio: TerritorioVista;
   readonly respuestasCiudadano: { readonly heridos: RespuestaCiudadano; readonly atencionMedica: RespuestaCiudadano };
+  /** Condicion vigente (P5.1, resumen de heridos); null sin evaluacion. */
+  readonly condicionMedica: CondicionMedica | null;
+  /** La sede del operador es SAMU participante: puede leer la evaluacion completa. */
+  readonly accesoSanitario: boolean;
   readonly otrasInstituciones: readonly TipoInstitucion[];
+}
+
+// --- Evaluacion rapida (P5.1) ----------------------------------------------------------------
+
+export type CantidadHeridos = number | 'no_se' | null;
+export type SignosVida = 'observados' | 'no_observados' | 'no_se' | null;
+
+export interface CondicionMedica {
+  readonly heridos: RespuestaCiudadano;
+  readonly atencionMedica: RespuestaCiudadano;
+  readonly cantidadHeridos: CantidadHeridos;
+  readonly revisionPendiente: boolean;
+  readonly version: number;
+  readonly origen: 'ciudadano' | 'operador';
+  readonly institucion: TipoInstitucion | null;
+  readonly informadaEn: string;
+  readonly observacionesInformadas: boolean;
+}
+
+export interface PersonaPrincipal {
+  readonly signosVida: SignosVida;
+  readonly consciente: RespuestaCiudadano;
+  readonly sangrado: RespuestaCiudadano;
+}
+
+export interface RespuestasEvaluacion {
+  readonly heridos: RespuestaCiudadano;
+  readonly atencionMedica: RespuestaCiudadano;
+  readonly cantidadHeridos: CantidadHeridos;
+  readonly personaPrincipal: PersonaPrincipal;
+}
+
+export type CampoEvaluacion = 'heridos' | 'atencionMedica' | 'cantidadHeridos' | 'signosVida' | 'consciente' | 'sangrado';
+
+export interface DetalleSanitario {
+  readonly version: number;
+  readonly informadaEn: string;
+  readonly pendiente: boolean;
+  readonly vigente: RespuestasEvaluacion;
+  readonly historial: readonly {
+    readonly version: number;
+    readonly origen: 'ciudadano' | 'operador';
+    readonly institucion: TipoInstitucion | null;
+    readonly instante: string;
+    readonly camposModificados: readonly CampoEvaluacion[];
+    readonly motivo: string | null;
+  }[];
+}
+
+/** Cuerpo de una precision: solo los campos que cambian, mas el motivo. */
+export interface PrecisionCondicion {
+  readonly heridos?: 'si' | 'no' | 'no_se';
+  readonly atencionMedica?: 'si' | 'no' | 'no_se';
+  readonly cantidadHeridos?: number | 'no_se';
+  readonly personaPrincipal?: Partial<Record<keyof PersonaPrincipal, string>>;
+  readonly motivo: string;
+}
+
+export interface ResultadoPrecision {
+  readonly version: number;
+  readonly condicionMedica: { readonly heridos: RespuestaCiudadano; readonly atencionMedica: RespuestaCiudadano; readonly cantidadHeridos: CantidadHeridos };
+  readonly samuIncorporado: boolean;
 }
 
 export interface Faltante {
@@ -308,6 +374,11 @@ export const api = {
   bandeja: (cursor: string | null, senal?: AbortSignal) =>
     llamar<Pagina<FilaBandeja>>(`/api/v1/operador/incidentes${cursor ? `?cursor=${enc(cursor)}` : ''}`, { senal }),
   resumenIncidente: (id: string, senal?: AbortSignal) => llamar<ResumenIncidente>(`/api/v1/operador/incidentes/${enc(id)}`, { senal }),
+  // Evaluacion rapida (P5.1): el detalle solo responde al operador SAMU participante.
+  evaluacionSanitaria: (id: string, senal?: AbortSignal) =>
+    llamar<DetalleSanitario>(`/api/v1/operador/incidentes/${enc(id)}/evaluacion`, { senal }),
+  precisarCondicion: (id: string, cuerpo: PrecisionCondicion) =>
+    llamar<ResultadoPrecision>(`/api/v1/operador/incidentes/${enc(id)}/evaluacion`, { metodo: 'POST', cuerpo }),
   pendientesEnrutamiento: (cursor: string | null, senal?: AbortSignal) =>
     llamar<Pagina<PendienteEnrutamiento>>(`${PEN}${cursor ? `?cursor=${enc(cursor)}` : ''}`, { senal }),
   designarSede: (incidenteId: string, datos: { institucion: TipoInstitucion; sedeId: string; motivo: string }) =>
