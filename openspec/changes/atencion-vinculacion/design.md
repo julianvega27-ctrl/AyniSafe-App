@@ -109,3 +109,21 @@ Todas las rutas usan el mismo envoltorio de errores, CSRF y `no-store` que P5.1.
 ## Migration Plan
 
 Migraciones aditivas con valores por defecto: los incidentes existentes quedan REGISTRADO, SIN_VERIFICAR y sin resultado. Para revertir, se retira el despliegue; las columnas nuevas son ignoradas por la versión anterior. No se migran datos.
+
+### 10. Asignación automática al operador único (decisión del responsable, 27/11/2026)
+
+- `ServicioAtencion.autoAsignarPrincipal(tx, incidenteId)` corre dentro de la transacción del enrutamiento: al enrutar, designar, reevaluar o aplicar la condición médica. `ServicioEnrutamiento` lo recibe como dependencia opcional (`alCambiarPrincipal`), cableada en la composición. Ambos servicios son de Operaciones; Identidad solo responde por su fachada (`operadoresAtencion.deSedes`).
+- Asigna solo si se cumplen todas estas condiciones: el incidente está abierto y no vinculado, la institución principal participa con una única sede, esa sede tiene exactamente un operador con cuenta activa y sede operativa, y la institución aún no tiene asignación activa.
+- Migración `…_asignacion_automatica`: `origen` admite `automatica`, `actor_tipo` admite `sistema` y `actor_usuario_id` es nulo solo para el sistema (CHECK).
+- Orden de bloqueo: evaluación, después enrutamiento, después incidente. Las mutaciones de atención solo bloquean el incidente, así que no hay ciclo.
+- Alternativa descartada: asignar al primer operador que abre el caso, porque abrir no equivale a aceptar.
+
+### 11. Bandeja con filtro de responsable y bloque de atención guiado
+
+- `GET /operador/incidentes?responsable=sin_tomar|mios` se resuelve con una condición sobre la asignación activa en el mismo SQL FIFO. El cursor sigue siendo `(registrado_en, id)`.
+- **Web:**
+  - El bloque «Atención» muestra un recorrido de estados (lista `.estados` con la pill del estado actual marcada con `aria-current="step"`) y una acción principal según el estado.
+  - Un «Control del caso» plegable (`aria-expanded`), como el «Abrir control» del origen `Incidents.jsx`.
+  - El historial se pliega y muestra su último movimiento.
+  - Los filtros reutilizan el `.segmented` del origen.
+  - La variante de pill del estado actual usa el par de tokens `--color-accion` y blanco, cuyo contraste ya se verifica.

@@ -19,7 +19,7 @@ Actualizado: 23 de noviembre de 2026. Estado: comparación y plan de integració
 2. Se conservan ciudadano, administrador global y operador, separando administración de atención. No se adoptan roles institucionales adicionales.
 3. Incidente único desde cada envío, conservando datos originales. Estados: REGISTRADO → EN_REVISION → EN_ATENCION → CERRADO; verificación separada. Cierre con resultado Atendido o Descartado y motivo, sin simular atención para descartar.
 4. Prioridad inicial según tabla de 16 categorías aprobada el 23/11/2026 en documento 11, versión documental prioridad-categoria-v1, sin edición libre de tabla en panel. El operador puede confirmar, elevar o reducir cada caso con motivo/historial; sin configuración válida queda Sin evaluar y se mantiene FIFO. Pendiente de implementación, sin nueva aprobación de esos valores.
-5. El operador asume inicialmente el caso; el administrador solo libera/reasigna con motivo como excepción, sin atender.
+5. El operador asume inicialmente el caso; el administrador solo libera/reasigna con motivo como excepción, sin atender. Ajuste del 27/11/2026: con un único operador activo en la única sede de la principal, la asignación es automática (documento 11 §2).
 6. Duplicados vinculados a un principal para coordinar atención; conservar cada envío, identificador, historial y seguimiento sin exponer información de otros informantes. La vinculación no es descarte.
 7. Punto obligatorio mediante GPS autorizado o selección manual confirmada; no se envía sin coordenadas. Puede quedar pendiente el distrito por ambigüedad geométrica o falta de cobertura.
 8. Se conserva PostgreSQL; se adapta la persistencia MySQL del origen. Docker no implica cambiar de motor ni se configura por esta decisión.

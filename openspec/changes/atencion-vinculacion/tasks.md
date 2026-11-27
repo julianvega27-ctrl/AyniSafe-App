@@ -45,3 +45,10 @@ Grupos verticales por prioridad. Durante la implementación se ejecutan solo las
 - [x] Z2 Evidencia breve en `docs/validacion/p6-atencion.md` (comandos, resultados, pendientes) y estado P6 en `docs/comparacion-proyecto-incidencias.md`.
 - [ ] Z3 Recorrido en Android real (manual, responsable del proyecto).
 - [x] Z4 Commits por capa, push, PR y CI.
+
+## D. Ajuste tras la prueba manual (decisión del responsable, 27/11/2026)
+- [ ] D1 Documento 11 §2, RF56, guía UI y plan de integración: asignación automática al operador único.
+- [ ] D2 Migración y `autoAsignarPrincipal` en enrutar, designar, reevaluar y condición médica; pruebas de integración (uno/varios operadores, SAMU a principal).
+- [ ] D3 Filtro `responsable` en la bandeja (API, OpenAPI y pruebas).
+- [ ] D4 Web: bloque «Atención» guiado (recorrido de estados, acción principal, control plegable, historial plegado, vista previa del ciudadano al cerrar) y filtros segmentados; pruebas.
+- [ ] D5 Suite completa, migración de `ayni_safe_dev`, evidencia y CI.

@@ -48,11 +48,15 @@ La sección «Inicio» del administrador MUST mostrar los bloques «Enrutamiento
 ## ADDED Requirements
 
 ### Requirement: Acciones de atención en el resumen
-El resumen MUST ofrecer «Asumir caso» mientras su institución no tenga responsable, mostrar si otro operador de su institución es responsable y, al responsable de la principal, «Iniciar atención», «Registrar verificación», «Cerrar como atendido» y «Descartar» según las acciones permitidas. Los formularios MUST exigir motivos y resumen ciudadano, enviar una sola solicitud y explicar un 409 sin presentar la acción como hecha.
+El resumen MUST mostrar el recorrido de los cuatro estados con el actual marcado con texto, una sola acción principal según el estado y las acciones permitidas («Tomar el caso», «Iniciar atención» o «Cerrar como atendido») con una frase sobre su efecto, y «Descartar» como acción secundaria. Verificación, prioridad y duplicado MUST agruparse en un «Control del caso» plegable.
 
 #### Scenario: Asumir y revisar
-- **WHEN** el operador de la principal pulsa «Asumir caso» en un incidente REGISTRADO
+- **WHEN** el operador de la principal pulsa «Tomar el caso» en un incidente REGISTRADO
 - **THEN** el resumen se actualiza como EN_REVISION con él como responsable
+
+#### Scenario: Una acción principal
+- **WHEN** el responsable de la principal abre un incidente EN_REVISION
+- **THEN** la única acción principal visible es «Iniciar atención» y el control del caso está plegado
 
 #### Scenario: Conflicto al asumir
 - **WHEN** la API responde 409 porque otro operador asumió
@@ -64,3 +68,17 @@ El bloque «Responsables activos» MUST listar las asignaciones recibidas con re
 #### Scenario: Reasignar
 - **WHEN** el administrador elige otro operador, escribe el motivo y confirma
 - **THEN** se envía una sola solicitud y la lista muestra al nuevo responsable
+
+### Requirement: Filtros de responsable en la bandeja web
+La sección «Incidentes» MUST ofrecer los filtros «Sin tomar», «Mis casos» y «Todos» como control segmentado accesible, consultando la API con el filtro elegido y conservando el orden recibido.
+
+#### Scenario: Cambiar a Mis casos
+- **WHEN** el operador elige «Mis casos»
+- **THEN** se consulta la primera página con `responsable=mios` y la tabla conserva el orden de llegada
+
+### Requirement: Formularios de atención con una sola solicitud
+Los formularios de cierre, descarte, verificación, prioridad y vínculo MUST exigir motivo y, al cerrar, resumen ciudadano con su vista previa; MUST enviar una sola solicitud y explicar un 409 sin presentar la acción como hecha.
+
+#### Scenario: Conflicto al cerrar
+- **WHEN** la API responde 409 ESTADO_CAMBIADO al cerrar
+- **THEN** se explica que el estado cambió y se recarga el resumen sin mostrar el caso como cerrado

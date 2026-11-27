@@ -125,3 +125,18 @@ El administrador MUST poder liberar una asignación activa o reasignarla a otro 
 #### Scenario: Liberar
 - **WHEN** el administrador libera una asignación con motivo
 - **THEN** la institución queda sin responsable activo y otro operador puede asumir
+
+### Requirement: Asignación automática al operador único
+Cuando la institución principal de un incidente abierto y sin vincular participa con una sola sede y esa sede tiene exactamente un operador activo, el sistema MUST asignarle el caso en la misma transacción en que la institución queda como principal (enrutamiento, designación, reevaluación o cambio por condición médica) y MUST pasar REGISTRADO a EN_REVISION. MUST registrarse con actor «sistema» y origen automático. Con varias sedes u operadores MUST mantenerse la toma manual.
+
+#### Scenario: Sede con un operador
+- **WHEN** se enruta un robo cuya única sede PNP tiene un operador activo
+- **THEN** ese operador queda como responsable, el incidente pasa a EN_REVISION y el historial registra el actor «sistema»
+
+#### Scenario: Sede con varios operadores
+- **WHEN** la única sede principal tiene dos operadores activos
+- **THEN** no se asigna a nadie y el incidente sigue REGISTRADO hasta que uno lo tome
+
+#### Scenario: SAMU pasa a principal
+- **WHEN** una aclaración hace principal a SAMU y su única sede tiene un operador activo
+- **THEN** SAMU queda con responsable automático y la asignación PNP previa se conserva como apoyo

@@ -34,3 +34,10 @@ El resumen MUST incluir el responsable de la institución del operador (nombre s
 #### Scenario: Acciones permitidas
 - **WHEN** el responsable de la principal abre un incidente EN_REVISION
 - **THEN** las acciones permitidas incluyen iniciar atención, descartar y registrar verificación, y no incluyen cerrar como atendido
+
+### Requirement: Filtro por responsable en la bandeja
+La bandeja MUST admitir un filtro opcional `responsable` con los valores `sin_tomar` (la institución del operador no tiene responsable activo en un caso abierto) y `mios` (el operador es el responsable activo). El filtro MUST aplicarse en el backend y MUST NOT cambiar el orden FIFO ni la paginación por cursor. Un valor no admitido MUST responder 400.
+
+#### Scenario: Mis casos
+- **WHEN** el operador consulta con `responsable=mios`
+- **THEN** recibe solo los incidentes que él tiene asignados, del más antiguo al más reciente
