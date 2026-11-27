@@ -1,0 +1,209 @@
+{
+  "fecha": "2026-11-26T23:16:12.846Z",
+  "destino": "http://127.0.0.1:5174",
+  "navegador": "chrome.exe",
+  "comprobaciones": 32,
+  "recorridoTeclado": [
+    {
+      "texto": "Accidente de tránsitoINC-DEM01-AAAAA",
+      "tag": "A",
+      "visible": true
+    },
+    {
+      "texto": "RoboINC-DEM02-AAAAA",
+      "tag": "A",
+      "visible": true
+    },
+    {
+      "texto": "Otra emergenciaINC-DEM03-AAAAA",
+      "tag": "A",
+      "visible": true
+    },
+    {
+      "texto": "Saltar al contenidoAAyniSafePanel institucionalPLA",
+      "tag": "BODY",
+      "visible": false
+    },
+    {
+      "texto": "Saltar al contenido",
+      "tag": "A",
+      "visible": true
+    },
+    {
+      "texto": "AAyniSafePanel institucional",
+      "tag": "A",
+      "visible": true
+    },
+    {
+      "texto": "◫InicioAún no disponible",
+      "tag": "A",
+      "visible": true
+    },
+    {
+      "texto": "▤Incidentes",
+      "tag": "A",
+      "visible": true
+    }
+  ],
+  "fichas": [
+    {
+      "nombre": "bandeja",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "archivo": "bandeja-1440.png",
+      "anchoDocumento": 1440,
+      "anchoVentana": 1440,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "resumen",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "archivo": "resumen-1440.png",
+      "anchoDocumento": 1440,
+      "anchoVentana": 1440,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "pendientes",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "archivo": "pendientes-1440.png",
+      "anchoDocumento": 1440,
+      "anchoVentana": 1440,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "designacion",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "archivo": "designacion-1440.png",
+      "anchoDocumento": 1440,
+      "anchoVentana": 1440,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "bandeja",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "archivo": "bandeja-900.png",
+      "anchoDocumento": 900,
+      "anchoVentana": 900,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "resumen",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "archivo": "resumen-900.png",
+      "anchoDocumento": 900,
+      "anchoVentana": 900,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "pendientes",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "archivo": "pendientes-900.png",
+      "anchoDocumento": 900,
+      "anchoVentana": 900,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "designacion",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "archivo": "designacion-900.png",
+      "anchoDocumento": 900,
+      "anchoVentana": 900,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "bandeja",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "archivo": "bandeja-360.png",
+      "anchoDocumento": 360,
+      "anchoVentana": 360,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "resumen",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "archivo": "resumen-360.png",
+      "anchoDocumento": 360,
+      "anchoVentana": 360,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "pendientes",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "archivo": "pendientes-360.png",
+      "anchoDocumento": 360,
+      "anchoVentana": 360,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "designacion",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "archivo": "designacion-360.png",
+      "anchoDocumento": 360,
+      "anchoVentana": 360,
+      "violacionesAxe": []
+    },
+    {
+      "nombre": "bandeja",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "archivo": "bandeja-1280-texto200.png",
+      "anchoDocumento": 1280,
+      "anchoVentana": 1280,
+      "violacionesAxe": [],
+      "sufijo": "-texto200",
+      "texto": "200%"
+    },
+    {
+      "nombre": "pendientes",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "archivo": "pendientes-1280-texto200.png",
+      "anchoDocumento": 1280,
+      "anchoVentana": 1280,
+      "violacionesAxe": [],
+      "sufijo": "-texto200",
+      "texto": "200%"
+    }
+  ],
+  "limites": "API interceptada con datos de demostración; no acredita integración de backend. axe sin reglas desactivadas en navegador real. La composición se contrasta con Incidents.jsx del origen (efc1bce8) por lectura del código: no hay arnés del donante ni comparación automatizada de píxeles."
+}

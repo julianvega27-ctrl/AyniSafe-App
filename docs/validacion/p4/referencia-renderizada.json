@@ -1,0 +1,10 @@
+{
+  "fecha": "2026-11-26T23:36:39.854Z",
+  "head": "efc1bce8c29b3c88487e36e10a324c71ae9c2029",
+  "donanteLimpioAntesYDespues": true,
+  "capturas": [
+    "bandeja-origen-1440.png",
+    "bandeja-origen-360.png"
+  ],
+  "limites": "UI original con API interceptada para render. Las fuentes DM Sans y Manrope se sirven desde los recursos locales de AyniSafe. No prueba operación del donante ni igualdad píxel a píxel."
+}

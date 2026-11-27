@@ -1,0 +1,173 @@
+{
+  "fecha": "2026-11-26T23:42:09.031Z",
+  "revision": "estado local sin commit sobre e0f6694",
+  "navegador": "158.0.8127.88",
+  "entorno": "API real (main.ts), PostgreSQL local *_test, Vite y Chrome; correo en memoria, datos y geometrías sintéticos",
+  "pasos": [
+    "Registro HTTP confirmado (estado 201)",
+    "Registro HTTP confirmado (estado 201)",
+    "Registro HTTP confirmado (estado 201)",
+    "SAMU ve el accidente como principal",
+    "PNP ve el accidente como simultánea",
+    "bandeja 1440: sin desborde de página",
+    "bandeja 1440: axe sin infracciones",
+    "bandeja 900: sin desborde de página",
+    "bandeja 900: axe sin infracciones",
+    "bandeja 360: sin desborde de página",
+    "bandeja 360: axe sin infracciones",
+    "bandeja 1280 texto200: sin desborde de página",
+    "bandeja 1280: axe sin infracciones",
+    "Bandeja: tres filas alcanzables con Tab y foco visible",
+    "resumen 1440: sin desborde de página",
+    "resumen 1440: axe sin infracciones",
+    "resumen 360: sin desborde de página",
+    "resumen 360: axe sin infracciones",
+    "resumen 1280 texto200: sin desborde de página",
+    "resumen 1280: axe sin infracciones",
+    "Seguimiento real muestra SAMU",
+    "pendientes 1440: sin desborde de página",
+    "pendientes 1440: axe sin infracciones",
+    "pendientes 360: sin desborde de página",
+    "pendientes 360: axe sin infracciones",
+    "pendientes 1280 texto200: sin desborde de página",
+    "pendientes 1280: axe sin infracciones",
+    "Designación en diálogo modal nativo",
+    "Escape cierra el diálogo y devuelve el foco",
+    "designacion 1440: sin desborde de página",
+    "designacion 1440: axe sin infracciones",
+    "designacion 360: sin desborde de página",
+    "designacion 360: axe sin infracciones",
+    "Shift+Tab conserva el foco dentro del diálogo",
+    "Designación: Tab pasa del selector al motivo",
+    "Pendiente resuelto mediante designación desde la web",
+    "Designación persistida con administrador y motivo",
+    "SAMU ve el caso designado fuera de su cobertura",
+    "Registro HTTP confirmado (estado 201)",
+    "EQ-19: Otra emergencia sin distrito resuelta designando Serenazgo",
+    "EQ-19: Serenazgo ve el caso designado sin cobertura distrital"
+  ],
+  "recorridoTeclado": [
+    {
+      "enlace": true,
+      "foco": true
+    },
+    {
+      "enlace": true,
+      "foco": true
+    },
+    {
+      "enlace": true,
+      "foco": true
+    }
+  ],
+  "fichas": [
+    {
+      "nombre": "bandeja",
+      "ancho": 1440,
+      "texto200": false,
+      "archivo": "bandeja-1440.png",
+      "documento": 1440,
+      "ventana": 1440,
+      "violaciones": []
+    },
+    {
+      "nombre": "bandeja",
+      "ancho": 900,
+      "texto200": false,
+      "archivo": "bandeja-900.png",
+      "documento": 900,
+      "ventana": 900,
+      "violaciones": []
+    },
+    {
+      "nombre": "bandeja",
+      "ancho": 360,
+      "texto200": false,
+      "archivo": "bandeja-360.png",
+      "documento": 360,
+      "ventana": 360,
+      "violaciones": []
+    },
+    {
+      "nombre": "bandeja",
+      "ancho": 1280,
+      "texto200": true,
+      "archivo": "bandeja-1280-texto200.png",
+      "documento": 1280,
+      "ventana": 1280,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen",
+      "ancho": 1440,
+      "texto200": false,
+      "archivo": "resumen-1440.png",
+      "documento": 1440,
+      "ventana": 1440,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen",
+      "ancho": 360,
+      "texto200": false,
+      "archivo": "resumen-360.png",
+      "documento": 360,
+      "ventana": 360,
+      "violaciones": []
+    },
+    {
+      "nombre": "resumen",
+      "ancho": 1280,
+      "texto200": true,
+      "archivo": "resumen-1280-texto200.png",
+      "documento": 1280,
+      "ventana": 1280,
+      "violaciones": []
+    },
+    {
+      "nombre": "pendientes",
+      "ancho": 1440,
+      "texto200": false,
+      "archivo": "pendientes-1440.png",
+      "documento": 1440,
+      "ventana": 1440,
+      "violaciones": []
+    },
+    {
+      "nombre": "pendientes",
+      "ancho": 360,
+      "texto200": false,
+      "archivo": "pendientes-360.png",
+      "documento": 360,
+      "ventana": 360,
+      "violaciones": []
+    },
+    {
+      "nombre": "pendientes",
+      "ancho": 1280,
+      "texto200": true,
+      "archivo": "pendientes-1280-texto200.png",
+      "documento": 1280,
+      "ventana": 1280,
+      "violaciones": []
+    },
+    {
+      "nombre": "designacion",
+      "ancho": 1440,
+      "texto200": false,
+      "archivo": "designacion-1440.png",
+      "documento": 1440,
+      "ventana": 1440,
+      "violaciones": []
+    },
+    {
+      "nombre": "designacion",
+      "ancho": 360,
+      "texto200": false,
+      "archivo": "designacion-360.png",
+      "documento": 360,
+      "ventana": 360,
+      "violaciones": []
+    }
+  ]
+}

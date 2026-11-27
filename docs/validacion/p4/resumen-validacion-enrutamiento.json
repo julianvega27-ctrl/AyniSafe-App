@@ -1,0 +1,31 @@
+{
+  "fechaLocal": "2026-11-26",
+  "zonaHoraria": "America/Lima",
+  "revision": "estado local sin commit sobre e0f6694",
+  "rama": "feat/p4-enrutamiento",
+  "entorno": {
+    "node": "24.21.0",
+    "postgresql": "18.1",
+    "flutter": "3.47.7",
+    "dart": "3.13.5",
+    "base": "PostgreSQL local aislada *_test",
+    "chrome": "158.0.8127.88"
+  },
+  "apiJest": {
+    "comando": "npm.cmd run test:cobertura",
+    "suitesAprobadas": 56,
+    "pruebasAprobadas": 848,
+    "pruebasFallidas": 0,
+    "duracionSegundos": 142.268,
+    "cobertura": {
+      "lineasYSentencias": {"porcentaje": 87.23, "cubiertas": 10419, "total": 11943},
+      "ramas": {"porcentaje": 91.34, "cubiertas": 3008, "total": 3293},
+      "funciones": {"porcentaje": 93.4, "cubiertas": 694, "total": 743}
+    }
+  },
+  "web": {"archivosAprobados": 11, "pruebasAprobadas": 160, "tipos": "correcto", "lint": "correcto", "build": "correcto"},
+  "flutter": {"pruebasAprobadas": 295, "analyze": "sin observaciones"},
+  "arquitectura": {"archivos": 116, "infracciones": 0, "destinosComputados": 0},
+  "openapi": "válido, 3.1.0",
+  "limitaciones": "Validación local; no acredita CI, despliegue, proveedores externos, Android físico, TalkBack ni carga de 2000 VU. Los reportes completos de cobertura permanecen en apps/api/coverage (ignorados por Git)."
+}
