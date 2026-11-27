@@ -1,6 +1,6 @@
 # Tasks
 
-Estado: implementación y validación local completadas el 26/11/2026 en `feat/p4-enrutamiento`, sobre `e0f6694` (`main`, con P4.1 fusionada en el PR #5 y archivada en el PR #6). Árbol local sin commit; PR, CI y archivado pendientes del workflow posterior.
+Estado: implementación fusionada mediante el PR #7 en `main` `08ca417`, con sus cuatro trabajos de CI aprobados. El 26/11/2026 se sincronizaron las siete capacidades y se preparó el archivo `2026-11-26-enrutamiento-bandeja-inicial` en `docs/p4.2-cierre`; la evidencia de CI está incorporada por `4142c7a`. El commit, PR y CI del cierre documental quedan pendientes del responsable. Base original de implementación: `e0f6694`.
 
 - `proposal.md` y las specs definen el alcance; `design.md` documenta las decisiones técnicas.
 - La evidencia va en `docs/validacion/p4-enrutamiento.md`. Se crea en 1.1 y se completa en cada grupo.
@@ -145,5 +145,5 @@ Estado: implementación y validación local completadas el 26/11/2026 en `feat/p
 
 ## Workflow follow-up
 
-- Abrir el PR de `feat/p4-enrutamiento` cuando el responsable lo pida, y registrar el CI en la evidencia.
-- Sincronizar las specs y archivar el cambio tras la fusión, en un PR de documentación aparte, como en P4.1.
+- Implementación: PR #7 fusionado y CI aprobado de `main` registrado en `docs/validacion/p4-enrutamiento.md`.
+- Cierre: siete capacidades sincronizadas y cambio archivado localmente en `docs/p4.2-cierre`. Confirmar el commit, abrir el PR documental y comprobar su CI antes de fusionarlo, como en P4.1.
