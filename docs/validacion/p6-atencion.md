@@ -97,6 +97,8 @@ En la prueba manual, el responsable observó que «Asumir caso» era confuso, po
 - **Web:** 189 pruebas aprobadas; lint y tipos sin errores.
 - **Base de desarrollo:** se migró `ayni_safe_dev`.
 
+**Fallo de CI tras el grupo D:** en la ejecución `46081521100` falló 1 de las 1445 pruebas (`pendientes-admin.test.ts`). El `TRUNCATE` de `limpiarBd` produjo un *deadlock* (40P01) con el procesador de eventos de la prueba anterior, que seguía enrutando y que ahora también bloquea la fila del incidente. Es un problema del arnés de pruebas: en producción no hay `TRUNCATE`, y el orden de bloqueos (evaluación → enrutamiento → incidente; la atención solo bloquea el incidente) no forma ciclo. Corrección: `limpiarBd` espera a que todos los procesadores queden en reposo. La integración local volvió a aprobar las 48 suites y 600 pruebas.
+
 **No verificado:** la revisión visual renderizada del bloque nuevo y de los filtros. No había credenciales de operador para entrar al panel local. Queda para la prueba manual del responsable, en escritorio y en pantalla estrecha.
 
 ## Pendiente, sin presentarlo como hecho

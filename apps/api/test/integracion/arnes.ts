@@ -218,6 +218,9 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
 }
 
 export async function limpiarBd(prisma: PrismaClient): Promise<void> {
+  // Un procesador de una prueba anterior puede seguir enrutando: TRUNCATE choca con sus bloqueos de fila
+  // (40P01). Se espera a que todos queden en reposo antes de limpiar.
+  await Promise.all([...procesadoresCreados].map((p) => p.esperarReposo()));
   await prisma.$executeRawUnsafe('TRUNCATE participaciones_incidente, enrutamientos_incidente, entregas_evento, eventos, solicitudes_envio, envios_incidente, incidentes CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE envios_correo, tokens_cuenta, sesiones, usuarios, ventanas_intentos CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE estado_territorial, geometrias_distritales, versiones_territoriales CASCADE');
