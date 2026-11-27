@@ -63,6 +63,42 @@ La migración ahora rechaza ese cierre, como exige la spec. Se corrigieron ambas
 
 Los reportes no se veían en la app ni en el panel. La base de desarrollo `ayni_safe_dev` no tenía las tres migraciones de P6; solo se habían aplicado en la base `*_test` de las pruebas. Las consultas de bandeja y seguimiento leen columnas nuevas y respondían 503. Se resolvió con `npm run db:migrar` en `apps/api`. No había entregas de eventos fallidas. Es la misma causa registrada en P5.1 y P5.2: el despliegue debe aplicar las migraciones antes de arrancar esta versión.
 
+## Grupo D: ajuste tras la prueba manual (27/11/2026)
+
+En la prueba manual, el responsable observó que «Asumir caso» era confuso, porque el incidente ya pertenecía a la sede por jurisdicción, y que los seis botones tenían el mismo peso. Se presentó una propuesta antes de implementarla y el responsable eligió:
+- **Opción B:** asignación automática al operador único.
+- **Bloque de atención guiado.**
+- **Incluirlo en el mismo PR #15.**
+
+**Implementado:**
+- **Reglas de negocio:** documento 11 §2, RF56, guía UI y plan de integración. Si la única sede de la institución principal tiene un solo operador activo, el sistema le asigna el caso y lo pasa a revisión. Lo hace al enrutar, designar, reevaluar o cuando la institución pasa a ser principal por la condición médica. El historial registra el actor «sistema». Con varias sedes o varios operadores, la toma sigue siendo manual («Tomar el caso»).
+- **API:**
+  - Migración `20261130130000_asignacion_automatica`.
+  - `autoAsignarPrincipal` dentro de la transacción del enrutamiento.
+  - `responsable.automatica` en el resumen.
+  - Filtro `GET /operador/incidentes?responsable=sin_tomar|mios`, que no altera el orden FIFO.
+- **Web:**
+  - Recorrido de los cuatro estados.
+  - Una sola acción principal según el estado, con una frase sobre su efecto, y «Descartar» como acción secundaria.
+  - «Control del caso» plegable para verificación, prioridad y duplicado, siguiendo el «Abrir control» de `Incidents.jsx` del origen.
+  - Historial plegado y vista previa de lo que verá el ciudadano al cerrar.
+  - Filtros segmentados en la bandeja («Sin tomar», «Mis casos» y «Todos»), con el `.segmented` del origen.
+  - La pill del estado actual usa el par de tokens `--color-accion`/superficie, ya verificado AA.
+- **Pruebas:**
+  - Integración, con operador único, varios operadores, dos sedes y cambio de SAMU a principal.
+  - Filtro de la bandeja.
+  - Web, con el recorrido, el control plegado, la asignación automática, el filtro «Mis casos» y la vista previa del cierre.
+- **Pruebas anteriores ajustadas:**
+  - Seis pruebas de integración cuyo tema no era la asignación usan ahora sedes con dos operadores, para conservar la toma manual.
+  - Las dos expresiones de privacidad sanitaria detectan ahora un `"motivo"` con valor, porque el historial operativo incluye la clave aunque sea nula. No se filtra ningún motivo.
+
+**Verificación tras el grupo D:**
+- **API:** 80 suites y 1445 pruebas Jest aprobadas, con 88,56 % de líneas y 90,68 % de ramas. OpenAPI válido y 0 infracciones de arquitectura.
+- **Web:** 189 pruebas aprobadas; lint y tipos sin errores.
+- **Base de desarrollo:** se migró `ayni_safe_dev`.
+
+**No verificado:** la revisión visual renderizada del bloque nuevo y de los filtros. No había credenciales de operador para entrar al panel local. Queda para la prueba manual del responsable, en escritorio y en pantalla estrecha.
+
 ## Pendiente, sin presentarlo como hecho
 
 - **Recorrido en Android real.** Lo verifica el responsable de forma manual; no se ejecutó aquí.
