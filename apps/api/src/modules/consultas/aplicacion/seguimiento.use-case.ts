@@ -1,3 +1,4 @@
+import type { EvidenciasLecturaPort } from './bandeja.use-case';
 import {
   codificarCursor,
   decodificarCursor,
@@ -74,6 +75,8 @@ export interface EvaluacionAutorPort {
 }
 
 export interface DependenciasSeguimiento {
+  /** Fotos propias del autor (P5.2). Nunca se usan en la vista del invitado. */
+  readonly evidencias?: EvidenciasLecturaPort;
   /** Evaluacion propia en el detalle del autor (P5.1). Nunca se usa en la vista del invitado. */
   readonly evaluacion?: EvaluacionAutorPort;
   /** Sin el puerto (pruebas de P4.1), la institucion responsable se informa pendiente. */
@@ -193,7 +196,23 @@ export class SeguimientoCiudadano {
         : null,
       institucionResponsable: await this.protegido(() => this.responsable(incidente.id)),
       actuaciones: [] as const,
+      evidencias: this.d.evidencias
+        ? [...((await this.protegido(() => this.d.evidencias!.metadatos([incidente.id]))).get(incidente.id) ?? [])]
+        : [],
     };
+  }
+
+  /** Contenido de una foto propia (P5.2). Lo ajeno, inexistente o no disponible es el mismo 404. */
+  async contenidoEvidenciaAutor(usuarioId: string, referenciaCruda: string, evidenciaId: string) {
+    const referencia = this.d.incidentes.normalizarReferencia(referenciaCruda);
+    if (!referencia || !this.d.evidencias) throw new SeguimientoNoEncontradoError();
+    const incidente = await this.protegido(() => this.d.incidentes.porReferencia(referencia));
+    if (!incidente) throw new SeguimientoNoEncontradoError();
+    const propio = await this.protegido(() => this.d.envios.detalleDeAutor(usuarioId, incidente.id));
+    if (!propio) throw new SeguimientoNoEncontradoError();
+    const r = await this.protegido(() => this.d.evidencias!.contenido(incidente.id, evidenciaId, { usuarioId, rol: 'ciudadano' }));
+    if (!r) throw new SeguimientoNoEncontradoError();
+    return r;
   }
 
   /** Vista limitada del invitado: solo estado y resumen ciudadano, tras consumir los limites. */

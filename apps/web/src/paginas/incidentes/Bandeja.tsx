@@ -7,6 +7,7 @@ import { Icono } from '../../componentes/iconos';
 import { Mensaje } from '../../componentes/Mensaje';
 import { useSesion } from '../../sesion/SesionContexto';
 import { BloqueCondicionMedica, SeccionEvaluacionSamu } from './Evaluacion';
+import { Fotografias } from './Fotografias';
 import { ESTADO, fecha, INSTITUCION, PAPEL, textoTerritorio } from './etiquetas';
 
 /**
@@ -208,7 +209,8 @@ type EstadoResumen =
 
 /**
  * Resumen limitado de un incidente de la bandeja. Ofrece solo las acciones que la API tiene: precisar
- * la condicion medica y, para SAMU participante, la evaluacion rapida (P5.1). Sin «Asumir caso» (P6).
+ * la condicion medica y, para SAMU participante, la evaluacion rapida (P5.1), y muestra las fotografias
+ * del reporte (P5.2). Sin «Asumir caso» (P6).
  */
 export function ResumenIncidenteVista({ id }: { id: string }) {
   const { expirar } = useSesion();
@@ -317,6 +319,7 @@ export function ResumenIncidenteVista({ id }: { id: string }) {
         </section>
         <BloqueCondicionMedica resumen={r} onActualizado={actualizado} />
         {r.accesoSanitario ? <SeccionEvaluacionSamu resumen={r} version={intento} onActualizado={actualizado} /> : null}
+        <Fotografias incidenteId={r.id} evidencias={r.evidencias ?? []} />
       </div>
     </div>
   );

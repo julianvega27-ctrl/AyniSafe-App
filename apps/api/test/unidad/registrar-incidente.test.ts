@@ -126,6 +126,7 @@ function crear(opciones: { territorio?: () => Promise<TerritorioEnvio>; falloEn?
     },
   };
   const secretos = new HmacSecretosAdapter('s'.repeat(40));
+  const permisos = new Map<string, { huella: string; venceEn: Date }>();
   const deps: DependenciasRegistro = {
     categorias: { idsActivos: async () => new Set(['robo', 'pelea', 'accidente-transito']) },
     envios: repo,
@@ -140,6 +141,14 @@ function crear(opciones: { territorio?: () => Promise<TerritorioEnvio>; falloEn?
     territorio,
     limitador,
     secretos,
+    permisos: {
+      async guardar(_tx, incidenteId, huella, _emitido, venceEn) {
+        permisos.set(incidenteId, { huella, venceEn });
+      },
+      async leer(incidenteId) {
+        return permisos.get(incidenteId) ?? null;
+      },
+    },
     eventos: publicador,
     unidadDeTrabajo: uow,
     ahora: () => AHORA,

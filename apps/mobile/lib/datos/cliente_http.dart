@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../config/entorno.dart';
 
@@ -56,5 +58,55 @@ class ClienteHttp {
       }
     }
     return RespuestaApi(respuesta.statusCode, json, respuesta.headers);
+  }
+
+  /// Sube un archivo en `multipart/form-data` (fotos, P5.2). Nunca registra el contenido ni el nombre.
+  Future<RespuestaApi> enviarArchivo(
+    String ruta, {
+    required String campo,
+    required Uint8List bytes,
+    required String tipo,
+    String? token,
+    Map<String, String> cabeceras = const {},
+  }) async {
+    final solicitud = http.MultipartRequest('POST', _uri(ruta));
+    solicitud.headers['Accept'] = 'application/json';
+    solicitud.headers.addAll(cabeceras);
+    if (token != null) solicitud.headers['Authorization'] = 'Bearer $token';
+    final extension = switch (tipo) {
+      'image/png' => 'png',
+      'image/webp' => 'webp',
+      _ => 'jpg',
+    };
+    solicitud.files.add(
+      http.MultipartFile.fromBytes(
+        campo,
+        bytes,
+        filename: 'foto.$extension',
+        contentType: MediaType.parse(tipo),
+      ),
+    );
+    final flujo = await _cliente.send(solicitud).timeout(_timeout * 3);
+    final respuesta = await http.Response.fromStream(flujo).timeout(_timeout * 3);
+    Map<String, dynamic>? json;
+    try {
+      final decodificado = jsonDecode(respuesta.body);
+      if (decodificado is Map<String, dynamic>) json = decodificado;
+    } on FormatException {
+      json = null;
+    }
+    return RespuestaApi(respuesta.statusCode, json, respuesta.headers);
+  }
+
+  /// Descarga bytes (fotos autorizadas). El cuerpo JSON de error se decodifica si lo hay.
+  Future<(int, Uint8List, Map<String, String>)> obtenerBytes(
+    String ruta, {
+    String? token,
+  }) async {
+    final solicitud = http.Request('GET', _uri(ruta));
+    if (token != null) solicitud.headers['Authorization'] = 'Bearer $token';
+    final flujo = await _cliente.send(solicitud).timeout(_timeout);
+    final respuesta = await http.Response.fromStream(flujo).timeout(_timeout);
+    return (respuesta.statusCode, respuesta.bodyBytes, respuesta.headers);
   }
 }

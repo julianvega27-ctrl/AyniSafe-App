@@ -186,6 +186,19 @@ Presentación web (ajuste del 27/11/2026, dentro del sistema actual por decisió
 
 Los grupos de opciones de la web usan `fieldset`, leyenda y radios con la composición `.choice-list` del origen, operables con teclado. En Flutter, las tarjetas de preguntas no fusionan su contenido en un único nodo semántico: el título es el único encabezado. El administrador, el invitado, el mapa y los avisos no reciben datos sanitarios.
 
+### 2.13 Fotografías del reporte (P5.2)
+
+La evidencia de implementación y sus límites están en [P5.2](../validacion/p5-evidencias.md). Se conserva la composición del origen: botón «Adjuntar foto opcional» con hoja de galería y cámara en `report.dart`, y rejilla `.evidence-grid` con `.evidence-card` en `Incidents.jsx`. El origen admitía una sola foto; aquí se admiten tres sin crear estilos nuevos. Las fotos se suben después del registro: su falta o su fallo nunca deshacen ni bloquean el reporte.
+
+| Vista | Navegación, campos y acciones |
+|---|---|
+| Formulario móvil | «Fotos (opcional)» después de la evaluación y antes del teléfono. «Adjuntar foto opcional» abre «Elegir de galería» o «Tomar foto». Hasta 3 miniaturas («Foto N de M»), cada una con «Quitar». Se comprime en el dispositivo; una foto de más de 5 MB, o que no sea JPEG, PNG ni WebP, se rechaza junto a la sección con texto e icono, sin perder el formulario. Negar el permiso de cámara o galería explica la alternativa y no impide enviar. |
+| Comprobante móvil | Tarjeta «Fotos» con el estado de cada una: pendiente, enviando, adjuntada, no se adjuntó, rechazada o fuera de plazo, con texto e icono. Si alguna falla: «Reintentar fotos» (misma clave, sin duplicar) y «Continuar sin esta foto». El permiso de carga del invitado nunca se muestra. |
+| Mis reportes (detalle) | «Tus fotos» con las miniaturas propias, obtenidas con la sesión y guardadas solo en memoria; al tocar una se amplía y «Cerrar» la cierra. Una foto que no se puede obtener aparece «No disponible». La consulta con código no muestra fotos. |
+| Resumen del operador | Panel «Fotografías» con las tarjetas del origen: la imagen, que es un botón para ampliarla en el diálogo del sistema, y el pie «Adjuntada …». Sin fotos: «El ciudadano no adjuntó fotografías.». Una foto no disponible no oculta el resto del resumen. Sin URLs ni identificadores del proveedor; nada se guarda en el navegador. |
+
+El administrador, el invitado, el mapa y los avisos no reciben fotos.
+
 ## 3. Aspectos pendientes
 
 Los siguientes puntos no constituyen decisiones cerradas ni deben presentarse como requisitos ya aprobados:

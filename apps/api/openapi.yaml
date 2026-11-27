@@ -1046,6 +1046,7 @@ paths:
                 modalidad: invitado
                 territorio: { estado: resuelto, distrito: { id: DIS-01, nombre: Ayacucho } }
                 codigoSeguimiento: 7K3M-9Q2T-XAB4-CD5E
+                permisoEvidencias: { valor: q3Vb8kQ0mZt1Xx9JcN2pLr4sW6yUe7Ai5Hd0Gf3Kj1M, venceEn: '2026-11-27T15:00:01.123Z' }
         '200':
           description: Repeticion idempotente del mismo envio. Mismo incidente; el invitado recibe un codigo nuevo.
           headers:
@@ -1082,6 +1083,121 @@ paths:
         '429': { $ref: '#/components/responses/LimiteExcedido' }
         '503':
           description: Base de datos, catalogo o cartografia no legibles. No queda incidente parcial; reintentar con la misma clave no duplica.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /incidentes/{referencia}/evidencias:
+    post:
+      tags: [Incidentes]
+      operationId: adjuntarEvidencia
+      summary: Adjuntar una fotografia a un incidente ya registrado (P5.2)
+      description: |
+        Una foto por solicitud en el campo `foto` (multipart). Con cuenta, mediante la sesion Bearer del autor;
+        como invitado, con el permiso de carga del comprobante en `X-Permiso-Evidencias`. Solo durante las 24 h
+        siguientes a la recepcion y con el incidente abierto. Maximo 3 fotos de hasta 5 MB, JPEG, PNG o WebP
+        segun su contenido real; la API guarda una copia re-codificada sin EXIF ni GPS (no es un original
+        forense). Un fallo o rechazo nunca afecta al incidente registrado. La respuesta no incluye URLs ni
+        identificadores del proveedor.
+      security: [{ bearerAuth: [] }, { permisoEvidencias: [] }]
+      parameters:
+        - name: referencia
+          in: path
+          required: true
+          schema: { type: string, maxLength: 40 }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [foto]
+              properties:
+                foto: { type: string, format: binary, description: 'Una sola imagen de hasta 5 MB.' }
+      responses:
+        '201':
+          description: Fotografia adjuntada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidenciaVista' }
+        '200':
+          description: Repeticion con la misma clave y el mismo archivo; misma evidencia.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidenciaVista' }
+        '400':
+          description: Falta Idempotency-Key, falta el campo foto o hay mas de un archivo.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Sin sesion ni permiso de carga, o sesion invalida.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: 'Sesion institucional; los operadores y administradores no adjuntan fotos.'
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Incidente inexistente, ajeno, fuera de plazo o cerrado, o permiso invalido o vencido. Mismo cuerpo en todos los casos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Clave reutilizada con otro archivo (IDEMPOTENCY_CONFLICT) o ya hay 3 fotos (EVIDENCE_LIMIT).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '413':
+          description: La fotografia supera 5 MB.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '415':
+          description: El cuerpo no es multipart/form-data.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: El archivo no es una fotografia JPEG, PNG o WebP valida (INVALID_IMAGE).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Demasiadas cargas de invitado desde el mismo origen.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+            Retry-After: { $ref: '#/components/headers/RetryAfter' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: Almacen deshabilitado, sin cuota o no disponible (EVIDENCE_STORAGE_UNAVAILABLE). El reporte sigue registrado; reintentable con la misma clave.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
@@ -1151,6 +1267,45 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DetalleIncidenteAutor' }
+        '400':
+          description: Parametros de consulta no admitidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: Sesion institucional por cookie.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/SeguimientoNoEncontrado' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /ciudadano/incidentes/{referencia}/evidencias/{evidenciaId}/contenido:
+    get:
+      tags: [Seguimiento]
+      operationId: obtenerMiEvidencia
+      summary: Contenido de una foto propia (P5.2)
+      description: |
+        Solo el ciudadano autor con cuenta. Se entrega a traves de la API, sin redirigir al proveedor ni
+        exponer URLs firmadas; cada entrega queda registrada sin contenido. Una foto ajena, inexistente o no
+        disponible responde el mismo 404. El codigo secreto y el permiso de carga del invitado no dan acceso.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: referencia, in: path, required: true, schema: { type: string, maxLength: 40 } }
+        - { name: evidenciaId, in: path, required: true, schema: { type: string, maxLength: 64 } }
+      responses:
+        '200':
+          description: Imagen con su tipo real, inline, nosniff y CSP sandbox.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
         '400':
           description: Parametros de consulta no admitidos.
           headers:
@@ -1314,8 +1469,9 @@ paths:
       description: |
         Campos de la fila mas descripcion, ocurrencia, resultado territorial, respuestas de heridos y atencion
         medica informadas por el ciudadano, condicion medica vigente (resumen de heridos, P5.1), si el operador
-        tiene acceso al detalle sanitario y tipos de las demas instituciones participantes. Sin telefono,
-        coordenadas, codigo, autor, evidencias ni observaciones de la persona principal. Un incidente fuera del ambito,
+        tiene acceso al detalle sanitario, tipos de las demas instituciones participantes y metadatos de las fotos
+        disponibles (P5.2). Sin telefono, coordenadas, codigo, autor, contenido ni URLs de fotos, ni observaciones
+        de la persona principal. Un incidente fuera del ambito,
         inexistente o con identificador malformado responde el mismo 404.
       security: [{ cookieAuth: [] }]
       parameters:
@@ -1331,6 +1487,33 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ResumenIncidenteOperador' }
+        '400': { $ref: '#/components/responses/ConsultaBandejaInvalida' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403': { $ref: '#/components/responses/ProhibidoBandeja' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}/evidencias/{evidenciaId}/contenido:
+    get:
+      tags: [Bandeja]
+      operationId: obtenerEvidenciaOperador
+      summary: Contenido de una foto para un operador participante (P5.2)
+      description: |
+        Cualquier operador cuya sede participa en el incidente dentro de su ambito vigente. Se entrega a
+        traves de la API, sin redirigir al proveedor ni exponer URLs firmadas; cada entrega queda registrada
+        sin contenido. Lo ajeno, inexistente, malformado o no disponible responde el mismo 404.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, maxLength: 64 } }
+        - { name: evidenciaId, in: path, required: true, schema: { type: string, maxLength: 64 } }
+      responses:
+        '200':
+          description: Imagen con su tipo real, inline, nosniff y CSP sandbox.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
         '400': { $ref: '#/components/responses/ConsultaBandejaInvalida' }
         '401': { $ref: '#/components/responses/NoAutenticado' }
         '403': { $ref: '#/components/responses/ProhibidoBandeja' }
@@ -1528,6 +1711,11 @@ components:
       type: http
       scheme: bearer
       description: Token opaco de sesion (32 bytes aleatorios en base64url).
+    permisoEvidencias:
+      type: apiKey
+      in: header
+      name: X-Permiso-Evidencias
+      description: Solo invitado (P5.2). Permiso de carga de fotos del comprobante, valido 24 h; no da lectura.
     cookieAuth:
       type: apiKey
       in: cookie
@@ -2255,6 +2443,18 @@ components:
           type: string
           pattern: '^[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4}){3}$'
           description: Solo invitado. Se muestra una unica vez; el servidor guarda solo su huella.
+        permisoEvidencias:
+          type: object
+          additionalProperties: false
+          required: [valor, venceEn]
+          description: >-
+            Solo invitado y dentro de las 24 h siguientes a la recepcion (P5.2). Permiso de un solo
+            proposito para subir fotos a este incidente en la cabecera X-Permiso-Evidencias. Se muestra
+            una unica vez; el servidor guarda solo su huella. Un reintento idempotente emite uno nuevo e
+            invalida el anterior. No da acceso al seguimiento ni a las fotos.
+          properties:
+            valor: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' }
+            venceEn: { type: string, format: date-time }
     TerritorioIncidente:
       description: Distrito resuelto por el backend o pendiente con su motivo.
       oneOf:
@@ -2365,7 +2565,7 @@ components:
         - { $ref: '#/components/schemas/CamposFilaBandeja' }
       type: object
       unevaluatedProperties: false
-      required: [descripcion, ocurrencia, territorio, respuestasCiudadano, condicionMedica, accesoSanitario, otrasInstituciones]
+      required: [descripcion, ocurrencia, territorio, respuestasCiudadano, condicionMedica, accesoSanitario, otrasInstituciones, evidencias]
       properties:
         descripcion: { type: string }
         ocurrencia:
@@ -2395,6 +2595,21 @@ components:
         otrasInstituciones:
           type: array
           items: { $ref: '#/components/schemas/TipoInstitucionDestino' }
+        evidencias:
+          type: array
+          maxItems: 3
+          description: Fotos disponibles (P5.2); las pendientes, fallidas o eliminadas no se listan.
+          items: { $ref: '#/components/schemas/EvidenciaVista' }
+    EvidenciaVista:
+      type: object
+      additionalProperties: false
+      required: [id, tipo, bytes, adjuntadaEn]
+      description: Metadatos de una foto, sin URL, identificador del proveedor, autor ni nombre de archivo.
+      properties:
+        id: { type: string, format: uuid }
+        tipo: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        bytes: { type: integer, minimum: 1, maximum: 5242880 }
+        adjuntadaEn: { type: string, format: date-time }
     FilaPendienteEnrutamiento:
       type: object
       additionalProperties: false
@@ -2479,7 +2694,7 @@ components:
     DetalleIncidenteAutor:
       type: object
       additionalProperties: false
-      required: [referencia, categoria, estado, recibidoEn, territorio, descripcion, ocurrencia, respuestas, evaluacion, institucionResponsable, actuaciones]
+      required: [referencia, categoria, estado, recibidoEn, territorio, descripcion, ocurrencia, respuestas, evaluacion, institucionResponsable, actuaciones, evidencias]
       description: Sin coordenadas, telefono, notas internas, operadores ni datos de otros informantes.
       properties:
         referencia: { type: string }
@@ -2509,6 +2724,11 @@ components:
             - { type: 'null' }
         institucionResponsable: { $ref: '#/components/schemas/InstitucionResponsable' }
         actuaciones: { type: array, maxItems: 0 }
+        evidencias:
+          type: array
+          maxItems: 3
+          description: Fotos propias disponibles (P5.2).
+          items: { $ref: '#/components/schemas/EvidenciaVista' }
     RespuestaSiNoSe: { enum: [si, no, no_se, null], description: null es sin respuesta, distinto de `no`. }
     CantidadHeridos:
       description: Entero de 1 a 999 o `no_se`. Solo con heridos `si`; null en otro caso. Nunca se convierte en cero.
@@ -2702,6 +2922,9 @@ components:
                 - SEDE_NO_DESIGNABLE
                 - ENRUTAMIENTO_NO_PENDIENTE
                 - EVALUACION_CERRADA
+                - EVIDENCE_LIMIT
+                - INVALID_IMAGE
+                - EVIDENCE_STORAGE_UNAVAILABLE
                 - SIN_AMBITO
             message: { type: string }
             requisitos:

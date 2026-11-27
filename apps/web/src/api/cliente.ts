@@ -118,6 +118,16 @@ export interface ResumenIncidente extends FilaBandeja {
   /** La sede del operador es SAMU participante: puede leer la evaluacion completa. */
   readonly accesoSanitario: boolean;
   readonly otrasInstituciones: readonly TipoInstitucion[];
+  /** Fotos disponibles (P5.2): solo metadatos; el contenido se pide aparte con la sesion. */
+  readonly evidencias: readonly EvidenciaVista[];
+}
+
+/** Metadatos de una foto (P5.2), sin URL ni identificadores del proveedor. */
+export interface EvidenciaVista {
+  readonly id: string;
+  readonly tipo: 'image/jpeg' | 'image/png' | 'image/webp';
+  readonly bytes: number;
+  readonly adjuntadaEn: string;
 }
 
 // --- Evaluacion rapida (P5.1) ----------------------------------------------------------------
@@ -319,6 +329,27 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}): Promise<Resulta
   };
 }
 
+/**
+ * Contenido de una foto autorizada (P5.2): bytes por la API con la cookie institucional, sin cache.
+ * Nunca se guarda en almacenamiento del navegador; la vista crea y revoca su URL de objeto.
+ */
+async function obtenerImagen(ruta: string, senal?: AbortSignal): Promise<Resultado<Blob>> {
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(ruta, { credentials: 'same-origin', cache: 'no-store', signal: senal });
+  } catch (error) {
+    if (senal?.aborted) throw error;
+    return { tipo: 'red' };
+  }
+  if (respuesta.status >= 500) return { tipo: 'servicio' };
+  if (!respuesta.ok) return { tipo: 'error', estado: respuesta.status };
+  try {
+    return { tipo: 'ok', datos: await respuesta.blob() };
+  } catch {
+    return { tipo: 'servicio' };
+  }
+}
+
 export const api = {
   contenidoPublico: (senal?: AbortSignal) => llamar<ContenidoPublico>('/api/v1/publico/contenido', { senal }),
 
@@ -374,6 +405,8 @@ export const api = {
   bandeja: (cursor: string | null, senal?: AbortSignal) =>
     llamar<Pagina<FilaBandeja>>(`/api/v1/operador/incidentes${cursor ? `?cursor=${enc(cursor)}` : ''}`, { senal }),
   resumenIncidente: (id: string, senal?: AbortSignal) => llamar<ResumenIncidente>(`/api/v1/operador/incidentes/${enc(id)}`, { senal }),
+  contenidoEvidencia: (id: string, evidenciaId: string, senal?: AbortSignal) =>
+    obtenerImagen(`/api/v1/operador/incidentes/${enc(id)}/evidencias/${enc(evidenciaId)}/contenido`, senal),
   // Evaluacion rapida (P5.1): el detalle solo responde al operador SAMU participante.
   evaluacionSanitaria: (id: string, senal?: AbortSignal) =>
     llamar<DetalleSanitario>(`/api/v1/operador/incidentes/${enc(id)}/evaluacion`, { senal }),

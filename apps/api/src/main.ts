@@ -2,18 +2,20 @@ import { crearApp } from './app';
 import { ProcesadorEntregas } from './compartido/eventos/procesador-entregas';
 import { LoggerConsola } from './compartido/logger';
 import { dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from './composicion';
-import { cargarEntorno, cargarSecretoSeguimiento } from './config/entorno';
+import { cargarConfigEvidencias, cargarEntorno, cargarSecretoSeguimiento } from './config/entorno';
 import { crearModuloConsultasConPrisma, idsDistritosPiloto } from './modules/consultas';
 import { crearModuloIdentidadConPrisma } from './modules/identidad';
 import { crearModuloOperacionesConPrisma } from './modules/operaciones';
-import { crearModuloReportesConPrisma, type ModuloReportes } from './modules/reportes';
+import { crearAlmacenEvidencias, crearModuloReportesConPrisma, programarLimpieza, type ModuloReportes } from './modules/reportes';
 import { crearPrismaClient } from './modules/identidad/infraestructura/prisma-cliente';
 
 const INTERVALO_PURGA_MS = 60 * 60 * 1000;
+const INTERVALO_LIMPIEZA_EVIDENCIAS_MS = 5 * 60 * 1000;
 
 async function main(): Promise<void> {
   const entorno = cargarEntorno();
   const secretoSeguimiento = cargarSecretoSeguimiento();
+  const configEvidencias = cargarConfigEvidencias(process.env, entorno.nodeEnv);
   const logger = new LoggerConsola();
   const prisma = crearPrismaClient(entorno.urlBaseDeDatos);
   const operaciones = crearModuloOperacionesConPrisma(prisma);
@@ -41,6 +43,10 @@ async function main(): Promise<void> {
   reportes = crearModuloReportesConPrisma(prisma, {
     ...dependenciasRegistro(prisma, { identidad, consultas, operaciones, enrutamiento }, () => procesador.despertar(), logger),
     secretoSeguimiento,
+    evidencias: {
+      almacen: crearAlmacenEvidencias(configEvidencias),
+      cuota: { maxBytes: configEvidencias.cuotaBytes, maxObjetos: configEvidencias.cuotaObjetos },
+    },
   });
   const app = crearApp({
     saltosProxyConfianza: entorno.saltosProxyConfianza,
@@ -73,9 +79,16 @@ async function main(): Promise<void> {
   identidad.gestorEnvios.iniciar();
   // Retoma las entregas pendientes o interrumpidas antes de un reinicio (EQ-14).
   procesador.iniciar();
+  // Limpieza de evidencias huerfanas o fallidas: al arrancar y cada 5 min (P5.2).
+  const detenerLimpieza = reportes.limpiezaEvidencias
+    ? programarLimpieza(reportes.limpiezaEvidencias, INTERVALO_LIMPIEZA_EVIDENCIAS_MS, (e) =>
+        logger.registrar({ evento: 'limpieza_evidencias', resultado: 'fallo', error: e instanceof Error ? e.name : 'desconocido' }),
+      )
+    : () => undefined;
 
   const cerrar = (): void => {
     clearInterval(temporizador);
+    detenerLimpieza();
     servidor.close(() => {
       void Promise.all([identidad.gestorEnvios.detener(), procesador.detener()])
         .then(() => prisma.$disconnect())

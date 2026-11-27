@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../datos/consultas_guardadas.dart';
+import '../datos/selector_fotos.dart';
 import '../datos/contenido_repositorio.dart';
 import '../datos/incidentes_repositorio.dart';
 import '../datos/perfil_repositorio.dart';
@@ -41,6 +42,8 @@ class Servicios extends InheritedWidget {
     required this.incidentes,
     required this.ubicacion,
     required this.consultasGuardadas,
+    this.selectorFotos,
+    this.permisosCarga,
     this.mostrarTeselas = true,
     required super.child,
   });
@@ -55,6 +58,12 @@ class Servicios extends InheritedWidget {
 
   /// Consultas de invitado guardadas en este teléfono (independientes de la sesión).
   final ConsultasGuardadas consultasGuardadas;
+
+  /// Cámara y galería (P5.2). null: el del sistema.
+  final SelectorFotos? selectorFotos;
+
+  /// Permisos de carga del invitado (P5.2). null: almacenamiento seguro del sistema.
+  final PermisosCarga? permisosCarga;
 
   /// Falso en pruebas: el selector de punto no consulta el proveedor de teselas.
   final bool mostrarTeselas;
@@ -73,5 +82,7 @@ class Servicios extends InheritedWidget {
       incidentes != old.incidentes ||
       ubicacion != old.ubicacion ||
       consultasGuardadas != old.consultasGuardadas ||
+      selectorFotos != old.selectorFotos ||
+      permisosCarga != old.permisosCarga ||
       mostrarTeselas != old.mostrarTeselas;
 }

@@ -269,3 +269,39 @@ export function cargarEntorno(env: NodeJS.ProcessEnv = process.env): Entorno {
     androidHuellasSha256: cargarAndroid(env).huellas,
   };
 }
+
+export type AdaptadorEvidencias = 'cloudinary' | 'deshabilitado' | 'memoria';
+
+export interface ConfigEvidencias {
+  readonly adaptador: AdaptadorEvidencias;
+  /** Solo con adaptador cloudinary. La key y el secret nunca se imprimen ni se registran. */
+  readonly cloudinary?: { readonly cloudName: string; readonly apiKey: string; readonly apiSecret: string };
+  /** Cuota local que protege la cuenta compartida (design, decision 3). */
+  readonly cuotaBytes: number;
+  readonly cuotaObjetos: number;
+}
+
+/**
+ * Almacen de evidencias (P5.2, ADR-006). Por defecto `deshabilitado`: la carga responde 503 y el
+ * registro funciona igual. `memoria` es un doble: nunca en produccion. Los errores nombran la
+ * variable, nunca su valor.
+ */
+export function cargarConfigEvidencias(env: NodeJS.ProcessEnv, nodeEnv: Entorno['nodeEnv']): ConfigEvidencias {
+  const pedido = env.EVIDENCIAS_ADAPTADOR?.trim() || 'deshabilitado';
+  if (pedido !== 'cloudinary' && pedido !== 'deshabilitado' && pedido !== 'memoria') {
+    throw new Error('Configuracion invalida: EVIDENCIAS_ADAPTADOR debe ser cloudinary, deshabilitado o memoria');
+  }
+  if (pedido === 'memoria' && nodeEnv === 'production') {
+    throw new Error('Configuracion invalida: EVIDENCIAS_ADAPTADOR=memoria es un doble de pruebas y no se admite en produccion');
+  }
+  const cuotaBytes = entero('EVIDENCIAS_CUOTA_BYTES', env.EVIDENCIAS_CUOTA_BYTES, 500 * 1024 * 1024, 5 * 1024 * 1024, 20 * 1024 * 1024 * 1024);
+  const cuotaObjetos = entero('EVIDENCIAS_CUOTA_OBJETOS', env.EVIDENCIAS_CUOTA_OBJETOS, 1000, 1, 1_000_000);
+  if (pedido !== 'cloudinary') return { adaptador: pedido, cuotaBytes, cuotaObjetos };
+  const cloudName = obligatoria('CLOUDINARY_CLOUD_NAME', env.CLOUDINARY_CLOUD_NAME?.trim());
+  const apiKey = obligatoria('CLOUDINARY_API_KEY', env.CLOUDINARY_API_KEY?.trim());
+  const apiSecret = obligatoria('CLOUDINARY_API_SECRET', env.CLOUDINARY_API_SECRET?.trim());
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(cloudName)) {
+    throw new Error('Configuracion invalida: CLOUDINARY_CLOUD_NAME tiene un formato no valido');
+  }
+  return { adaptador: 'cloudinary', cloudinary: { cloudName, apiKey, apiSecret }, cuotaBytes, cuotaObjetos };
+}

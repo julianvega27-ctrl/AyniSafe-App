@@ -9,6 +9,7 @@ import '../componentes/campo_formulario.dart';
 import '../componentes/mensaje_accesible.dart';
 import '../componentes/tarjeta_mensaje.dart';
 import '../tema.dart';
+import '../componentes/fotos_propias.dart';
 import 'aclarar_evaluacion_pantalla.dart';
 import 'reporte_pantalla.dart' show textoEstadoIncidente;
 
@@ -447,6 +448,14 @@ class _DetalleIncidentePantallaState extends State<DetalleIncidentePantalla> {
                         d.resumen.categoriaId == 'accidente-transito',
                     alAclarar: () => _aclarar(d, ev),
                   ),
+                FotosPropias(
+                  evidencias: d.evidencias,
+                  cargar: (id) async {
+                    final token = widget.obtenerToken();
+                    if (token == null) return const ConsultaSesionInvalida();
+                    return widget.repositorio.fotoPropia(token, d.resumen.referencia, id);
+                  },
+                ),
               ],
               ConsultaNoEncontrada() => [
                 const MensajeAccesible(

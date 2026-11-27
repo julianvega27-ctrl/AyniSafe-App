@@ -1,0 +1,110 @@
+{
+  "fecha": "2026-11-27T17:09:32.449Z",
+  "validado": true,
+  "puntos": [
+    {
+      "id": "S1",
+      "titulo": "Subida authenticated con prefijo, carpeta y etiqueta",
+      "estado": "aprobado",
+      "observaciones": {
+        "publicIdConPrefijo": true,
+        "tipo": "authenticated",
+        "assetFolder": "aynisafe",
+        "folder": null,
+        "modoCarpetas": "dinamico",
+        "etiquetas": [
+          "aynisafe"
+        ],
+        "bytes": 659
+      }
+    },
+    {
+      "id": "S2",
+      "titulo": "Original: sin firma, firma alterada, tipo upload y firma valida",
+      "estado": "aprobado",
+      "observaciones": {
+        "sinFirma": 401,
+        "firmaAlterada": 401,
+        "firmaAlteradaDistinta": true,
+        "tipoUpload": 404,
+        "firmaValida": 200,
+        "bytesIgualesAlSubido": true
+      }
+    },
+    {
+      "id": "S3",
+      "titulo": "Derivado sin firma y firmado",
+      "estado": "aprobado",
+      "observaciones": {
+        "derivadoSinFirma": 401,
+        "derivadoFirmado": 200,
+        "derivadosListados": 1,
+        "limiteAdminApi": {
+          "permitido": 500,
+          "restante": 499
+        }
+      }
+    },
+    {
+      "id": "S4",
+      "titulo": "EXIF ausente en la imagen entregada",
+      "estado": "aprobado",
+      "observaciones": {
+        "exif": false,
+        "xmp": false,
+        "iptc": false,
+        "marcaFabricante": false
+      }
+    },
+    {
+      "id": "S5",
+      "titulo": "destroy con invalidate: original y derivados",
+      "estado": "aprobado",
+      "observaciones": {
+        "resultadoDestroy": "eliminado",
+        "adminTrasDestroy": 404,
+        "originalDejaDeServirseMs": 10900,
+        "derivadoDejaDeServirseMs": 10900,
+        "ultimoEstadoOriginal": 404,
+        "ultimoEstadoDerivado": 404,
+        "topeSondeoMs": 600000
+      }
+    },
+    {
+      "id": "S6",
+      "titulo": "Aislamiento: prefijo, etiqueta y borrado solo por registro",
+      "estado": "aprobado",
+      "observaciones": {
+        "etiquetaInicial": 0,
+        "ajenoRechazadoSinLlamar": true,
+        "etiquetaFinal": 0,
+        "destroySoloRegistrados": true,
+        "llamadasDestroy": 1
+      }
+    },
+    {
+      "id": "S7",
+      "titulo": "Cuota: /usage y consumo propio",
+      "estado": "informativo",
+      "observaciones": {
+        "usage": "ok",
+        "bytesPropios": 659,
+        "objetosPropios": 1
+      }
+    },
+    {
+      "id": "S8",
+      "titulo": "Descarga privada con expires_at (referencia)",
+      "estado": "informativo",
+      "observaciones": {
+        "vencida": 401,
+        "vigente": 200
+      }
+    }
+  ],
+  "manifiesto": [
+    {
+      "estado": "eliminado"
+    }
+  ]
+}

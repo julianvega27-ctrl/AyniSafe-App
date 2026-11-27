@@ -44,6 +44,7 @@ describe('migracion desde base vacia', () => {
     );
     expect(tablas.rows.map((t) => t.tablename).sort()).toEqual([
       'accesos_evaluacion',
+      'accesos_evidencia',
       'cambios_enrutamiento',
       'categorias',
       'coberturas_sede',
@@ -56,10 +57,12 @@ describe('migracion desde base vacia', () => {
       'estado_territorial',
       'evaluaciones_incidente',
       'eventos',
+      'evidencias_incidente',
       'geometrias_distritales',
       'incidentes',
       'instituciones',
       'participaciones_incidente',
+      'permisos_evidencia',
       'pertenencias_operador',
       'sedes',
       'sesiones',

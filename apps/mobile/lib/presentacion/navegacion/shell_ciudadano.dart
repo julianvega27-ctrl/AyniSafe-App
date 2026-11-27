@@ -1,3 +1,5 @@
+import '../../datos/evidencias.dart';
+import '../../datos/selector_fotos.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -102,6 +104,8 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
     nuevaClave: () => const Uuid().v4(),
     cuandoSesionInvalida: widget.sesion.alSesionInvalida,
     ahora: widget.ahora,
+    selector: Servicios.of(context).selectorFotos ?? SelectorFotosSistema(),
+    permisos: Servicios.of(context).permisosCarga ?? PermisosCargaSeguros(),
   );
 
   @override

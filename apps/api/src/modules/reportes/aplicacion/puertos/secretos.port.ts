@@ -11,4 +11,8 @@ export interface SecretosPort {
   iguales(a: string, b: string): boolean;
   /** Codigo secreto nuevo, formateado (XXXX-XXXX-XXXX-XXXX). */
   nuevoCodigo(): string;
+  /** Permiso de carga de fotos del invitado (P5.2): 32 bytes aleatorios en base64url. */
+  nuevoPermisoEvidencias(): string;
+  /** Huella del permiso de carga ligado a un incidente (64 hex). */
+  huellaPermisoEvidencias(incidenteId: string, permiso: string): string;
 }

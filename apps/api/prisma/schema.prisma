@@ -428,3 +428,53 @@ model AccesoEvaluacion {
   @@index([incidenteId, accedidoEn], map: "accesos_evaluacion_incidente")
   @@map("accesos_evaluacion")
 }
+
+/// P5.2 (Reportes): foto adjunta. public_id registrado antes de subir; ranura 1-3 unica entre no eliminadas
+/// (indice parcial y CHECK en la migracion). Una fila eliminada es la marca sin contenido.
+model EvidenciaIncidente {
+  id                  String    @id @db.Uuid
+  incidenteId         String    @map("incidente_id") @db.Uuid
+  ranura              Int       @db.SmallInt
+  publicId            String    @unique @map("public_id")
+  proveedor           String
+  estado              String
+  tipoMedio           String    @map("tipo_medio")
+  bytes               Int
+  ancho               Int?
+  alto                Int?
+  sha256              String?
+  huellaCarga         String    @map("huella_carga")
+  claveIdempotencia   String    @map("clave_idempotencia") @db.Uuid
+  modalidad           String
+  autorUsuarioId      String?   @map("autor_usuario_id") @db.Uuid
+  creadaEn            DateTime  @default(now()) @map("creada_en") @db.Timestamptz(3)
+  confirmadaEn        DateTime? @map("confirmada_en") @db.Timestamptz(3)
+  eliminadaEn         DateTime? @map("eliminada_en") @db.Timestamptz(3)
+  motivoEliminacion   String?   @map("motivo_eliminacion")
+  intentosEliminacion Int       @default(0) @map("intentos_eliminacion")
+  proximoIntentoEn    DateTime? @map("proximo_intento_en") @db.Timestamptz(3)
+  accesos             AccesoEvidencia[]
+  // Indices unicos parciales (ranura activa; clave entre pendiente/disponible) solo en la migracion.
+  @@map("evidencias_incidente")
+}
+
+/// P5.2 (Reportes): huella HMAC del permiso de carga del invitado (24 h).
+model PermisoEvidencia {
+  incidenteId   String   @id @map("incidente_id") @db.Uuid
+  permisoHuella String   @map("permiso_huella")
+  emitidoEn     DateTime @default(now()) @map("emitido_en") @db.Timestamptz(3)
+  venceEn       DateTime @map("vence_en") @db.Timestamptz(3)
+  @@map("permisos_evidencia")
+}
+
+/// P5.2 (Reportes): lectura autorizada del contenido de una foto, sin contenido.
+model AccesoEvidencia {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  evidenciaId String   @map("evidencia_id") @db.Uuid
+  usuarioId   String   @map("usuario_id") @db.Uuid
+  rol         String
+  accedidoEn  DateTime @default(now()) @map("accedido_en") @db.Timestamptz(3)
+  evidencia   EvidenciaIncidente @relation(fields: [evidenciaId], references: [id], onDelete: Restrict)
+  @@index([evidenciaId, accedidoEn], map: "accesos_evidencia_evidencia")
+  @@map("accesos_evidencia")
+}

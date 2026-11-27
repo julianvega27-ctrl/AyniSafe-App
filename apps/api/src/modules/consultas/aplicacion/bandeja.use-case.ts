@@ -76,6 +76,24 @@ export interface OriginalesBandejaPort {
   }>>;
 }
 
+/** Foto disponible: metadatos sin public_id, URL ni autor (P5.2). */
+export interface EvidenciaVista {
+  readonly id: string;
+  readonly tipo: string;
+  readonly bytes: number;
+  readonly adjuntadaEn: string;
+}
+
+/** Puerto hacia Reportes: fotos. El contenido registra el acceso; Consultas autoriza antes. */
+export interface EvidenciasLecturaPort {
+  metadatos(ids: readonly string[]): Promise<ReadonlyMap<string, readonly EvidenciaVista[]>>;
+  contenido(
+    incidenteId: string,
+    evidenciaId: string,
+    lector: { readonly usuarioId: string; readonly rol: 'operador' | 'ciudadano' },
+  ): Promise<{ readonly bytes: Buffer; readonly tipo: string } | null>;
+}
+
 export interface DependenciasBandeja {
   readonly ambito: AmbitoBandejaPort;
   readonly participaciones: ParticipacionesBandejaPort;
@@ -83,6 +101,8 @@ export interface DependenciasBandeja {
   readonly categorias: { nombres(): Promise<ReadonlyMap<string, string>> };
   /** Evaluacion rapida (P5.1). Sin ella, el resumen no informa condicion vigente ni acceso sanitario. */
   readonly evaluacion?: EvaluacionBandejaPort;
+  /** Evidencias fotograficas (P5.2). Sin ellas, el resumen informa una lista vacia. */
+  readonly evidencias?: EvidenciasLecturaPort;
 }
 
 export const PAGINA_BANDEJA = 50;
@@ -156,10 +176,11 @@ export class BandejaInstitucional {
     const ambito = await this.ambito(usuarioId);
     const p = await this.d.participaciones.participacionDe(ambito, incidenteId);
     if (!p) throw new IncidenteNoDisponibleError();
-    const [originales, categorias, condiciones] = await Promise.all([
+    const [originales, categorias, condiciones, fotos] = await Promise.all([
       this.d.originales.resumenOperativo([p.incidenteId]),
       this.d.categorias.nombres(),
       this.d.evaluacion ? this.d.evaluacion.condiciones([p.incidenteId]) : Promise.resolve(new Map<string, CondicionBandeja>()),
+      this.d.evidencias ? this.d.evidencias.metadatos([p.incidenteId]) : Promise.resolve(new Map<string, readonly EvidenciaVista[]>()),
     ]);
     const o = originales.get(p.incidenteId);
     if (!o) throw new IncidenteNoDisponibleError();
@@ -185,7 +206,21 @@ export class BandejaInstitucional {
         : null,
       accesoSanitario: c !== undefined && p.institucion === 'samu',
       otrasInstituciones: [...p.otrasInstituciones],
+      evidencias: [...(fotos.get(p.incidenteId) ?? [])],
     };
+  }
+
+  /**
+   * Contenido de una foto (P5.2, spec `consultas/acceso-evidencias`): cualquier operador cuya sede
+   * participa dentro de su ambito vigente. Lo ajeno, inexistente o no disponible es el mismo 404.
+   */
+  async contenidoEvidencia(usuarioId: string, incidenteId: string, evidenciaId: string) {
+    const ambito = await this.ambito(usuarioId);
+    const p = await this.d.participaciones.participacionDe(ambito, incidenteId);
+    if (!p || !this.d.evidencias) throw new IncidenteNoDisponibleError();
+    const r = await this.d.evidencias.contenido(p.incidenteId, evidenciaId, { usuarioId, rol: 'operador' });
+    if (!r) throw new IncidenteNoDisponibleError();
+    return r;
   }
 
   /**

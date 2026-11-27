@@ -8,14 +8,16 @@ import '../componentes/boton_principal.dart';
 import '../componentes/campo_formulario.dart';
 import '../componentes/mensaje_accesible.dart';
 import '../componentes/pregunta_seleccion.dart';
+import '../componentes/seccion_fotos.dart';
 import '../componentes/selector_punto.dart';
 import '../componentes/tarjeta_mensaje.dart';
 import '../tema.dart';
 
 /// Formulario de reporte (composición de `screens/report.dart` del origen): título, categoría,
 /// descripción, cuándo, ubicación con mapa, preguntas para SAMU cuando aplican, evaluación rápida
-/// cuando SAMU interviene (P5.1) y teléfono solo del invitado. Sin fotos (P5.2). Todo lo escrito se
-/// conserva ante errores, también lo marcado en un bloque que se oculta.
+/// cuando SAMU interviene (P5.1), fotos opcionales (P5.2) y teléfono solo del invitado. Todo lo escrito
+/// se conserva ante errores, también lo marcado en un bloque que se oculta. Las fotos se suben después
+/// del comprobante y su fallo nunca deshace el reporte.
 class ReportePantalla extends StatefulWidget {
   const ReportePantalla({
     super.key,
@@ -90,6 +92,7 @@ class _ReportePantallaState extends State<ReportePantalla> {
           return ComprobanteVista(
             estado: estado,
             esInvitado: estado.comprobante.codigoSeguimiento != null,
+            fotos: EstadoFotosVista(controlador: _c),
             alNuevoReporte: () {
               _descripcion.clear();
               _telefono.clear();
@@ -167,6 +170,8 @@ class _ReportePantallaState extends State<ReportePantalla> {
               alCambiarSangrado: _c.responderSangrado,
             ),
           ],
+          const SizedBox(height: Espaciado.s2),
+          SeccionFotos(controlador: _c, habilitada: !enviando),
           if (_c.esInvitado) ...[
             const SizedBox(height: Espaciado.s2),
             CampoFormulario(
@@ -446,8 +451,11 @@ class ComprobanteVista extends StatelessWidget {
     required this.alNuevoReporte,
     this.alVerMisReportes,
     this.alConsultarCodigo,
+    this.fotos,
   });
 
+  /// Estado de las fotos adjuntas (P5.2); el reporte ya está registrado aunque fallen.
+  final Widget? fotos;
   final EnvioListo estado;
   final bool esInvitado;
   final VoidCallback alNuevoReporte;
@@ -544,6 +552,7 @@ class ComprobanteVista extends StatelessWidget {
               ),
             ),
           ],
+          if (fotos != null) ...[const SizedBox(height: Espaciado.s2), fotos!],
           const SizedBox(height: Espaciado.s2),
           if (esInvitado && alConsultarCodigo != null)
             OutlinedButton.icon(

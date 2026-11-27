@@ -58,15 +58,11 @@ export function dependenciasRegistro(
   const { enrutamiento } = modulos;
   return {
     incidentes: modulos.operaciones.incidentes,
-    ...(enrutamiento
-      ? {
-          condicionMedica: { aplicar: (tx, cambio) => enrutamiento.aplicarCondicionMedica(tx, cambio) },
-          idPorReferencia: async (texto: string) => {
-            const referencia = normalizarReferencia(texto);
-            return referencia ? ((await modulos.operaciones.incidentes.porReferencia(referencia))?.id ?? null) : null;
-          },
-        }
-      : {}),
+    ...(enrutamiento ? { condicionMedica: { aplicar: (tx, cambio) => enrutamiento.aplicarCondicionMedica(tx, cambio) } } : {}),
+    idPorReferencia: async (texto: string) => {
+      const referencia = normalizarReferencia(texto);
+      return referencia ? ((await modulos.operaciones.incidentes.porReferencia(referencia))?.id ?? null) : null;
+    },
     territorio: puertoTerritorio(modulos.consultas),
     limitador: modulos.identidad.limitador,
     identificarSolicitante: modulos.identidad.identificarSolicitante,
@@ -112,6 +108,7 @@ export function opcionesSeguimiento(
     },
     ...(modulos.enrutamiento ? { responsables: responsablesDe(modulos.enrutamiento, modulos.identidad) } : {}),
     evaluacion: { vistaAutor: (incidenteId, abierto) => lecturaEvaluacion(obtenerReportes).vistaAutor(incidenteId, abierto) },
+    evidencias: puertoEvidencias(obtenerReportes),
     limitador: modulos.identidad.limitador,
     identificar: modulos.identidad.identificarSolicitante,
     logger,
@@ -166,8 +163,18 @@ export function opcionesBandeja(
       condiciones: (ids) => lecturaEvaluacion(obtenerReportes).condicionesVigentes(ids),
       detalleSanitario: (incidenteId, usuarioId) => lecturaEvaluacion(obtenerReportes).detalleSanitario(incidenteId, usuarioId),
     },
+    evidencias: puertoEvidencias(obtenerReportes),
     identificar: identidad.identificarSolicitante,
     logger,
+  };
+}
+
+/** Fotos (P5.2) por la fachada de Reportes; sin lectura compuesta, sin fotos. */
+function puertoEvidencias(obtenerReportes: () => ModuloReportes) {
+  return {
+    metadatos: async (ids: readonly string[]) => obtenerReportes().lecturaEvidencias?.metadatos(ids) ?? new Map(),
+    contenido: async (incidenteId: string, evidenciaId: string, lector: { readonly usuarioId: string; readonly rol: 'operador' | 'ciudadano' }) =>
+      obtenerReportes().lecturaEvidencias?.contenido(incidenteId, evidenciaId, lector) ?? null,
   };
 }
 

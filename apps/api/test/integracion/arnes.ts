@@ -33,6 +33,7 @@ import { RedactorCorreoTextoPlano } from '../../src/modules/identidad/infraestru
 import { PrismaSesionesAdapter } from '../../src/modules/identidad/infraestructura/prisma-sesiones.adapter';
 import { PrismaTokensCuentaAdapter } from '../../src/modules/identidad/infraestructura/prisma-tokens-cuenta.adapter';
 import { TokenOpacoAdapter } from '../../src/modules/identidad/infraestructura/token-opaco.adapter';
+import { MemoriaEvidenciasAdapter } from '../../src/modules/reportes/infraestructura/memoria-evidencias.adapter';
 
 export const SECRETO_PRUEBA = 'secreto-de-prueba-para-hmac-de-al-menos-32-caracteres';
 export const SECRETO_SEGUIMIENTO_PRUEBA = 'secreto-de-seguimiento-de-prueba-de-al-menos-32-caracteres';
@@ -96,6 +97,10 @@ export interface OpcionesArnes {
     readonly porReferencia: { readonly maximo: number; readonly ventanaMs: number };
     readonly porOrigen: { readonly maximo: number; readonly ventanaMs: number };
   };
+  /** Almacen de evidencias (P5.2). Por defecto, el doble en memoria; null = deshabilitado. */
+  readonly almacenEvidencias?: MemoriaEvidenciasAdapter | null;
+  readonly cuotaEvidencias?: { readonly maxBytes: number; readonly maxObjetos: number };
+  readonly limiteCargasInvitado?: { readonly maximo: number; readonly ventanaMs: number };
 }
 
 export interface Arnes {
@@ -111,6 +116,8 @@ export interface Arnes {
   readonly deps: DependenciasIdentidad;
   /** Adaptador de correo en memoria (salvo que se sobrescriba): no valida el proveedor real. */
   readonly correo: CorreoPruebaAdapter;
+  /** Doble del almacen de evidencias: no valida Cloudinary. */
+  readonly almacenEvidencias: MemoriaEvidenciasAdapter;
 }
 
 export function urlPruebas(): string {
@@ -136,6 +143,7 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   const reloj = opciones.reloj ?? new RelojControlable();
   const logger = new LoggerCapturado();
   const correo = new CorreoPruebaAdapter();
+  const almacenEvidencias = opciones.almacenEvidencias ?? new MemoriaEvidenciasAdapter();
   // El catalogo de categorias se lee al usarse: Reportes se compone despues porque depende de Identidad.
   let reportes: ModuloReportes | undefined;
   const deps: DependenciasIdentidad = {
@@ -191,6 +199,11 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     ...dependenciasRegistro(prisma, { identidad: modulo, consultas, operaciones, enrutamiento }, () => procesador.despertar(), logger),
     secretoSeguimiento: SECRETO_SEGUIMIENTO_PRUEBA,
     limiteInvitado: opciones.limiteInvitado ?? { maximo: 100000, ventanaMs: 60 * 60 * 1000 },
+    evidencias: {
+      almacen: opciones.almacenEvidencias === undefined ? almacenEvidencias : opciones.almacenEvidencias,
+      cuota: opciones.cuotaEvidencias ?? { maxBytes: 500 * 1024 * 1024, maxObjetos: 1000 },
+      limiteInvitado: opciones.limiteCargasInvitado ?? { maximo: 100000, ventanaMs: 60 * 60 * 1000 },
+    },
   });
   const app = crearApp({
     saltosProxyConfianza: opciones.saltosProxy ?? 0,
@@ -199,7 +212,7 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     reportes,
     operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger),
   });
-  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, deps, correo };
+  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, deps, correo, almacenEvidencias };
 }
 
 export async function limpiarBd(prisma: PrismaClient): Promise<void> {
