@@ -4,8 +4,8 @@ import type { Express } from 'express';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultasConPrisma, idsDistritosPiloto } from '../../src/modules/consultas';
 import { crearModuloReportesConPrisma, type ModuloReportes } from '../../src/modules/reportes';
-import { crearModuloOperacionesConPrisma, type ModuloOperaciones, type ServicioEnrutamiento } from '../../src/modules/operaciones';
-import { dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from '../../src/composicion';
+import { crearModuloOperacionesConPrisma, type ModuloOperaciones, type ServicioAtencion, type ServicioEnrutamiento } from '../../src/modules/operaciones';
+import { atencionDe, dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from '../../src/composicion';
 import type { ConsumidorEventos } from '../../src/compartido/eventos/eventos';
 import { ProcesadorEntregas } from '../../src/compartido/eventos/procesador-entregas';
 import { PrismaOrganizacionAdapter } from '../../src/modules/identidad/infraestructura/prisma-organizacion.adapter';
@@ -113,6 +113,7 @@ export interface Arnes {
   readonly operaciones: ModuloOperaciones;
   readonly procesador: ProcesadorEntregas;
   readonly enrutamiento: ServicioEnrutamiento;
+  readonly atencion: ServicioAtencion;
   readonly deps: DependenciasIdentidad;
   /** Adaptador de correo en memoria (salvo que se sobrescriba): no valida el proveedor real. */
   readonly correo: CorreoPruebaAdapter;
@@ -178,15 +179,16 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   modulosCreados.add(modulo);
   clientesCreados.add(prisma);
   let procesadorCreado: ProcesadorEntregas | undefined;
-  const enrutamiento = enrutamientoDe(prisma, modulo, () => reportes!, () => procesadorCreado?.despertar());
+  const atencion = atencionDe(prisma, modulo);
+  const enrutamiento = enrutamientoDe(prisma, modulo, () => reportes!, () => procesadorCreado?.despertar(), atencion);
   const consultas = crearModuloConsultasConPrisma(
     prisma,
     SECRETO_PRUEBA,
     {
-      ...opcionesSeguimiento({ identidad: modulo, operaciones, enrutamiento }, () => reportes!, logger),
+      ...opcionesSeguimiento({ identidad: modulo, operaciones, enrutamiento, atencion }, () => reportes!, logger),
       ...(opciones.limitesSeguimiento ? { limites: opciones.limitesSeguimiento } : {}),
     },
-    opcionesBandeja(modulo, enrutamiento, () => reportes!, logger),
+    opcionesBandeja(modulo, enrutamiento, () => reportes!, logger, atencion),
   );
   const procesador = new ProcesadorEntregas(
     prisma,
@@ -210,12 +212,15 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     identidad: modulo,
     consultas,
     reportes,
-    operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger),
+    operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger, atencion, operaciones.incidentes),
   });
-  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, deps, correo, almacenEvidencias };
+  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, atencion, deps, correo, almacenEvidencias };
 }
 
 export async function limpiarBd(prisma: PrismaClient): Promise<void> {
+  // Un procesador de una prueba anterior puede seguir enrutando: TRUNCATE choca con sus bloqueos de fila
+  // (40P01). Se espera a que todos queden en reposo antes de limpiar.
+  await Promise.all([...procesadoresCreados].map((p) => p.esperarReposo()));
   await prisma.$executeRawUnsafe('TRUNCATE participaciones_incidente, enrutamientos_incidente, entregas_evento, eventos, solicitudes_envio, envios_incidente, incidentes CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE envios_correo, tokens_cuenta, sesiones, usuarios, ventanas_intentos CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE estado_territorial, geometrias_distritales, versiones_territoriales CASCADE');

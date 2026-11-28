@@ -94,6 +94,21 @@ export interface OrganizacionPort {
   sedesElegibles(institucion: TipoInstitucion, distritoId: string, categoriaId: string): Promise<string[]>;
   /** Estado de una sede para una designacion administrativa; nulo si la sede no existe. */
   estadoDesignacion(sedeId: string): Promise<EstadoDesignacion | null>;
+  /** Operadores por id para la atencion (P6): nombre, sede, institucion y si pueden atender. */
+  describirOperadores(ids: readonly string[]): Promise<OperadorAtencionVista[]>;
+  /** Operadores de las sedes indicadas (P6, candidatos a reasignacion). */
+  operadoresDeSedes(sedeIds: readonly string[]): Promise<OperadorAtencionVista[]>;
+}
+
+export interface OperadorAtencionVista {
+  readonly usuarioId: string;
+  readonly nombre: string;
+  readonly sedeId: string;
+  readonly sedeNombre: string;
+  readonly institucion: TipoInstitucion;
+  readonly cuentaActiva: boolean;
+  /** Sede e institucion activas y sede habilitada para atencion. */
+  readonly sedeOperativa: boolean;
 }
 
 export interface EstadoDesignacion {

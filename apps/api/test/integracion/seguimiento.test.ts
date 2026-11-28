@@ -155,7 +155,7 @@ describe('vista limitada del invitado', () => {
     const r = await consultar({ referencia: inv.referencia.toLowerCase(), codigo: inv.codigoSeguimiento!.toLowerCase() });
     expect(r.status).toBe(200);
     expect(r.headers['cache-control']).toBe('no-store');
-    expect(Object.keys(r.body).sort()).toEqual(['actuaciones', 'categoria', 'estado', 'institucionResponsable', 'recibidoEn', 'referencia']);
+    expect(Object.keys(r.body).sort()).toEqual(['actuaciones', 'categoria', 'cierre', 'coordinacion', 'estado', 'institucionResponsable', 'recibidoEn', 'referencia']);
     expect(r.body).toMatchObject({ referencia: inv.referencia, estado: 'REGISTRADO', categoria: { id: 'pelea', nombre: 'Pelea' } });
     expect(logger.texto()).not.toContain(inv.codigoSeguimiento!);
   });

@@ -23,7 +23,12 @@ const fila = (n: number, extra: Partial<FilaBandeja> = {}): FilaBandeja => ({
   registradoEn: `2026-11-26T1${n}:00:00.000Z`,
   papel: 'principal',
   condicionMedicaPorConfirmar: false,
+  verificacion: 'SIN_VERIFICAR',
+  resultado: null,
+  responsable: { asignado: false, esUsted: false },
+  vinculado: false,
   prioridad: 'SIN_EVALUAR',
+  prioridadOrigen: null,
   ...extra,
 });
 
@@ -131,6 +136,7 @@ describe('resumen del incidente', () => {
     accesoSanitario: false,
     otrasInstituciones: ['samu'],
     evidencias: [],
+    atencion: null,
   };
 
   it('abre el resumen desde la fila y vuelve a la bandeja con las mismas filas', async () => {

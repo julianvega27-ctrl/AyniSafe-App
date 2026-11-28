@@ -19,7 +19,12 @@ const resumen = (extra: Partial<ResumenIncidente> = {}): ResumenIncidente => ({
   registradoEn: '2026-11-26T10:00:00.000Z',
   papel: 'principal',
   condicionMedicaPorConfirmar: true,
+  verificacion: 'SIN_VERIFICAR',
+  resultado: null,
+  responsable: { asignado: false, esUsted: false },
+  vinculado: false,
   prioridad: 'SIN_EVALUAR',
+  prioridadOrigen: null,
   descripcion: 'Choque de dos autos en la avenida',
   ocurrencia: { modo: 'ahora', instante: '2026-11-26T09:58:00.000Z' },
   territorio: { estado: 'resuelto', distrito: { id: 'DIS-01', nombre: 'Ayacucho' } },
@@ -38,6 +43,7 @@ const resumen = (extra: Partial<ResumenIncidente> = {}): ResumenIncidente => ({
   accesoSanitario: false,
   otrasInstituciones: [],
   evidencias: [],
+  atencion: null,
   ...extra,
 });
 

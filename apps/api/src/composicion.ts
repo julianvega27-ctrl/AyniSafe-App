@@ -5,8 +5,14 @@ import { distritosPiloto, type ModuloConsultas, type OpcionesBandeja, type Opcio
 import type { ModuloIdentidad } from './modules/identidad';
 import { Router } from 'express';
 import {
+  crearAtencionConPrisma,
   crearEnrutamientoConPrisma,
+  crearRouterAtencion,
   crearRouterEnrutamiento,
+  type ServicioAtencion,
+  type EstadoIncidente,
+  type InstitucionDestino,
+  type Papel,
   crearRouterEvaluacionOperador,
   type ResultadoAclaracionOperador,
   normalizarReferencia,
@@ -83,10 +89,13 @@ export function opcionesSeguimiento(
     readonly operaciones: ModuloOperaciones;
     /** Institucion responsable (P4.2); sin el, se informa pendiente. */
     readonly enrutamiento?: ServicioEnrutamiento;
+    /** Hitos y cierre (P6); sin ella, las actuaciones se informan pendientes. */
+    readonly atencion?: ServicioAtencion;
   },
   obtenerReportes: () => ModuloReportes,
   logger: Logger,
 ): OpcionesSeguimiento {
+  const { atencion } = modulos;
   const lectura = () => {
     const l = obtenerReportes().lectura;
     if (!l) throw new Error('Reportes sin lectura de envios compuesta');
@@ -107,6 +116,14 @@ export function opcionesSeguimiento(
       nombres: async () => new Map((await obtenerReportes().categorias.listar()).map((c) => [c.id, c.nombre])),
     },
     ...(modulos.enrutamiento ? { responsables: responsablesDe(modulos.enrutamiento, modulos.identidad) } : {}),
+    ...(atencion
+      ? {
+          atencion: {
+            cierres: (ids: readonly string[]) => atencion.cierres(ids),
+            nombresInstituciones: () => modulos.identidad.sedesEnrutamiento.nombresInstituciones(),
+          },
+        }
+      : {}),
     evaluacion: { vistaAutor: (incidenteId, abierto) => lecturaEvaluacion(obtenerReportes).vistaAutor(incidenteId, abierto) },
     evidencias: puertoEvidencias(obtenerReportes),
     limitador: modulos.identidad.limitador,
@@ -135,8 +152,27 @@ export function opcionesBandeja(
   enrutamiento: ServicioEnrutamiento,
   obtenerReportes: () => ModuloReportes,
   logger: Logger,
+  atencion?: ServicioAtencion,
 ): OpcionesBandeja {
   return {
+    ...(atencion
+      ? {
+          atencion: {
+            vista: (p, operadorId) =>
+              atencion.vistaOperador(
+                {
+                  incidenteId: p.incidenteId,
+                  institucion: p.institucion as InstitucionDestino,
+                  sedeId: p.sedeId,
+                  papel: p.papel as Papel,
+                  estado: p.estado as EstadoIncidente,
+                  vinculado: p.vinculado,
+                },
+                operadorId,
+              ),
+          },
+        }
+      : {}),
     ambito: {
       async de(usuarioId) {
         const a = await identidad.consultarAmbitoOperador.ejecutar(usuarioId);
@@ -146,7 +182,7 @@ export function opcionesBandeja(
       },
     },
     participaciones: {
-      bandeja: (ambito, despuesDe, limite) => enrutamiento.bandeja(ambito, despuesDe, limite),
+      bandeja: (ambito, despuesDe, limite, filtro) => enrutamiento.bandeja(ambito, despuesDe, limite, filtro),
       participacionDe: (ambito, id) => enrutamiento.participacionDe(ambito, id),
     },
     originales: {
@@ -194,6 +230,8 @@ export function enrutamientoDe(
   identidad: ModuloIdentidad,
   obtenerReportes: () => ModuloReportes,
   despertarEntregas: () => void,
+  /** P6 grupo D: asignacion automatica al operador unico de la principal. */
+  atencion?: ServicioAtencion,
 ): ServicioEnrutamiento {
   return crearEnrutamientoConPrisma(prisma, {
     datos: {
@@ -220,6 +258,7 @@ export function enrutamientoDe(
       designable: (sedeId, institucion) => identidad.sedesEnrutamiento.designable(sedeId, institucion),
     },
     despertarEntregas,
+    ...(atencion ? { alCambiarPrincipal: (tx, incidenteId) => atencion.autoAsignarPrincipal(tx, incidenteId) } : {}),
   });
 }
 
@@ -262,15 +301,40 @@ function aclararComoOperador(obtenerReportes: () => ModuloReportes) {
   };
 }
 
-/** Rutas de Operaciones: pendientes del administrador (P4.2) y precision de la condicion medica (P5.1). */
+/** Atencion institucional (P6) con los operadores de la fachada de Identidad. */
+export function atencionDe(prisma: PrismaClient, identidad: ModuloIdentidad): ServicioAtencion {
+  return crearAtencionConPrisma(prisma, {
+    describir: (ids) => identidad.operadoresAtencion.describir(ids),
+    deSedes: (sedeIds) => identidad.operadoresAtencion.deSedes(sedeIds),
+  });
+}
+
+/**
+ * Rutas de Operaciones: pendientes del administrador (P4.2), precision de la condicion medica (P5.1)
+ * y atencion institucional (P6).
+ */
 export function routerOperaciones(
   enrutamiento: ServicioEnrutamiento,
   identidad: ModuloIdentidad,
   obtenerReportes: () => ModuloReportes,
   logger: Logger,
+  atencion?: ServicioAtencion,
+  operacionesIncidentes?: ModuloOperaciones['incidentes'],
 ) {
   const distritos = new Map(distritosPiloto().map((d) => [d.id, d.nombre]));
   const router = Router();
+  if (atencion) {
+    router.use(crearRouterAtencion(atencion, enrutamiento, {
+      identificar: identidad.identificarSolicitante,
+      origenWebPermitido: identidad.origenWebPermitido,
+      ambito: ambitoOperador(identidad),
+      idPorReferencia: async (texto) => {
+        const referencia = normalizarReferencia(texto);
+        return referencia ? ((await operacionesIncidentes?.porReferencia(referencia))?.id ?? null) : null;
+      },
+      logger,
+    }));
+  }
   router.use(
     crearRouterEvaluacionOperador(enrutamiento, {
       identificar: identidad.identificarSolicitante,

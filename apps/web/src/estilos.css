@@ -26,6 +26,15 @@
   --color-prioridad-pendiente-texto: #475569;
   --color-prioridad-pendiente-fondo: #F1F5F9;
   --color-prioridad-pendiente-borde: #CBD5E1;
+  --color-prioridad-normal-texto: #1E40AF;
+  --color-prioridad-normal-fondo: #EFF6FF;
+  --color-prioridad-normal-borde: #BFDBFE;
+  --color-prioridad-alta-texto: #92400E;
+  --color-prioridad-alta-fondo: #FFFBEB;
+  --color-prioridad-alta-borde: #FCD34D;
+  --color-prioridad-urgente-texto: #991B1B;
+  --color-prioridad-urgente-fondo: #FEF2F2;
+  --color-prioridad-urgente-borde: #F87171;
   --espacio: 8px;
   --radio: 9px;
   --altura-minima: 48px;

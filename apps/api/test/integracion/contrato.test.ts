@@ -11,7 +11,8 @@ import { jpegRuido } from '../fixtures/imagenes';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultas } from '../../src/modules/consultas';
 import { crearModuloReportes } from '../../src/modules/reportes';
-import { crearRouterEnrutamiento, type ServicioEnrutamiento } from '../../src/modules/operaciones';
+import express from 'express';
+import { crearRouterAtencion, crearRouterEnrutamiento, type ServicioAtencion, type ServicioEnrutamiento } from '../../src/modules/operaciones';
 import { cookieInstitucional, crearSedeDePrueba, registrarIncidente } from './fixtures-enrutamiento';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import type { CuentasPort } from '../../src/modules/identidad/aplicacion/puertos/cuentas.port';
@@ -915,7 +916,7 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     };
     const inc = await registrar(accidente());
     const cerrado = await registrar(accidente({ heridos: 'si', evaluacion: { cantidadHeridos: 2, personaPrincipal: { consciente: 'si' } } }));
-    await prisma.incidente.update({ where: { id: cerrado.id }, data: { estado: 'CERRADO' } });
+    await prisma.incidente.update({ where: { id: cerrado.id }, data: { estado: 'CERRADO', resultado: 'DESCARTADO', resumenCiudadano: 'Cierre de prueba del caso.', cerradoEn: new Date() } });
     await procesador.esperarReposo();
     await procesador.procesarPendientes();
 
@@ -1076,6 +1077,160 @@ describe('respuestas reales conforme a openapi.yaml', () => {
       verificar(CCI, 'get', await cci(ref, ev)); // 503
     } finally {
       almacenEvidencias.fallarObtener = false;
+    }
+  });
+
+  it('atencion institucional (P6): cada estado documentado coincide con la respuesta real', async () => {
+    const ASU = '/operador/incidentes/{id}/asumir';
+    const TRA = '/operador/incidentes/{id}/transiciones';
+    const VER = '/operador/incidentes/{id}/verificacion';
+    const ASI = '/admin/asignaciones';
+    const CAN = '/admin/asignaciones/{id}/candidatos';
+    const LIB = '/admin/asignaciones/{id}/liberar';
+    const REA = '/admin/asignaciones/{id}/reasignar';
+    const U = (r: string) => `/api/v1${r}`;
+    const arnes = crearArnes({ prisma, enrutar: true });
+    const { app, procesador } = arnes;
+    await limpiarBd(prisma);
+    await new PrismaTerritorioAdapter(prisma).importar(paqueteSintetico().preparado, true);
+    const admin = await crearCuentaDePrueba(prisma, { rol: 'administrador' });
+    const cookieAdmin = await cookieInstitucional(app, admin.correo);
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo'], operadores: ['activo', 'activo'], creadoPor: admin.id });
+    const ajena = await crearSedeDePrueba(prisma, { institucion: 'pnp', distritos: ['DIS-02'], categorias: ['robo'], creadoPor: admin.id });
+    const [opA, opB] = await Promise.all(pnp.operadores.map((o) => cookieInstitucional(app, o.correo)));
+    const opAjeno = await cookieInstitucional(app, ajena.operadores[0]!.correo);
+    const inc = await registrarIncidente(app, prisma);
+    const otro = await registrarIncidente(app, prisma);
+    await procesador.esperarReposo();
+    await procesador.procesarPendientes();
+    const motivo = 'Confirmado por llamada al lugar';
+    const post = (ruta: string, cookie: string | null, cuerpo?: unknown, tipo = 'application/json') => {
+      let r = request(app).post(U(ruta)).set('Origin', ORIGEN_WEB_PRUEBA);
+      if (cookie) r = r.set('Cookie', cookie);
+      return cuerpo === undefined ? r : r.set('Content-Type', tipo).send(typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo));
+    };
+    const get = (ruta: string, cookie: string | null) => (cookie ? request(app).get(U(ruta)).set('Cookie', cookie) : request(app).get(U(ruta)));
+
+    // Asumir.
+    verificar(ASU, 'post', await post(`/operador/incidentes/${inc.id}/asumir`, opA!)); // 201
+    verificar(ASU, 'post', await post(`/operador/incidentes/${inc.id}/asumir`, opA!)); // 200
+    verificar(ASU, 'post', await post(`/operador/incidentes/${inc.id}/asumir`, opB!)); // 409
+    verificar(ASU, 'post', await post(`/operador/incidentes/${inc.id}/asumir`, opA!, {})); // 400
+    verificar(ASU, 'post', await post(`/operador/incidentes/${inc.id}/asumir`, null)); // 401
+    verificar(ASU, 'post', await post(`/operador/incidentes/${inc.id}/asumir`, cookieAdmin)); // 403
+    verificar(ASU, 'post', await post(`/operador/incidentes/${inc.id}/asumir`, opAjeno)); // 404
+
+    // Verificacion.
+    const v = { valor: 'VERIFICADO', motivo, estadoEsperado: 'EN_REVISION' };
+    verificar(VER, 'post', await post(`/operador/incidentes/${inc.id}/verificacion`, opA!, v)); // 200
+    verificar(VER, 'post', await post(`/operador/incidentes/${inc.id}/verificacion`, opA!, { valor: 'x' })); // 400
+    verificar(VER, 'post', await post(`/operador/incidentes/${inc.id}/verificacion`, null, v)); // 401
+    verificar(VER, 'post', await post(`/operador/incidentes/${inc.id}/verificacion`, opB!, v)); // 403
+    verificar(VER, 'post', await post(`/operador/incidentes/${inc.id}/verificacion`, opAjeno, v)); // 404
+    verificar(VER, 'post', await post(`/operador/incidentes/${inc.id}/verificacion`, opA!, { ...v, estadoEsperado: 'REGISTRADO' })); // 409
+
+    // Transiciones.
+    const ini = { accion: 'iniciar_atencion', estadoEsperado: 'EN_REVISION' };
+    verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opA!, { accion: 'cerrar' })); // 400
+    verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, null, ini)); // 401
+    verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opB!, ini)); // 403
+    verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opAjeno, ini)); // 404
+    verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opA!, 'x', 'text/plain')); // 415
+    verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opA!, ini)); // 200
+    verificar(TRA, 'post', await post(`/operador/incidentes/${inc.id}/transiciones`, opA!, ini)); // 409
+
+    // Prioridad (grupo C).
+    const PRI = '/operador/incidentes/{id}/prioridad';
+    const pri = { valor: 'URGENTE', motivo };
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, opA!, pri)); // 200
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, opA!, { valor: 'BAJA', motivo })); // 400
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, null, pri)); // 401
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, opB!, pri)); // 403
+    verificar(PRI, 'post', await post(`/operador/incidentes/${inc.id}/prioridad`, opAjeno, pri)); // 404
+
+    // Vinculo (grupo B): `tercero` se vincula a `inc`.
+    const VIN = '/operador/incidentes/{id}/vinculo';
+    const tercero = await registrarIncidente(app, prisma);
+    await procesador.esperarReposo();
+    await procesador.procesarPendientes();
+    const vin = { referenciaPrincipal: inc.referencia, motivo };
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opA!, { motivo })); // 400
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, null, vin)); // 401
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opA!, vin)); // 403 (sin asumir)
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opAjeno, vin)); // 404
+    await post(`/operador/incidentes/${tercero.id}/asumir`, opA!);
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opA!, { referenciaPrincipal: tercero.referencia, motivo })); // 409
+    verificar(VIN, 'post', await post(`/operador/incidentes/${tercero.id}/vinculo`, opA!, vin)); // 200
+
+    // Administrador.
+    verificar(ASI, 'get', await get(ASI, cookieAdmin)); // 200
+    verificar(ASI, 'get', await get(`${ASI}?x=1`, cookieAdmin)); // 400
+    verificar(ASI, 'get', await get(ASI, null)); // 401
+    verificar(ASI, 'get', await get(ASI, opA!)); // 403
+    const asig = (await get(ASI, cookieAdmin)).body.elementos[0].id as string;
+    verificar(CAN, 'get', await get(`${ASI}/${asig}/candidatos`, cookieAdmin)); // 200
+    verificar(CAN, 'get', await get(`${ASI}/${asig}/candidatos`, null)); // 401
+    verificar(CAN, 'get', await get(`${ASI}/${asig}/candidatos`, opA!)); // 403
+    verificar(CAN, 'get', await get(`${ASI}/${randomUUID()}/candidatos`, cookieAdmin)); // 404
+    verificar(REA, 'post', await post(`${ASI}/${asig}/reasignar`, cookieAdmin, { operadorId: 'x', motivo })); // 400
+    verificar(REA, 'post', await post(`${ASI}/${asig}/reasignar`, null, { operadorId: pnp.operadores[1]!.id, motivo })); // 401
+    verificar(REA, 'post', await post(`${ASI}/${asig}/reasignar`, opA!, { operadorId: pnp.operadores[1]!.id, motivo })); // 403
+    verificar(REA, 'post', await post(`${ASI}/${randomUUID()}/reasignar`, cookieAdmin, { operadorId: pnp.operadores[1]!.id, motivo })); // 404
+    verificar(REA, 'post', await post(`${ASI}/${asig}/reasignar`, cookieAdmin, { operadorId: ajena.operadores[0]!.id, motivo })); // 409
+    verificar(REA, 'post', await post(`${ASI}/${asig}/reasignar`, cookieAdmin, { operadorId: pnp.operadores[1]!.id, motivo })); // 200
+    const nueva = (await get(ASI, cookieAdmin)).body.elementos[0].id as string;
+    verificar(LIB, 'post', await post(`${ASI}/${nueva}/liberar`, cookieAdmin, { motivo: 'x' })); // 400
+    verificar(LIB, 'post', await post(`${ASI}/${nueva}/liberar`, null, { motivo })); // 401
+    verificar(LIB, 'post', await post(`${ASI}/${nueva}/liberar`, opA!, { motivo })); // 403
+    verificar(LIB, 'post', await post(`${ASI}/${asig}/liberar`, cookieAdmin, { motivo })); // 404 (ya inactiva)
+    verificar(LIB, 'post', await post(`${ASI}/${nueva}/liberar`, cookieAdmin, { motivo })); // 200
+    // 409: asignacion activa de un incidente cerrado.
+    await post(`/operador/incidentes/${otro.id}/asumir`, opA!);
+    const deOtro = (await get(ASI, cookieAdmin)).body.elementos.find((e: { referencia: string }) => e.referencia === otro.referencia).id as string;
+    await post(`/operador/incidentes/${otro.id}/transiciones`, opA!, { accion: 'cerrar', estadoEsperado: 'EN_REVISION', resultado: 'DESCARTADO', motivo, resumenCiudadano: 'El hecho no pudo confirmarse.' });
+    verificar(LIB, 'post', await post(`${ASI}/${deOtro}/liberar`, cookieAdmin, { motivo })); // 409
+    verificar(PRI, 'post', await post(`/operador/incidentes/${otro.id}/prioridad`, opA!, pri)); // 409 (cerrado)
+
+    // Seguimiento del invitado con hitos y cierre conforme al esquema.
+    verificar('/publico/seguimiento', 'post', await request(app).post(U('/publico/seguimiento')).set('Content-Type', 'application/json')
+      .send(JSON.stringify({ referencia: otro.referencia, codigo: otro.codigo })));
+    verificar('/operador/incidentes/{id}', 'get', await get(`/operador/incidentes/${inc.id}`, opB!));
+
+    // 503: servicio de atencion averiado.
+    const falla = () => Promise.reject(new Error('bd caida'));
+    const roto = new Proxy({}, { get: () => falla }) as unknown as ServicioAtencion;
+    const caida = express();
+    caida.use('/api/v1', crearRouterAtencion(roto, arnes.enrutamiento, {
+      idPorReferencia: async () => inc.id,
+      identificar: arnes.modulo.identificarSolicitante,
+      origenWebPermitido: arnes.modulo.origenWebPermitido,
+      ambito: async (id) => {
+        const a = await arnes.modulo.consultarAmbitoOperador.ejecutar(id);
+        return a ? { sedeId: a.sede.id, distritos: a.distritos, categorias: a.categorias } : null;
+      },
+      logger: arnes.logger,
+    }));
+    const casos = [
+      [ASU, 'post', request(caida).post(U(`/operador/incidentes/${inc.id}/asumir`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)],
+      [TRA, 'post', request(caida).post(U(`/operador/incidentes/${inc.id}/transiciones`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', 'application/json').send(JSON.stringify(ini))],
+      [VER, 'post', request(caida).post(U(`/operador/incidentes/${inc.id}/verificacion`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', 'application/json').send(JSON.stringify(v))],
+      [PRI, 'post', request(caida).post(U(`/operador/incidentes/${inc.id}/prioridad`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', 'application/json').send(JSON.stringify(pri))],
+      [VIN, 'post', request(caida).post(U(`/operador/incidentes/${otro.id}/vinculo`)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', 'application/json').send(JSON.stringify(vin))],
+      [ASI, 'get', request(caida).get(U(ASI)).set('Cookie', cookieAdmin)],
+      [CAN, 'get', request(caida).get(U(`${ASI}/${nueva}/candidatos`)).set('Cookie', cookieAdmin)],
+      [LIB, 'post', request(caida).post(U(`${ASI}/${nueva}/liberar`)).set('Cookie', cookieAdmin).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', 'application/json').send(JSON.stringify({ motivo }))],
+      [REA, 'post', request(caida).post(U(`${ASI}/${nueva}/reasignar`)).set('Cookie', cookieAdmin).set('Origin', ORIGEN_WEB_PRUEBA)
+        .set('Content-Type', 'application/json').send(JSON.stringify({ operadorId: pnp.operadores[1]!.id, motivo }))],
+    ] as const;
+    for (const [doc, metodo, pendiente] of casos) {
+      const r = await pendiente;
+      expect(r.status).toBe(503);
+      verificar(doc, metodo, r);
     }
   });
 

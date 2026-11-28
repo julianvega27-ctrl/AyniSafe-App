@@ -105,7 +105,57 @@ export interface FilaBandeja {
   readonly registradoEn: string;
   readonly papel: PapelInstitucion;
   readonly condicionMedicaPorConfirmar: boolean;
-  readonly prioridad: 'SIN_EVALUAR';
+  /** P6: verificacion separada del estado, resultado de cierre y responsable de tu institucion. */
+  readonly verificacion: Verificacion;
+  readonly resultado: ResultadoCierre | null;
+  readonly responsable: { readonly asignado: boolean; readonly esUsted: boolean };
+  /** Duplicado vinculado (P6 grupo B): estado y resultado son los del principal. */
+  readonly vinculado: boolean;
+  /** Etiqueta vigente (P6 grupo C); no ordena la bandeja. */
+  readonly prioridad: Prioridad;
+  readonly prioridadOrigen: 'propuesta' | 'revisada' | null;
+}
+
+export type Verificacion = 'SIN_VERIFICAR' | 'VERIFICADO' | 'NO_VERIFICADO';
+export type Prioridad = 'SIN_EVALUAR' | 'NORMAL' | 'ALTA' | 'URGENTE';
+/** Filtro de la bandeja por responsable (P6 grupo D); no cambia el orden FIFO. */
+export type FiltroResponsable = 'sin_tomar' | 'mios' | 'todos';
+export type ResultadoCierre = 'ATENDIDO' | 'DESCARTADO';
+export type AccionAtencion = 'asumir' | 'iniciar_atencion' | 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular' | 'priorizar';
+
+/** Atencion institucional del resumen (P6). La API decide las acciones permitidas. */
+export interface AtencionOperador {
+  readonly responsable:
+    | { readonly asignado: true; readonly esUsted: boolean; readonly automatica: boolean; readonly nombre: string | null; readonly desde: string }
+    | { readonly asignado: false };
+  readonly institucionesConResponsable: readonly TipoInstitucion[];
+  readonly accionesPermitidas: readonly AccionAtencion[];
+  readonly historial: readonly {
+    readonly accion: string;
+    readonly institucion: TipoInstitucion;
+    readonly actorTipo: 'operador' | 'administrador' | 'sistema';
+    readonly valorAnterior: string | null;
+    readonly valorNuevo: string | null;
+    readonly motivo: string | null;
+    readonly instante: string;
+  }[];
+}
+
+export interface AsignacionAdmin {
+  readonly id: string;
+  readonly referencia: string;
+  readonly estado: EstadoIncidente;
+  readonly institucion: TipoInstitucion;
+  readonly sede: { readonly id: string; readonly nombre: string | null };
+  readonly responsable: { readonly id: string; readonly nombre: string | null };
+  readonly asignadaEn: string;
+  readonly requiereReasignacion: boolean;
+}
+
+export interface CandidatoReasignacion {
+  readonly id: string;
+  readonly nombre: string;
+  readonly sede: { readonly id: string; readonly nombre: string };
 }
 
 export interface ResumenIncidente extends FilaBandeja {
@@ -120,6 +170,8 @@ export interface ResumenIncidente extends FilaBandeja {
   readonly otrasInstituciones: readonly TipoInstitucion[];
   /** Fotos disponibles (P5.2): solo metadatos; el contenido se pide aparte con la sesion. */
   readonly evidencias: readonly EvidenciaVista[];
+  /** Atencion institucional (P6); null si la API no la compone. */
+  readonly atencion: AtencionOperador | null;
 }
 
 /** Metadatos de una foto (P5.2), sin URL ni identificadores del proveedor. */
@@ -222,6 +274,7 @@ export interface Pagina<T> {
 
 const ORG = '/api/v1/administrador/organizacion';
 const PEN = '/api/v1/admin/enrutamientos-pendientes';
+const ASI = '/api/v1/admin/asignaciones';
 const enc = encodeURIComponent;
 
 export interface ContenidoPublico {
@@ -249,6 +302,8 @@ export type Resultado<T> =
       readonly faltantes?: readonly string[];
       /** Requisitos incumplidos de la sede cuando el codigo es SEDE_NO_DESIGNABLE. */
       readonly requisitos?: readonly string[];
+      /** Estado vigente del incidente en un conflicto de atencion (P6). */
+      readonly estadoActual?: EstadoIncidente;
     }
   /** Sin conexion o la solicitud no llego. */
   | { readonly tipo: 'red' }
@@ -306,14 +361,16 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}): Promise<Resulta
   let campos: Record<string, string> | undefined;
   let faltantes: string[] | undefined;
   let requisitos: string[] | undefined;
+  let estadoActual: EstadoIncidente | undefined;
   try {
     const json = (await respuesta.json()) as {
-      error?: { code?: string; fields?: Record<string, string>; faltantes?: string[]; requisitos?: string[] };
+      error?: { code?: string; fields?: Record<string, string>; faltantes?: string[]; requisitos?: string[]; estadoActual?: EstadoIncidente };
     };
     codigo = json.error?.code;
     campos = json.error?.fields;
     faltantes = Array.isArray(json.error?.faltantes) ? json.error.faltantes : undefined;
     requisitos = Array.isArray(json.error?.requisitos) ? json.error.requisitos : undefined;
+    estadoActual = json.error?.estadoActual;
   } catch {
     /* cuerpo no JSON */
   }
@@ -326,6 +383,7 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}): Promise<Resulta
     reintentarEn: respuesta.status === 429 && Number.isFinite(espera) && espera > 0 ? espera : undefined,
     faltantes,
     requisitos,
+    ...(estadoActual ? { estadoActual } : {}),
   };
 }
 
@@ -402,8 +460,13 @@ export const api = {
   categorias: (senal?: AbortSignal) => llamar<{ categorias: readonly CategoriaCatalogo[] }>('/api/v1/publico/categorias', { senal }),
 
   // Bandeja del operador y pendientes del administrador (P4.2). Sin consultas periodicas.
-  bandeja: (cursor: string | null, senal?: AbortSignal) =>
-    llamar<Pagina<FilaBandeja>>(`/api/v1/operador/incidentes${cursor ? `?cursor=${enc(cursor)}` : ''}`, { senal }),
+  bandeja: (cursor: string | null, senal?: AbortSignal, responsable?: FiltroResponsable) => {
+    const q = new URLSearchParams();
+    if (responsable && responsable !== 'todos') q.set('responsable', responsable);
+    if (cursor) q.set('cursor', cursor);
+    const texto = q.toString();
+    return llamar<Pagina<FilaBandeja>>(`/api/v1/operador/incidentes${texto ? `?${texto}` : ''}`, { senal });
+  },
   resumenIncidente: (id: string, senal?: AbortSignal) => llamar<ResumenIncidente>(`/api/v1/operador/incidentes/${enc(id)}`, { senal }),
   contenidoEvidencia: (id: string, evidenciaId: string, senal?: AbortSignal) =>
     obtenerImagen(`/api/v1/operador/incidentes/${enc(id)}/evidencias/${enc(evidenciaId)}/contenido`, senal),
@@ -416,6 +479,38 @@ export const api = {
     llamar<Pagina<PendienteEnrutamiento>>(`${PEN}${cursor ? `?cursor=${enc(cursor)}` : ''}`, { senal }),
   designarSede: (incidenteId: string, datos: { institucion: TipoInstitucion; sedeId: string; motivo: string }) =>
     llamar<ResultadoEnrutamiento>(`${PEN}/${enc(incidenteId)}/designaciones`, { metodo: 'POST', cuerpo: datos }),
+  // Atencion institucional (P6): la API autoriza cada accion y decide las permitidas.
+  asumirCaso: (id: string) =>
+    llamar<{ asignacion: { id: string; institucion: TipoInstitucion; desde: string }; estado: EstadoIncidente }>(
+      `/api/v1/operador/incidentes/${enc(id)}/asumir`,
+      { metodo: 'POST' },
+    ),
+  transicionar: (
+    id: string,
+    cuerpo:
+      | { accion: 'iniciar_atencion'; estadoEsperado: EstadoIncidente }
+      | { accion: 'cerrar'; estadoEsperado: EstadoIncidente; resultado: ResultadoCierre; motivo: string; resumenCiudadano: string },
+  ) =>
+    llamar<{ estado: EstadoIncidente; resultado: ResultadoCierre | null }>(`/api/v1/operador/incidentes/${enc(id)}/transiciones`, {
+      metodo: 'POST',
+      cuerpo,
+    }),
+  verificar: (id: string, cuerpo: { valor: Exclude<Verificacion, 'SIN_VERIFICAR'>; motivo: string; estadoEsperado: EstadoIncidente }) =>
+    llamar<{ verificacion: Verificacion; estado: EstadoIncidente }>(`/api/v1/operador/incidentes/${enc(id)}/verificacion`, {
+      metodo: 'POST',
+      cuerpo,
+    }),
+  revisarPrioridad: (id: string, valor: Exclude<Prioridad, 'SIN_EVALUAR'>, motivo: string) =>
+    llamar<{ prioridad: Prioridad; origen: 'revisada' }>(`/api/v1/operador/incidentes/${enc(id)}/prioridad`, { metodo: 'POST', cuerpo: { valor, motivo } }),
+  vincularDuplicado: (id: string, referenciaPrincipal: string, motivo: string) =>
+    llamar<{ vinculado: true }>(`/api/v1/operador/incidentes/${enc(id)}/vinculo`, { metodo: 'POST', cuerpo: { referenciaPrincipal, motivo } }),
+  asignaciones: (senal?: AbortSignal) => llamar<{ elementos: readonly AsignacionAdmin[] }>(ASI, { senal }),
+  candidatosReasignacion: (id: string, senal?: AbortSignal) =>
+    llamar<{ elementos: readonly CandidatoReasignacion[] }>(`${ASI}/${enc(id)}/candidatos`, { senal }),
+  liberarAsignacion: (id: string, motivo: string) =>
+    llamar<{ liberada: true }>(`${ASI}/${enc(id)}/liberar`, { metodo: 'POST', cuerpo: { motivo } }),
+  reasignarAsignacion: (id: string, operadorId: string, motivo: string) =>
+    llamar<{ asignacion: { id: string } }>(`${ASI}/${enc(id)}/reasignar`, { metodo: 'POST', cuerpo: { operadorId, motivo } }),
   reevaluarEnrutamiento: (incidenteId: string) =>
     llamar<ResultadoEnrutamiento>(`${PEN}/${enc(incidenteId)}/reevaluar`, { metodo: 'POST' }),
 };

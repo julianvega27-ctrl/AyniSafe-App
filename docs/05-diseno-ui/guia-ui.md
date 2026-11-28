@@ -48,7 +48,7 @@ La información pública, los contactos y el envío como invitado no requieren s
 
 ### 2.3 Navegación web
 
-Acuerdos de integración del 23/11/2026: la toma inicial se realiza con «Asumir caso» por un operador; la reasignación administrativa requiere motivo y no habilita atención. El detalle debe distinguir estado de verificación, mostrar vínculos de duplicados solo dentro de los permisos del usuario y diferenciar cierre Atendido de Descartado. No ofrecer «Descartado» como quinto estado ni contar ese cierre como atención realizada. Son comportamientos pendientes de implementación, definidos en el documento 11.
+Acuerdos de integración del 23/11/2026: la toma inicial se realiza con «Tomar el caso» por un operador (desde el 27/11/2026 es automática cuando la única sede de la principal tiene un solo operador activo; documento 11 §2). El resumen muestra el recorrido de estados, una sola acción principal según el estado y un «Control del caso» plegable para verificación, prioridad y duplicados; la reasignación administrativa requiere motivo y no habilita atención. El detalle debe distinguir estado de verificación, mostrar vínculos de duplicados solo dentro de los permisos del usuario y diferenciar cierre Atendido de Descartado. No ofrecer «Descartado» como quinto estado ni contar ese cierre como atención realizada. Son comportamientos pendientes de implementación, definidos en el documento 11.
 
 La web mantiene una portada pública y un panel protegido, con navegación según los permisos del usuario.
 

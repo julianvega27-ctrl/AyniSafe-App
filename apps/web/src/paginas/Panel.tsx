@@ -10,6 +10,7 @@ import { Mensaje } from '../componentes/Mensaje';
 import { useSesion } from '../sesion/SesionContexto';
 import { Bandeja, olvidarBandeja, ResumenIncidenteVista } from './incidentes/Bandeja';
 import { EnrutamientoPendiente } from './incidentes/Pendientes';
+import { ResponsablesActivos } from './incidentes/Responsables';
 import { DESCRIPCION_SECCION, SeccionOrganizacion } from './organizacion/Organizacion';
 
 /**
@@ -194,6 +195,7 @@ export function PanelRol({ rol }: { rol: Rol }) {
       {intro && seccion?.id === 'inicio' ? (
         <>
           <EnrutamientoPendiente />
+          <ResponsablesActivos />
           <Mensaje tipo="info" titulo="Resumen administrativo aún no disponible">
             Los indicadores y avisos del panel se habilitarán en una próxima entrega. No se muestran cifras de ejemplo.
           </Mensaje>

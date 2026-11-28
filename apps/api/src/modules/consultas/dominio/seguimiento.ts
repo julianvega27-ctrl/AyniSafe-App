@@ -19,6 +19,49 @@ export const INSTITUCION_PENDIENTE = { estado: 'pendiente' } as const;
 
 export const PAGINA_HISTORIAL = 20;
 
+/** Hito operativo sin actor, sede ni motivo interno (P6). */
+export interface HitoSeguimiento {
+  readonly tipo: 'EN_REVISION' | 'EN_ATENCION' | 'CERRADO';
+  readonly institucion: string;
+  readonly instante: Date;
+}
+
+export interface CierreSeguimiento {
+  readonly estado: string;
+  readonly resultado: string | null;
+  readonly resumenCiudadano: string | null;
+  readonly hitos: readonly HitoSeguimiento[];
+  readonly coordinado?: boolean;
+}
+
+/**
+ * Texto ciudadano fijo de cada hito (documento 11 §3): «En revisión», «En atención por <institución>»
+ * y «Cerrado: atendido/descartado». Nunca operadores, sedes, verificacion ni motivo interno.
+ */
+export function actuacionesVista(c: CierreSeguimiento | undefined, nombres: ReadonlyMap<string, string>) {
+  if (!c) return [];
+  return c.hitos.map((h) => ({
+    tipo: h.tipo,
+    texto:
+      h.tipo === 'EN_REVISION'
+        ? 'En revisión'
+        : h.tipo === 'EN_ATENCION'
+          ? `En atención por ${nombres.get(h.institucion) ?? h.institucion}`
+          : c.resultado === 'DESCARTADO'
+            ? 'Cerrado: descartado'
+            : 'Cerrado: atendido',
+    instante: h.instante.toISOString(),
+  }));
+}
+
+/** Resultado y resumen ciudadano del cierre, o null si no esta cerrado. */
+export function cierreVista(c: CierreSeguimiento | undefined) {
+  if (!c || c.estado !== 'CERRADO' || !c.resultado) return null;
+  return { resultado: c.resultado, resumenCiudadano: c.resumenCiudadano };
+}
+
+export const TEXTO_COORDINADO = 'Coordinado con otro reporte del mismo hecho';
+
 export function territorioVista(t: TerritorioSeguimiento) {
   if (t.estado === 'resuelto') {
     const nombre = DISTRITOS_PILOTO.find((d) => d.id === t.distritoId)?.nombre ?? null;
