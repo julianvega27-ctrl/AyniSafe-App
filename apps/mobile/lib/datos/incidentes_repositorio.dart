@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 
 import 'cliente_http.dart';
+import 'mapa_publico.dart';
 import 'evaluacion.dart';
 import 'evidencias.dart';
 
 export 'evidencias.dart';
+export 'mapa_publico.dart';
 
 /// Categoría del catálogo público (`/publico/categorias`).
 class CategoriaIncidente {
@@ -720,6 +722,43 @@ class IncidentesRepositorio {
     if (r is! ConsultaObtenida<Map<String, dynamic>>) return _sinValor(r);
     final v = VistaInvitado.desdeJson(r.valor);
     return v == null ? const ConsultaNoDisponible() : ConsultaObtenida(v);
+  }
+
+  /// Catálogo de los cinco distritos del piloto (id y nombre), con o sin cartografía activa.
+  Future<Consulta<List<DistritoCatalogo>>> distritos() async {
+    final r = await _leer('GET', '/publico/territorio/distritos');
+    if (r is! ConsultaObtenida<Map<String, dynamic>>) return _sinValor(r);
+    final lista = r.valor['distritos'];
+    if (lista is! List) return const ConsultaNoDisponible();
+    return ConsultaObtenida([
+      for (final d in lista)
+        if (d is Map<String, dynamic> &&
+            d['id'] is String &&
+            d['nombre'] is String)
+          DistritoCatalogo(
+            id: d['id'] as String,
+            nombre: d['nombre'] as String,
+          ),
+    ]);
+  }
+
+  /// Mapa público (P7): publicaciones vigentes con zona aproximada, sin sesión.
+  Future<Consulta<MapaPublico>> mapaPublico({
+    String? distritoId,
+    String? categoriaId,
+    PeriodoMapa periodo = PeriodoMapa.semana,
+  }) async {
+    final consulta = Uri(
+      queryParameters: {
+        'distrito': ?distritoId,
+        'categoria': ?categoriaId,
+        'periodo': periodo.valor,
+      },
+    ).query;
+    final r = await _leer('GET', '/publico/mapa?$consulta');
+    if (r is! ConsultaObtenida<Map<String, dynamic>>) return _sinValor(r);
+    final m = MapaPublico.desdeJson(r.valor);
+    return m == null ? const ConsultaNoDisponible() : ConsultaObtenida(m);
   }
 
   /// Límites distritales activos para dibujarlos si falla el mapa base. Sin cartografía: lista vacía.

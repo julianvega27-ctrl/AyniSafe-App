@@ -10,6 +10,7 @@ import '../../datos/auth_repositorio.dart';
 import '../componentes/bloque_contactos.dart';
 import '../componentes/contenido_cargado.dart';
 import '../componentes/destino_pendiente.dart';
+import '../pantallas/mapa_pantalla.dart';
 import '../pantallas/acceso_pantalla.dart';
 import '../pantallas/contenido_publico_pantalla.dart';
 import '../pantallas/inicio_pantalla.dart';
@@ -177,10 +178,9 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
       alVerMisReportes: () => _navegar(Destino.misReportes),
       alConsultarCodigo: () => _navegar(Destino.consultarCodigo),
     ),
-    Destino.mapa => const DestinoPendiente(
-      titulo: 'Mapa',
-      icono: Icons.map_outlined,
-      explicacion: 'Aquí verás los incidentes publicados, con filtros por distrito, categoría y período.',
+    Destino.mapa => MapaPantalla(
+      incidentes: Servicios.of(context).incidentes,
+      mostrarTeselas: Servicios.of(context).mostrarTeselas,
     ),
     Destino.contactos => const _Contactos(),
     Destino.alertas => const DestinoPendiente(

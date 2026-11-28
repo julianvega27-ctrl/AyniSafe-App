@@ -89,7 +89,7 @@ void main() {
       await tester.tap(enBarra('Mapa'));
       await tester.pumpAndSettle();
       expect(barra(tester).selectedIndex, 2);
-      expect(find.text('Aún no disponible'), findsWidgets);
+      expect(find.text('Mapa de incidentes'), findsOneWidget);
       final inicio = tester.element(find.byType(InicioPantalla, skipOffstage: false));
       await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Inicio')));
       await tester.pumpAndSettle();
@@ -207,12 +207,13 @@ void main() {
       expect(find.textContaining(RegExp(r'\d{3,}')), findsNothing);
     });
 
-    testWidgets('Mapa y Alertas siguen sin estar disponibles, sin permisos ni datos', (tester) async {
+    testWidgets('Alertas sigue sin estar disponible, sin permisos ni datos; Mapa es operativo (P7)', (tester) async {
       final m = await montar(tester);
-      final antes = m.api.solicitudes.length;
       await tester.tap(enBarra('Mapa'));
       await tester.pumpAndSettle();
-      expect(find.text('Aún no disponible'), findsOneWidget);
+      expect(find.text('Aún no disponible'), findsNothing);
+      expect(find.text('Mapa de incidentes'), findsOneWidget);
+      final antes = m.api.solicitudes.length;
       await desdeMenu(tester, 'Alertas');
       expect(find.text('Aún no disponible'), findsOneWidget);
       expect(find.textContaining('notificaciones'), findsNothing);
@@ -613,8 +614,7 @@ void main() {
       expect(nodo.flagsCollection.isButton, isTrue);
       expect(find.bySemanticsLabel(RegExp('Reportar un incidente')), findsWidgets);
       expect(find.bySemanticsLabel(RegExp('Mis últimos reportes')), findsWidgets);
-      await tester.tap(enBarra('Mapa'));
-      await tester.pumpAndSettle();
+      await desdeMenu(tester, 'Alertas');
       expect(find.bySemanticsLabel(RegExp('Aún no disponible')), findsWidgets);
       semantica.dispose();
     });
