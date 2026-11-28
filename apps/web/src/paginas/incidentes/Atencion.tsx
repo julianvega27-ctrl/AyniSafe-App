@@ -38,7 +38,7 @@ function Recorrido({ estado }: { estado: EstadoIncidente }) {
 }
 
 const CONTROLES: readonly { readonly accion: AccionAtencion; readonly dialogo: Exclude<Dialogo, null>; readonly etiqueta: string; readonly efecto: string }[] = [
-  { accion: 'verificar', dialogo: 'verificar', etiqueta: 'Registrar verificación', efecto: 'Indica si se confirmó el hecho. No cambia el estado ni publica el caso.' },
+  { accion: 'verificar', dialogo: 'verificar', etiqueta: 'Registrar verificación', efecto: 'Indica si se confirmó el hecho. Al marcarlo verificado se publica en el mapa ciudadano como zona aproximada.' },
   { accion: 'priorizar', dialogo: 'priorizar', etiqueta: 'Revisar prioridad', efecto: 'Confirma, eleva o reduce la etiqueta. No cambia el orden de llegada.' },
   { accion: 'vincular', dialogo: 'vincular', etiqueta: 'Vincular como duplicado', efecto: 'Si otro reporte describe el mismo hecho, este se atenderá desde aquel.' },
 ];
@@ -415,7 +415,11 @@ function DialogoVerificacion({ resumen, onCerrar, onResultado }: { resumen: Resu
         <h3 id={idTitulo} className="form-grid__completo">
           Verificación de {resumen.referencia}
         </h3>
-        <p className="form-grid__completo nota-panel">La verificación no cambia el estado, no publica el caso ni es requisito para cerrarlo.</p>
+        <p className="form-grid__completo nota-panel">
+          La verificación no cambia el estado ni es requisito para cerrar. Marcarlo verificado lo publica en el mapa ciudadano como zona
+          aproximada de 300 m, sin descripción, fotos ni datos de quien reportó (las categorías reservadas solo cuentan en totales). Marcarlo
+          no verificado lo retira del mapa.
+        </p>
         {fallo ? (
           <div className="form-grid__completo" role="status">
             <Mensaje tipo="error" titulo="No se registró la verificación">{fallo}</Mensaje>

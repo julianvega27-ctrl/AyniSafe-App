@@ -118,7 +118,7 @@ describe('publicación en el control del caso', () => {
     montar([resumen(publicacion({ noPublicable: 'NO_VERIFICADO', accionesPermitidas: [] }), { verificacion: 'SIN_VERIFICAR' })], () => json(500, {}));
     renderizarApp(RUTA);
     const control = await abrirControl();
-    expect(within(control).getByText(/Solo se publican incidentes verificados/)).toBeInTheDocument();
+    expect(within(control).getByText('Se publicará en el mapa ciudadano al marcarlo verificado.')).toBeInTheDocument();
     expect(within(control).queryByRole('button', { name: 'Publicar en el mapa' })).not.toBeInTheDocument();
   });
 
@@ -145,6 +145,15 @@ describe('publicación en el control del caso', () => {
     renderizarApp(RUTA);
     const control = await abrirControl();
     expect(within(control).getByText(/Categoría reservada: no se muestra como punto/)).toBeInTheDocument();
+  });
+
+  it('el diálogo de verificación avisa que verificar publica en el mapa', async () => {
+    montar([resumen(publicacion({ noPublicable: 'NO_VERIFICADO', accionesPermitidas: [] }), { verificacion: 'SIN_VERIFICAR' })], () => json(500, {}));
+    renderizarApp(RUTA);
+    const control = await abrirControl();
+    await userEvent.click(within(control).getByRole('button', { name: 'Registrar verificación' }));
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByText(/Marcarlo verificado lo publica en el mapa ciudadano/)).toBeInTheDocument();
   });
 
   it('un apoyo no ve el bloque de publicación', async () => {

@@ -15,7 +15,7 @@ import { CAUSA_RETIRO, CONFLICTO_ATENCION, ESTADO, fecha } from './etiquetas';
  */
 
 const NO_PUBLICABLE: Record<CodigoNoPublicable, string> = {
-  NO_VERIFICADO: 'Solo se publican incidentes verificados. Registra la verificación antes de publicar.',
+  NO_VERIFICADO: 'Se publicará en el mapa ciudadano al marcarlo verificado.',
   FUERA_DE_VIGENCIA: 'Ocurrió hace más de 7 días: ya no se puede publicar.',
   DISTRITO_PENDIENTE: 'El distrito está pendiente: no se puede publicar.',
   INCIDENTE_CERRADO: 'El caso está cerrado y salió del mapa.',
@@ -120,7 +120,7 @@ const TITULO: Record<Modo, string> = {
 
 const EXPLICA: Record<Modo, string> = {
   publicar:
-    'Autorizas mostrar este incidente verificado en el mapa ciudadano hasta 7 días desde la ocurrencia, como zona aproximada. Saldrá del mapa al cerrarlo.',
+    'Vuelves a mostrar este incidente verificado en el mapa ciudadano, como zona aproximada, hasta 7 días desde la ocurrencia. Saldrá del mapa al cerrarlo.',
   retirar: 'Deja de mostrarse en el mapa de inmediato. Para volver a publicarlo hará falta otra autorización del responsable.',
   reservar: 'El caso dejará de mostrarse como punto y solo contará en el total por distrito y mes.',
   quitar_reserva: 'El caso volverá a mostrarse como zona aproximada en el mapa.',

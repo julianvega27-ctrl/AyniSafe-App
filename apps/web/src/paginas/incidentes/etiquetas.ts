@@ -69,7 +69,7 @@ export const CONFLICTO_ATENCION: Record<string, string> = {
   DESTINO_NO_VALIDO: 'El operador elegido no puede recibir este caso.',
   ASIGNACION_INACTIVA: 'La asignación ya no está activa.',
   VINCULO_NO_PERMITIDO: 'No se puede vincular a ese incidente: ya es duplicado, tiene duplicados, está cerrado o es el mismo caso.',
-  NO_VERIFICADO: 'Solo se publican incidentes verificados.',
+  NO_VERIFICADO: 'Solo se publican incidentes verificados: se publicará al verificarlo.',
   FUERA_DE_VIGENCIA: 'El incidente ocurrió hace más de 7 días y ya no se puede publicar.',
   DISTRITO_PENDIENTE: 'El distrito del incidente está pendiente; no se puede publicar.',
   NO_PUBLICADA: 'El incidente ya no tiene una publicación vigente.',

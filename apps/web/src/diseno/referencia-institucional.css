@@ -279,9 +279,9 @@
    de marcador (--color-accion) y el borde del publicado con --color-azul; los tonos por familia del
    origen no se portan sin una eleccion en DESIGN.md. */
 .map-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 14px; }
-.map-filters .field { min-width: 0; }
-.map-filters select { min-height: 48px; min-width: 0; }
-.map-filter-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 12px 0 18px; }
+/* Selectores con el CampoSeleccion compartido (etiqueta arriba, borde y altura de los campos del panel). */
+.map-filters .campo { min-width: 0; margin: 0; }
+.map-filter-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 16px 0 18px; }
 .map-filter-footer .map-note { margin: 0; line-height: 1.6; }
 .map-note { font-size: 0.75rem; color: var(--color-texto-suave); margin: 11px 0 0; }
 .map-frame { height: clamp(500px, 62vh, 720px); min-height: 500px; border: 1px solid var(--color-divisor); border-radius: 12px; overflow: hidden; background: var(--color-fondo); }

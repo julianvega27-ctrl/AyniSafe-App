@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useEffect, useId, useState, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
   api,
@@ -9,6 +9,7 @@ import {
   type PeriodoOperativo,
 } from '../../api/cliente';
 import { Boton } from '../../componentes/Boton';
+import { CampoSeleccion } from '../../componentes/Campo';
 import { FalloDeConexion } from '../../componentes/FalloDeConexion';
 import { Icono } from '../../componentes/iconos';
 import { Mensaje } from '../../componentes/Mensaje';
@@ -49,9 +50,6 @@ class LimiteMapa extends Component<{ children: ReactNode; alternativa: ReactNode
 
 export function MapaOperativo() {
   const { expirar } = useSesion();
-  const idDistrito = useId();
-  const idCategoria = useId();
-  const idPeriodo = useId();
   const [distrito, setDistrito] = useState('');
   const [categoria, setCategoria] = useState('');
   const [periodo, setPeriodo] = useState<PeriodoOperativo>('7d');
@@ -102,38 +100,29 @@ export function MapaOperativo() {
         </div>
       </div>
       <div className="map-filters">
-        <div className="field">
-          <label htmlFor={idCategoria}>Tipo de incidente</label>
-          <select id={idCategoria} value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-            <option value="">Todos los tipos</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor={idDistrito}>Distrito</label>
-          <select id={idDistrito} value={distrito} onChange={(e) => setDistrito(e.target.value)}>
-            <option value="">Todos los distritos</option>
-            {distritos.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor={idPeriodo}>Período</label>
-          <select id={idPeriodo} value={periodo} onChange={(e) => setPeriodo(e.target.value as PeriodoOperativo)}>
-            {PERIODOS.map(([v, t]) => (
-              <option key={v} value={v}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CampoSeleccion etiqueta="Tipo de incidente" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+          <option value="">Todos los tipos</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre}
+            </option>
+          ))}
+        </CampoSeleccion>
+        <CampoSeleccion etiqueta="Distrito" value={distrito} onChange={(e) => setDistrito(e.target.value)}>
+          <option value="">Todos los distritos</option>
+          {distritos.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.nombre}
+            </option>
+          ))}
+        </CampoSeleccion>
+        <CampoSeleccion etiqueta="Período" value={periodo} onChange={(e) => setPeriodo(e.target.value as PeriodoOperativo)}>
+          {PERIODOS.map(([v, t]) => (
+            <option key={v} value={v}>
+              {t}
+            </option>
+          ))}
+        </CampoSeleccion>
       </div>
       <div className="map-filter-footer">
         <p className="map-note">Fecha de registro · Hora de Perú · Puntos exactos limitados a los incidentes de tu sede.</p>
