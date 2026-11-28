@@ -86,7 +86,7 @@ Grupos verticales por prioridad. Durante la implementación solo se ejecutan las
 
 ## Z. Cierre
 - [x] Z1 Suite completa con cobertura, validación OpenAPI y verificador de arquitectura, una vez.
-- [ ] Z2 Migrar `ayni_safe_dev` (`npm run db:migrar`) y comprobar `adb reverse tcp:3000` en el teléfono.
+- [x] Z2 Migrar `ayni_safe_dev` (`npm run db:migrar`) y comprobar `adb reverse tcp:3000` en el teléfono.
 - [x] Z3 Evidencia breve en `docs/validacion/p7-publicacion.md` y estado P7 en `docs/comparacion-proyecto-incidencias.md`.
-- [ ] Z4 Recorrido en Android real y en el panel (manual, responsable del proyecto).
-- [ ] Z5 Commits por capa, push, PR y CI; tras la fusión, sincronizar specs y archivar.
+- [x] Z4 Recorrido en Android real y en el panel (manual, responsable del proyecto).
+- [x] Z5 Commits por capa, push, PR y CI; tras la fusión, sincronizar specs y archivar.

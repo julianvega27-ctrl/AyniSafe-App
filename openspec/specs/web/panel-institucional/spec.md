@@ -72,7 +72,7 @@ El panel MUST mostrar las secciones de su rol recibidas de la API según la guí
 
 #### Scenario: Panel del operador
 - **WHEN** un operador entra a su panel
-- **THEN** ve «Incidentes» operativa con su bandeja y las demás secciones de operación marcadas como no disponibles
+- **THEN** ve «Incidentes» operativa con su bandeja, «Mapa» operativa con el mapa operativo y las demás secciones de operación marcadas como no disponibles
 
 #### Scenario: Rol ajeno
 - **WHEN** un operador navega a la ruta del panel del administrador

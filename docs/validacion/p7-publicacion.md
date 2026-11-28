@@ -130,17 +130,15 @@ Pedido del responsable: los marcadores no permitían saber qué reporte era. Se 
 
 ## No verificado, sin presentarlo como hecho
 
-- **Revisión visual renderizada:** queda para la prueba manual del responsable, en escritorio y en pantalla estrecha:
-  - el Leaflet real con teselas;
-  - los marcadores;
-  - el bloque «Publicación»;
-  - la pantalla Mapa en Android.
-
   En las pruebas, el lienzo Leaflet se sustituyó por un doble.
 - **Proveedor de teselas:** no se midieron cuotas ni disponibilidad de OSM; su política no garantiza servicio para uso institucional.
-- **Prueba en Android real:** la permanencia de la posición, el permiso de ubicación y el centrado del mapa quedan para la prueba manual.
 - **Fuera de alcance:**
   - alertas preventivas (P8);
   - mapa público en la portada web;
   - edición de la cuadrícula o de las categorías sensibles;
   - medición de consultas bajo carga (P9).
+
+## Aceptación y fusión (fecha de hoy)
+
+- **Recorrido en Android real y revisión del panel:** aprobados por el responsable en el Samsung (`adb reverse tcp:3000`) contra la API local. Incluye publicar al verificar, punto exacto, detalle al tocar, «Mi ubicación», reserva, retiro y el mapa operativo del panel en escritorio y en pantalla estrecha.
+- **PR #17:** fusionado en `main` con el commit `755a792ed648e61aa32da7a531772f46f89e99ec`. La CI de `main` (ejecución `46108524188`) aprobó.
