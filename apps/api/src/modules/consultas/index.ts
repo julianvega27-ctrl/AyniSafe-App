@@ -14,6 +14,8 @@ import { crearRouterSeguimiento, type IdentificarConsultante } from './presentac
 import { BandejaInstitucional, type DependenciasBandeja } from './aplicacion/bandeja.use-case';
 import { crearRouterBandeja, type IdentificarOperador } from './presentacion/bandeja.routes';
 import type { Logger } from '../../compartido/logger';
+import { MapaPublico, type DependenciasMapaPublico } from './aplicacion/mapa.use-case';
+import { crearRouterMapaPublico } from './presentacion/mapa.routes';
 
 export type { TerritorioRepositorio } from './aplicacion/territorio.use-case';
 export type { SnapshotTerritorial, ResultadoTerritorial, Distrito } from './dominio/territorio';
@@ -37,6 +39,20 @@ export {
   type ParticipacionesBandejaPort,
 } from './aplicacion/bandeja.use-case';
 export type { IdentificarOperador } from './presentacion/bandeja.routes';
+export {
+  MapaPublico,
+  PERIODOS_PUBLICOS,
+  RADIO_ZONA_M,
+  type ConteoReservado,
+  type DependenciasMapaPublico,
+  type PublicacionesPublicasPort,
+  type PuntoPublico,
+} from './aplicacion/mapa.use-case';
+
+/** Mapa publico (P7): instantaneas de Operaciones por un puerto. */
+export interface OpcionesMapaPublico extends DependenciasMapaPublico {
+  readonly logger: Logger;
+}
 
 /** Bandeja del operador (P4.2): puertos hacia Identidad, Operaciones y Reportes. */
 export interface OpcionesBandeja extends DependenciasBandeja {
@@ -66,6 +82,7 @@ export interface OpcionesTerritorio {
   readonly ahora?: () => number;
   readonly seguimiento?: OpcionesSeguimiento;
   readonly bandeja?: OpcionesBandeja;
+  readonly mapaPublico?: OpcionesMapaPublico;
 }
 
 export type { ContenidoPublico } from './dominio/contenido';
@@ -103,8 +120,18 @@ export function crearModuloConsultas(entrada: unknown = fuente, opciones?: Opcio
   const territorio = new ConsultarTerritorio(opciones?.repositorio ?? { leer: async () => null });
   router.use('/publico/territorio', crearRouterTerritorial(territorio,
     new LimitadorTerritorial(opciones?.secretoLimitador ?? randomBytes(32).toString('hex'), opciones?.ahora)));
+  if (opciones?.mapaPublico) {
+    router.use(crearRouterMapaPublico(new MapaPublico(opciones.mapaPublico), opciones.mapaPublico.logger));
+  }
   if (opciones?.bandeja) {
-    router.use(crearRouterBandeja(new BandejaInstitucional(opciones.bandeja), opciones.bandeja.identificar, opciones.bandeja.logger));
+    router.use(
+      crearRouterBandeja(
+        new BandejaInstitucional(opciones.bandeja),
+        opciones.bandeja.identificar,
+        opciones.bandeja.logger,
+        Boolean(opciones.bandeja.mapaOperativo),
+      ),
+    );
   }
   if (!opciones?.seguimiento) return { router, contenido, territorio };
   const seguimiento = new SeguimientoCiudadano(opciones.seguimiento);
@@ -117,11 +144,13 @@ export function crearModuloConsultasConPrisma(
   secretoLimitador: string,
   seguimiento?: OpcionesSeguimiento,
   bandeja?: OpcionesBandeja,
+  mapaPublico?: OpcionesMapaPublico,
 ): ModuloConsultas {
   return crearModuloConsultas(fuente, {
     repositorio: new PrismaTerritorioAdapter(prisma),
     secretoLimitador,
     ...(seguimiento ? { seguimiento } : {}),
     ...(bandeja ? { bandeja } : {}),
+    ...(mapaPublico ? { mapaPublico } : {}),
   });
 }

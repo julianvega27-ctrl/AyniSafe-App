@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: AyniSafe API - Identidad, organización, contenido público, territorio y categorías
-  version: 0.8.0
+  version: 0.9.0
   description: |
     Contrato del modulo Identidad: registro, inicio de sesion, consulta y cierre de sesion del
     ciudadano (entrega `registro-login-ciudadano`), mas recuperacion de contrasena y activacion de
@@ -82,6 +82,7 @@ tags:
   - name: Enrutamiento
   - name: Bandeja
   - name: Atencion
+  - name: Publicacion
 paths:
   /auth/ciudadanos/registro:
     post:
@@ -902,6 +903,98 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ContenidoPublico' }
+  /operador/mapa:
+    get:
+      tags: [Publicacion]
+      operationId: consultarMapaOperativo
+      summary: Mapa operativo del operador con puntos exactos de su ambito (P7)
+      description: |
+        Consulta autorizada: solo incidentes en que participa la sede del operador dentro de su ambito vigente,
+        registrados en el periodo, con su punto exacto, estado, prioridad y si tienen publicacion vigente. Nunca
+        descripcion, telefono, autor, codigo, fotos ni datos sanitarios. Maximo 500, los mas recientes, con
+        `truncado`. El administrador y los ciudadanos reciben 403.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: distrito
+          in: query
+          schema: { type: string, maxLength: 60 }
+        - name: categoria
+          in: query
+          schema: { type: string, maxLength: 60 }
+        - name: periodo
+          in: query
+          schema: { enum: ['24h', '7d', '30d'], default: '7d' }
+      responses:
+        '200':
+          description: Incidentes de la sede con su punto.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MapaOperativo' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN (otro rol o sede sin atencion habilitada).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: VALIDATION_ERROR (filtro desconocido o fuera del catalogo).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /publico/mapa:
+    get:
+      tags: [Publicacion]
+      operationId: consultarMapaPublico
+      summary: Incidentes publicados y vigentes con zona aproximada (sin sesion, P7)
+      description: |
+        Solo publicaciones vigentes (menos de 7 dias desde la ocurrencia, no retiradas) de incidentes abiertos, con
+        lista cerrada de campos: identificador publico opaco, categoria, distrito, centro de la celda de 300 m,
+        estado y antiguedad. Nunca referencia, coordenadas exactas, descripcion, fotos, telefono, institucion ni
+        datos sanitarios. Acoso, Violencia, Agresion, Emergencia medica y los casos reservados no aparecen como
+        punto; `reservados` los cuenta por distrito y mes solo si el grupo tiene al menos cinco. Cache publica de
+        30 s.
+      security: []
+      parameters:
+        - name: distrito
+          in: query
+          schema: { type: string, maxLength: 60 }
+        - name: categoria
+          in: query
+          schema: { type: string, maxLength: 60 }
+        - name: periodo
+          in: query
+          schema: { enum: ['24h', '3d', '7d'], default: '7d' }
+      responses:
+        '200':
+          description: Publicaciones vigentes y conteos agregados.
+          headers:
+            Cache-Control:
+              description: Cache publica breve.
+              schema: { type: string, const: "public, max-age=30" }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MapaPublico' }
+        '422':
+          description: VALIDATION_ERROR (filtro desconocido o fuera del catalogo).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: MAPA_NO_DISPONIBLE, sin datos parciales.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /publico/territorio/distritos:
     get:
       tags: [Territorio]
@@ -1829,6 +1922,173 @@ paths:
         '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
         '409':
           description: INCIDENTE_CERRADO o INCIDENTE_VINCULADO.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}/publicacion:
+    post:
+      tags: [Publicacion]
+      operationId: publicarIncidente
+      summary: Publicar en el mapa un incidente verificado (P7)
+      description: |
+        Autorizacion expresa del responsable activo de la principal (documento 11 §5, RF49). Exige VERIFICADO,
+        EN_REVISION o EN_ATENCION, no vinculado, distrito resuelto y ocurrencia de menos de 7 dias. Guarda una
+        instantanea con categoria, distrito real y centro de la celda fija de 300 m; nunca el punto exacto ni datos
+        personales o sanitarios. Repetir con una publicacion vigente devuelve 200 sin duplicarla. Con `reservada`
+        (y `motivoReserva`) el caso solo cuenta en los conteos agregados.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PublicarSolicitud' }
+      responses:
+        '201':
+          description: Publicado.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoPublicacion' }
+        '200':
+          description: Ya estaba publicado; se devuelve la publicacion vigente.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoPublicacion' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN, FORBIDDEN_ORIGIN, SIN_AMBITO, ASIGNACION_REQUERIDA o NO_PRINCIPAL.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '409':
+          description: NO_VERIFICADO, FUERA_DE_VIGENCIA, DISTRITO_PENDIENTE, ESTADO_CAMBIADO, INCIDENTE_CERRADO o INCIDENTE_VINCULADO.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}/publicacion/retiro:
+    post:
+      tags: [Publicacion]
+      operationId: retirarPublicacion
+      summary: Retirar la publicacion con motivo (P7)
+      description: |
+        Cualquier operador de una sede de la institucion principal que participa, con motivo de 10 a 500 caracteres.
+        Deja de ser publica en la misma respuesta. El cierre, la correccion a NO_VERIFICADO y la vinculacion como
+        duplicado retiran automaticamente.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetiroSolicitud' }
+      responses:
+        '200':
+          description: Retirada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoRetiro' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN, FORBIDDEN_ORIGIN, SIN_AMBITO, ASIGNACION_REQUERIDA o NO_PRINCIPAL.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '409':
+          description: NO_PUBLICADA.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/ServicioNoDisponible' }
+  /operador/incidentes/{id}/publicacion/reserva:
+    post:
+      tags: [Publicacion]
+      operationId: reservarPublicacion
+      summary: Reservar o quitar la reserva de un caso publicado (P7)
+      description: |
+        Solo el responsable activo de la principal, con motivo. Un caso reservado no se muestra como punto: solo cuenta
+        en los conteos por distrito y mes con minimo de cinco.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrigenWeb'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReservaSolicitud' }
+      responses:
+        '200':
+          description: Reserva actualizada.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoReserva' }
+        '400':
+          description: VALIDATION_ERROR con los campos invalidos.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: FORBIDDEN, FORBIDDEN_ORIGIN, SIN_AMBITO, ASIGNACION_REQUERIDA o NO_PRINCIPAL.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/IncidenteNoDisponible' }
+        '409':
+          description: NO_PUBLICADA, INCIDENTE_CERRADO o INCIDENTE_VINCULADO.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
@@ -3095,8 +3355,12 @@ components:
     AtencionOperador:
       type: object
       additionalProperties: false
-      required: [responsable, institucionesConResponsable, accionesPermitidas, historial]
+      required: [responsable, institucionesConResponsable, accionesPermitidas, historial, publicacion]
       properties:
+        publicacion:
+          oneOf:
+            - $ref: '#/components/schemas/PublicacionOperador'
+            - type: 'null'
         responsable:
           oneOf:
             - type: object
@@ -3131,7 +3395,7 @@ components:
             additionalProperties: false
             required: [accion, institucion, actorTipo, valorAnterior, valorNuevo, motivo, instante]
             properties:
-              accion: { enum: [asumir, transicion, verificacion, liberar, reasignar, vincular, prioridad] }
+              accion: { enum: [asumir, transicion, verificacion, liberar, reasignar, vincular, prioridad, publicar, retirar, reservar] }
               institucion: { $ref: '#/components/schemas/TipoInstitucionDestino' }
               actorTipo: { enum: [operador, administrador, sistema] }
               valorAnterior: { type: [string, 'null'] }
@@ -3288,6 +3552,198 @@ components:
       properties:
         referenciaPrincipal: { type: string, maxLength: 40, description: Referencia publica del incidente principal. }
         motivo: { type: string, minLength: 10, maxLength: 500 }
+    PublicacionOperador:
+      type: object
+      additionalProperties: false
+      description: Estado de publicacion para el resumen del operador (P7). Sin coordenadas ni identificador publico.
+      required: [estado, reservada, sensible, publicadaEn, venceEn, causaRetiro, noPublicable, accionesPermitidas]
+      properties:
+        estado: { enum: [NO_PUBLICADO, VIGENTE, RETIRADA, VENCIDA] }
+        reservada: { type: boolean }
+        sensible:
+          type: boolean
+          description: Categoria que nunca se muestra como punto (Acoso, Violencia, Agresion, Emergencia medica).
+        publicadaEn: { type: [string, 'null'], format: date-time }
+        venceEn: { type: [string, 'null'], format: date-time }
+        causaRetiro: { enum: [DECISION, CIERRE, NO_VERIFICADO, DUPLICADO, null] }
+        noPublicable:
+          enum: [NO_VERIFICADO, FUERA_DE_VIGENCIA, DISTRITO_PENDIENTE, INCIDENTE_CERRADO, INCIDENTE_VINCULADO, null]
+          description: Por que no se podria publicar ahora; null si es publicable.
+        accionesPermitidas:
+          type: array
+          items: { enum: [publicar, retirar, reservar, quitar_reserva] }
+    PublicarSolicitud:
+      type: object
+      additionalProperties: false
+      required: [estadoEsperado]
+      properties:
+        estadoEsperado: { enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
+        reservada: { type: boolean }
+        motivoReserva: { type: string, minLength: 10, maxLength: 500, description: Obligatorio si reservada es true. }
+    RetiroSolicitud:
+      type: object
+      additionalProperties: false
+      required: [motivo]
+      properties:
+        motivo: { type: string, minLength: 10, maxLength: 500 }
+    ReservaSolicitud:
+      type: object
+      additionalProperties: false
+      required: [reservada, motivo]
+      properties:
+        reservada: { type: boolean }
+        motivo: { type: string, minLength: 10, maxLength: 500 }
+    ResultadoPublicacion:
+      type: object
+      additionalProperties: false
+      required: [publicacion]
+      properties:
+        publicacion:
+          type: object
+          additionalProperties: false
+          required: [estado, reservada, publicadaEn, venceEn]
+          properties:
+            estado: { const: VIGENTE }
+            reservada: { type: boolean }
+            publicadaEn: { type: string, format: date-time }
+            venceEn: { type: string, format: date-time }
+    ResultadoRetiro:
+      type: object
+      additionalProperties: false
+      required: [retirada]
+      properties:
+        retirada: { const: true }
+    ResultadoReserva:
+      type: object
+      additionalProperties: false
+      required: [reservada]
+      properties:
+        reservada: { type: boolean }
+    MapaOperativo:
+      type: object
+      additionalProperties: false
+      required: [filtros, truncado, elementos]
+      properties:
+        filtros:
+          type: object
+          additionalProperties: false
+          required: [distrito, categoria, periodo]
+          properties:
+            distrito: { type: [string, 'null'] }
+            categoria: { type: [string, 'null'] }
+            periodo: { enum: ['24h', '7d', '30d'] }
+        truncado: { type: boolean }
+        elementos:
+          type: array
+          maxItems: 500
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, referencia, categoria, distrito, estado, prioridad, registradoEn, punto, publicacion]
+            properties:
+              id: { type: string, format: uuid }
+              referencia: { type: string }
+              categoria:
+                type: object
+                additionalProperties: false
+                required: [id, nombre]
+                properties:
+                  id: { type: string }
+                  nombre: { type: [string, 'null'] }
+              distrito:
+                oneOf:
+                  - type: 'null'
+                  - type: object
+                    additionalProperties: false
+                    required: [id, nombre]
+                    properties:
+                      id: { type: string }
+                      nombre: { type: [string, 'null'] }
+              estado: { enum: [REGISTRADO, EN_REVISION, EN_ATENCION, CERRADO] }
+              prioridad: { enum: [SIN_EVALUAR, NORMAL, ALTA, URGENTE] }
+              registradoEn: { type: string, format: date-time }
+              punto:
+                type: object
+                additionalProperties: false
+                required: [lat, lon]
+                description: Punto exacto, solo en esta consulta autorizada.
+                properties:
+                  lat: { type: number }
+                  lon: { type: number }
+              publicacion:
+                type: object
+                additionalProperties: false
+                required: [vigente, reservada]
+                properties:
+                  vigente: { type: boolean }
+                  reservada: { type: boolean }
+    MapaPublico:
+      type: object
+      additionalProperties: false
+      required: [filtros, generadoEn, radioZonaM, elementos, reservados]
+      properties:
+        filtros:
+          type: object
+          additionalProperties: false
+          required: [distrito, categoria, periodo]
+          properties:
+            distrito: { type: [string, 'null'] }
+            categoria: { type: [string, 'null'] }
+            periodo: { enum: ['24h', '3d', '7d'] }
+        generadoEn: { type: string, format: date-time }
+        radioZonaM: { const: 150, description: Radio sugerido para dibujar la zona aproximada (media celda). }
+        elementos:
+          type: array
+          maxItems: 500
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, categoria, distrito, zona, estado, ocurridoEn, antiguedadHoras]
+            properties:
+              id: { type: string, format: uuid, description: Identificador publico opaco; no es el del incidente. }
+              categoria:
+                type: object
+                additionalProperties: false
+                required: [id, nombre]
+                properties:
+                  id: { type: string }
+                  nombre: { type: [string, 'null'] }
+              distrito:
+                type: object
+                additionalProperties: false
+                required: [id, nombre]
+                properties:
+                  id: { type: string }
+                  nombre: { type: [string, 'null'] }
+              zona:
+                type: object
+                additionalProperties: false
+                required: [lat, lon, aproximada]
+                description: Centro de la celda fija de 300 m; nunca el punto informado.
+                properties:
+                  lat: { type: number }
+                  lon: { type: number }
+                  aproximada: { const: true }
+              estado: { enum: [EN_REVISION, EN_ATENCION] }
+              ocurridoEn: { type: string, format: date-time }
+              antiguedadHoras: { type: integer, minimum: 0 }
+        reservados:
+          type: array
+          description: Sensibles y reservados por distrito y mes (hora de Peru), solo grupos de al menos cinco.
+          items:
+            type: object
+            additionalProperties: false
+            required: [distrito, mes, total]
+            properties:
+              distrito:
+                type: object
+                additionalProperties: false
+                required: [id, nombre]
+                properties:
+                  id: { type: string }
+                  nombre: { type: [string, 'null'] }
+              mes: { type: string, pattern: '^[0-9]{4}-[0-9]{2}$' }
+              total: { type: integer, minimum: 5 }
     PrioridadSolicitud:
       type: object
       additionalProperties: false
@@ -3665,6 +4121,11 @@ components:
                 - VINCULO_NO_PERMITIDO
                 - ASIGNACION_REQUERIDA
                 - NO_PRINCIPAL
+                - NO_VERIFICADO
+                - FUERA_DE_VIGENCIA
+                - DISTRITO_PENDIENTE
+                - NO_PUBLICADA
+                - MAPA_NO_DISPONIBLE
             message: { type: string }
             estadoActual:
               description: Solo en conflictos de atencion (P6). Estado vigente del incidente.

@@ -37,7 +37,7 @@ describe('dominio institucional', () => {
     expect(aUsuarioInstitucional(base)).toEqual({ id: base.id, nombre: 'Ana', correo: 'ana@ejemplo.com', rol: 'administrador' });
   });
 
-  it('las secciones de cada panel siguen la guia; disponibles organizacion, Inicio del administrador e Incidentes', () => {
+  it('las secciones de cada panel siguen la guia; disponibles organizacion, Inicio del administrador , Incidentes y Mapa', () => {
     expect(seccionesDelPanel('operador').map((s) => s.titulo)).toEqual(['Inicio', 'Incidentes', 'Mapa', 'Indicadores', 'Historial']);
     expect(seccionesDelPanel('administrador').map((s) => s.titulo)).toEqual([
       'Inicio',
@@ -50,7 +50,7 @@ describe('dominio institucional', () => {
       'Historial',
     ]);
     // P3.2: organizacion del administrador; P4.2: Inicio (pendientes) y la bandeja Incidentes del operador.
-    expect(seccionesDelPanel('operador').filter((s) => s.disponible).map((s) => s.id)).toEqual(['incidentes']);
+    expect(seccionesDelPanel('operador').filter((s) => s.disponible).map((s) => s.id)).toEqual(['incidentes', 'mapa']);
     expect(seccionesDelPanel('administrador').filter((s) => s.disponible).map((s) => s.id)).toEqual([
       'inicio',
       'instituciones-sedes',

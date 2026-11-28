@@ -17,6 +17,7 @@ import type {
   EnvioInvitadoVerificado,
   EnvioResumen,
   EnvioResumenOperativo,
+  UbicacionEnvio,
 } from '../aplicacion/lectura-envios';
 import type { Modalidad, ModoOcurrencia, RespuestaSamu } from '../dominio/envio';
 
@@ -162,6 +163,21 @@ export class PrismaEnviosAdapter implements EnviosRepositorio, EnviosLecturaRepo
       atencionMedica: f.atencionMedica as RespuestaSamu | null,
       recibidoEn: f.recibidoEn,
     };
+  }
+
+  async ubicaciones(ids: readonly string[]): Promise<readonly UbicacionEnvio[]> {
+    const filas = await this.prisma.envioIncidente.findMany({
+      where: { incidenteId: { in: [...ids] } },
+      select: { incidenteId: true, categoriaId: true, distritoId: true, estadoTerritorial: true, latitud: true, longitud: true, ocurridoEn: true },
+    });
+    return filas.map((f) => ({
+      incidenteId: f.incidenteId,
+      categoriaId: f.categoriaId,
+      distritoId: f.estadoTerritorial === 'resuelto' ? f.distritoId : null,
+      latitud: f.latitud,
+      longitud: f.longitud,
+      ocurridoEn: f.ocurridoEn,
+    }));
   }
 
   async resumenOperativo(ids: readonly string[]): Promise<readonly EnvioResumenOperativo[]> {

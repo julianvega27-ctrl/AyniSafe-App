@@ -5,6 +5,7 @@ import type {
   AmbitoBandeja,
   CursorFifo,
   FilaBandeja,
+  FiltroMapaOperativo,
   FiltroResponsable,
   ParticipacionVisible,
   EnrutamientoGuardado,
@@ -190,6 +191,26 @@ export class PrismaEnrutamientosAdapter implements EnrutamientosRepositorio {
       limite,
       filtro?.tipo ?? null,
       filtro?.usuarioId ?? null,
+    );
+    return filas.map(aFilaBandeja);
+  }
+
+  /** Mapa operativo (P7 grupo B): participaciones visibles de la sede, las mas recientes primero. */
+  async mapa(ambito: AmbitoBandeja, filtro: FiltroMapaOperativo, limite: number): Promise<readonly FilaBandeja[]> {
+    const filas = await this.prisma.$queryRawUnsafe<FilaBandejaSql[]>(
+      `${SELECT_BANDEJA}
+         AND e.registrado_en >= $4::timestamptz
+         AND ($5::text IS NULL OR e.distrito_id = $5)
+         AND ($6::text IS NULL OR e.categoria_id = $6)
+       ORDER BY e.registrado_en DESC, e.incidente_id
+       LIMIT $7`,
+      ambito.sedeId,
+      [...ambito.distritos],
+      [...ambito.categorias],
+      filtro.desde,
+      filtro.distritoId,
+      filtro.categoriaId,
+      limite,
     );
     return filas.map(aFilaBandeja);
   }

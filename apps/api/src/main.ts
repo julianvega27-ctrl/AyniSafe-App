@@ -1,7 +1,16 @@
 import { crearApp } from './app';
 import { ProcesadorEntregas } from './compartido/eventos/procesador-entregas';
 import { LoggerConsola } from './compartido/logger';
-import { atencionDe, dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from './composicion';
+import {
+  atencionDe,
+  dependenciasRegistro,
+  enrutamientoDe,
+  opcionesBandeja,
+  opcionesMapaPublico,
+  opcionesSeguimiento,
+  publicacionDe,
+  routerOperaciones,
+} from './composicion';
 import { cargarConfigEvidencias, cargarEntorno, cargarSecretoSeguimiento } from './config/entorno';
 import { crearModuloConsultasConPrisma, idsDistritosPiloto } from './modules/consultas';
 import { crearModuloIdentidadConPrisma } from './modules/identidad';
@@ -30,13 +39,17 @@ async function main(): Promise<void> {
   let procesadorEntregas: ProcesadorEntregas | undefined;
   // Atencion institucional (P6): asignaciones, transiciones e historial; asigna al operador unico al enrutar.
   const atencion = atencionDe(prisma, identidad);
+  // Publicacion controlada (P7): la atencion la retira al cerrar, corregir a NO_VERIFICADO o vincular.
+  const publicacion = publicacionDe(prisma, () => reportes!);
+  atencion.conPublicacion(publicacion.servicio);
   const enrutamiento = enrutamientoDe(prisma, identidad, () => reportes!, () => procesadorEntregas?.despertar(), atencion);
   // Si la fuente de contenido publico no cumple el esquema, el arranque falla aqui.
   const consultas = crearModuloConsultasConPrisma(
     prisma,
     entorno.secretoLimitador,
     opcionesSeguimiento({ identidad, operaciones, enrutamiento, atencion }, () => reportes!, logger),
-    opcionesBandeja(identidad, enrutamiento, () => reportes!, logger, atencion),
+    opcionesBandeja(identidad, enrutamiento, () => reportes!, logger, atencion, publicacion.lectura),
+    opcionesMapaPublico(publicacion.lectura, () => reportes!, logger),
   );
   // Entregas de eventos (ADR-004). El enrutamiento (P4.2) recibe tambien los eventos anteriores a su
   // registro. Los avisos por usuario de P8 se registraran aqui sobre EnrutamientoResuelto.
@@ -55,7 +68,7 @@ async function main(): Promise<void> {
     identidad,
     consultas,
     reportes,
-    operaciones: routerOperaciones(enrutamiento, identidad, () => reportes!, logger, atencion, operaciones.incidentes),
+    operaciones: routerOperaciones(enrutamiento, identidad, () => reportes!, logger, atencion, operaciones.incidentes, publicacion.servicio),
   });
 
   const servidor = app.listen(entorno.puerto, () => {

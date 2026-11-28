@@ -7,6 +7,7 @@ import {
   SinAmbitoError,
   type BandejaInstitucional,
 } from '../aplicacion/bandeja.use-case';
+import { FiltroMapaInvalidoError } from '../aplicacion/mapa.use-case';
 
 /** Quien consulta, segun Identidad (fachada inyectada en la composicion). */
 export type IdentificarOperador = (cabeceras: { readonly authorization?: string; readonly cookie?: string }) => Promise<
@@ -47,7 +48,7 @@ function responderError(res: Response, estado: number, code: string, message: st
  * operador por cookie; el ambito se resuelve en cada consulta. Un incidente fuera del ambito responde
  * el mismo 404 que uno inexistente.
  */
-export function crearRouterBandeja(bandeja: BandejaInstitucional, identificar: IdentificarOperador, logger: Logger) {
+export function crearRouterBandeja(bandeja: BandejaInstitucional, identificar: IdentificarOperador, logger: Logger, conMapa = false) {
   const router = express.Router();
 
   const sinCache = (_req: Request, res: Response, next: NextFunction) => {
@@ -119,8 +120,21 @@ export function crearRouterBandeja(bandeja: BandejaInstitucional, identificar: I
     })
     .all(sinCache, soloLectura);
 
+  if (conMapa) {
+    router
+      .route('/operador/mapa')
+      .get(sinCache, operador, async (req, res) => {
+        res.json(await bandeja.mapa(res.locals.operadorId as string, req.query as Record<string, unknown>));
+      })
+      .all(sinCache, soloLectura);
+  }
+
   const manejarError: ErrorRequestHandler = (e: unknown, _req, res, _next) => {
     res.set({ 'Cache-Control': 'no-store' });
+    if (e instanceof FiltroMapaInvalidoError) {
+      res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Revisa los filtros del mapa.', fields: e.campos, requestId: requestId(res) } });
+      return;
+    }
     if (e instanceof ConsultaBandejaInvalidaError) return responderError(res, 400, 'VALIDATION_ERROR', 'Revisa los datos de la consulta.');
     if (e instanceof SinAmbitoError) return responderError(res, 403, 'FORBIDDEN', 'Tu sede no está habilitada para atención.');
     if (e instanceof IncidenteNoDisponibleError) return responderError(res, 404, 'NOT_FOUND', 'Incidente no disponible.');

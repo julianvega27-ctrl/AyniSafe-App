@@ -66,7 +66,12 @@ export type CodigoConflicto =
   | 'DESTINO_NO_VALIDO'
   | 'ASIGNACION_INACTIVA'
   | 'INCIDENTE_VINCULADO'
-  | 'VINCULO_NO_PERMITIDO';
+  | 'VINCULO_NO_PERMITIDO'
+  // P7: publicacion.
+  | 'NO_VERIFICADO'
+  | 'FUERA_DE_VIGENCIA'
+  | 'DISTRITO_PENDIENTE'
+  | 'NO_PUBLICADA';
 
 export class ConflictoAtencionError extends Error {
   constructor(

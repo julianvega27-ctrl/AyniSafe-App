@@ -91,6 +91,13 @@ export interface AmbitoBandeja {
 }
 
 /** Fila de la bandeja: participacion de la sede del operador en un incidente. */
+/** Filtros del mapa operativo (P7 grupo B), ya validados por Consultas. */
+export interface FiltroMapaOperativo {
+  readonly desde: Date;
+  readonly distritoId: string | null;
+  readonly categoriaId: string | null;
+}
+
 export interface FilaBandeja {
   readonly incidenteId: string;
   readonly referencia: string;
@@ -144,6 +151,8 @@ export interface EnrutamientosRepositorio {
    */
   bandeja(ambito: AmbitoBandeja, despuesDe: CursorFifo | null, limite: number, filtro?: FiltroResponsable | null): Promise<readonly FilaBandeja[]>;
   participacionDe(ambito: AmbitoBandeja, incidenteId: string): Promise<ParticipacionVisible | null>;
+  /** Mapa operativo (P7 grupo B). */
+  mapa(ambito: AmbitoBandeja, filtro: FiltroMapaOperativo, limite: number): Promise<readonly FilaBandeja[]>;
   /** Institucion principal con participacion de cada incidente (ausente si falta). */
   principales(ids: readonly string[]): Promise<ReadonlyMap<string, InstitucionDestino>>;
   /** Institucion y papel de cada participacion (P5.1). */
@@ -447,6 +456,11 @@ export class ServicioEnrutamiento {
   /** Bandeja FIFO de la sede dentro de su ambito vigente (la consulta Consultas). */
   bandeja(ambito: AmbitoBandeja, despuesDe: CursorFifo | null, limite: number, filtro?: FiltroResponsable | null): Promise<readonly FilaBandeja[]> {
     return this.d.repositorio.bandeja(ambito, despuesDe, limite, filtro ?? null);
+  }
+
+  /** Mapa operativo (P7 grupo B): participaciones de la sede en su ambito, con filtros. */
+  mapa(ambito: AmbitoBandeja, filtro: FiltroMapaOperativo, limite: number): Promise<readonly FilaBandeja[]> {
+    return this.d.repositorio.mapa(ambito, filtro, limite);
   }
 
   /** Null si el identificador no es valido o el incidente no es visible para la sede. */

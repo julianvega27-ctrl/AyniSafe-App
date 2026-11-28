@@ -422,8 +422,8 @@ describe('paneles minimos y permisos por rol', () => {
     const ok = await request(app).get(RUTA_PANEL_OPERADOR).set('Cookie', cookie);
     expect(ok.status).toBe(200);
     expect(ok.body.secciones.map((s: { titulo: string }) => s.titulo)).toEqual(['Inicio', 'Incidentes', 'Mapa', 'Indicadores', 'Historial']);
-    // P4.2: solo la bandeja Incidentes esta disponible.
-    expect(ok.body.secciones.filter((s: { disponible: boolean }) => s.disponible).map((s: { id: string }) => s.id)).toEqual(['incidentes']);
+    // P4.2 y P7: la bandeja Incidentes y el Mapa operativo estan disponibles.
+    expect(ok.body.secciones.filter((s: { disponible: boolean }) => s.disponible).map((s: { id: string }) => s.id)).toEqual(['incidentes', 'mapa']);
     const ajeno = await request(app).get(RUTA_PANEL_ADMIN).set('Cookie', cookie);
     expect(ajeno.status).toBe(403);
     expect(ajeno.body.usuario).toBeUndefined();
