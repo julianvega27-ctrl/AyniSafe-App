@@ -95,7 +95,7 @@ describe('shell por rol', () => {
     expect(document.body.textContent).not.toMatch(/DEMO/);
   });
 
-  it('operador: Inicio, Incidentes, Mapa, Indicadores e Historial; solo Incidentes disponible', async () => {
+  it('operador: Inicio, Incidentes, Mapa, Indicadores e Historial; disponibles Incidentes y Mapa', async () => {
     instalarApi(servidorFalso({ sesion: operador }).manejador);
     renderizarApp('/panel');
     await screen.findByRole('heading', { name: 'Panel del operador' });
@@ -108,7 +108,7 @@ describe('shell por rol', () => {
       'Historial',
     ]);
     within(nav).getAllByRole('listitem').forEach((item, n) => {
-      if (n === 1) expect(item).not.toHaveTextContent('Aún no disponible');
+      if (n === 1 || n === 2) expect(item).not.toHaveTextContent('Aún no disponible');
       else expect(item).toHaveTextContent('Aún no disponible');
     });
   });

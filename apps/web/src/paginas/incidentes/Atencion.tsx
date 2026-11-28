@@ -8,6 +8,7 @@ import { Icono } from '../../componentes/iconos';
 import { Mensaje } from '../../componentes/Mensaje';
 import { useSesion } from '../../sesion/SesionContexto';
 import { CONFLICTO_ATENCION, ESTADO, fecha, INSTITUCION, PRIORIDAD, RESULTADO, textoHistorial, VERIFICACION } from './etiquetas';
+import { BloquePublicacion } from './Publicacion';
 
 /**
  * Atencion institucional en el resumen del operador (P6, spec `web/bandeja-incidentes`). Composicion
@@ -121,6 +122,8 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
 
   const automatica = a.responsable.asignado && a.responsable.automatica;
   const controles = CONTROLES.filter((c) => puede(c.accion));
+  // P7: la publicacion se muestra a la principal (publicar, retirar o su estado) dentro del control.
+  const conPublicacion = Boolean(a.publicacion) && resumen.papel === 'principal';
   const ultimo = a.historial.at(-1);
 
   return (
@@ -182,7 +185,7 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
         <p className="nota-panel">{sinAccion}</p>
       ) : null}
 
-      {controles.length ? (
+      {controles.length || conPublicacion ? (
         <>
           <button
             type="button"
@@ -202,6 +205,7 @@ export function BloqueAtencion({ resumen, onActualizado }: { resumen: ResumenInc
                 </Boton>
               </li>
             ))}
+            <BloquePublicacion resumen={resumen} onActualizado={onActualizado} />
           </ul>
         </>
       ) : null}

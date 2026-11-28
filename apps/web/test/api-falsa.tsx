@@ -67,7 +67,7 @@ export const SECCIONES_ADMIN = [
 export const SECCIONES_OPERADOR = [
   { id: 'inicio', titulo: 'Inicio', disponible: false },
   { id: 'incidentes', titulo: 'Incidentes', disponible: true },
-  { id: 'mapa', titulo: 'Mapa', disponible: false },
+  { id: 'mapa', titulo: 'Mapa', disponible: true },
   { id: 'indicadores', titulo: 'Indicadores', disponible: false },
   { id: 'historial', titulo: 'Historial', disponible: false },
 ];

@@ -69,6 +69,18 @@ export const CONFLICTO_ATENCION: Record<string, string> = {
   DESTINO_NO_VALIDO: 'El operador elegido no puede recibir este caso.',
   ASIGNACION_INACTIVA: 'La asignación ya no está activa.',
   VINCULO_NO_PERMITIDO: 'No se puede vincular a ese incidente: ya es duplicado, tiene duplicados, está cerrado o es el mismo caso.',
+  NO_VERIFICADO: 'Solo se publican incidentes verificados.',
+  FUERA_DE_VIGENCIA: 'El incidente ocurrió hace más de 7 días y ya no se puede publicar.',
+  DISTRITO_PENDIENTE: 'El distrito del incidente está pendiente; no se puede publicar.',
+  NO_PUBLICADA: 'El incidente ya no tiene una publicación vigente.',
+};
+
+/** Causa del retiro de una publicacion (P7). */
+export const CAUSA_RETIRO: Record<string, string> = {
+  DECISION: 'retirada por decisión de la institución principal',
+  CIERRE: 'retirada al cerrar el caso',
+  NO_VERIFICADO: 'retirada al corregir la verificación',
+  DUPLICADO: 'retirada al vincularlo como duplicado',
 };
 
 /** Texto del historial operativo, sin actores. */
@@ -94,6 +106,12 @@ export function textoHistorial(h: { accion: string; institucion: TipoInstitucion
       return `${inst}: prioridad ${(PRIORIDAD[h.valorAnterior as Prioridad]?.texto ?? h.valorAnterior)} → ${(PRIORIDAD[h.valorNuevo as Prioridad]?.texto ?? h.valorNuevo)}`;
     case 'vincular':
       return `${inst}: vinculado como duplicado de otro reporte del mismo hecho`;
+    case 'publicar':
+      return `${inst}: publicado en el mapa ciudadano`;
+    case 'retirar':
+      return `${inst}: publicación ${CAUSA_RETIRO[h.valorNuevo ?? ''] ?? 'retirada'}`;
+    case 'reservar':
+      return h.valorNuevo === 'true' ? `${inst}: caso marcado como reservado` : `${inst}: reserva quitada`;
     default:
       return `${inst}: ${h.accion}`;
   }

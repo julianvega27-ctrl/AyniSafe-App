@@ -123,6 +123,50 @@ export type FiltroResponsable = 'sin_tomar' | 'mios' | 'todos';
 export type ResultadoCierre = 'ATENDIDO' | 'DESCARTADO';
 export type AccionAtencion = 'asumir' | 'iniciar_atencion' | 'cerrar_atendido' | 'descartar' | 'verificar' | 'vincular' | 'priorizar';
 
+export type AccionPublicacion = 'publicar' | 'retirar' | 'reservar' | 'quitar_reserva';
+export type CausaRetiro = 'DECISION' | 'CIERRE' | 'NO_VERIFICADO' | 'DUPLICADO';
+export type CodigoNoPublicable = 'NO_VERIFICADO' | 'FUERA_DE_VIGENCIA' | 'DISTRITO_PENDIENTE' | 'INCIDENTE_CERRADO' | 'INCIDENTE_VINCULADO';
+
+/** Estado de publicacion del resumen (P7). La API decide las acciones permitidas. */
+export interface PublicacionOperador {
+  readonly estado: 'NO_PUBLICADO' | 'VIGENTE' | 'RETIRADA' | 'VENCIDA';
+  readonly reservada: boolean;
+  readonly sensible: boolean;
+  readonly publicadaEn: string | null;
+  readonly venceEn: string | null;
+  readonly causaRetiro: CausaRetiro | null;
+  readonly noPublicable: CodigoNoPublicable | null;
+  readonly accionesPermitidas: readonly AccionPublicacion[];
+}
+
+/** Mapa operativo del operador (P7 grupo B): punto exacto solo de incidentes de su sede. */
+export type PeriodoOperativo = '24h' | '7d' | '30d';
+export interface ElementoMapaOperativo {
+  readonly id: string;
+  readonly referencia: string;
+  readonly categoria: { readonly id: string; readonly nombre: string | null };
+  readonly distrito: { readonly id: string; readonly nombre: string | null } | null;
+  readonly estado: EstadoIncidente;
+  readonly prioridad: Prioridad;
+  readonly registradoEn: string;
+  readonly punto: { readonly lat: number; readonly lon: number };
+  readonly publicacion: { readonly vigente: boolean; readonly reservada: boolean };
+}
+export interface MapaOperativo {
+  readonly filtros: { readonly distrito: string | null; readonly categoria: string | null; readonly periodo: PeriodoOperativo };
+  readonly truncado: boolean;
+  readonly elementos: readonly ElementoMapaOperativo[];
+}
+/** Limites distritales GeoJSON del catalogo activo. */
+export interface LimitesDistritales {
+  readonly type: 'FeatureCollection';
+  readonly features: readonly {
+    readonly type: 'Feature';
+    readonly properties: { readonly id: string; readonly nombre: string };
+    readonly geometry: { readonly type: string; readonly coordinates: unknown };
+  }[];
+}
+
 /** Atencion institucional del resumen (P6). La API decide las acciones permitidas. */
 export interface AtencionOperador {
   readonly responsable:
@@ -139,6 +183,8 @@ export interface AtencionOperador {
     readonly motivo: string | null;
     readonly instante: string;
   }[];
+  /** P7; null si la API no compone la publicacion. */
+  readonly publicacion?: PublicacionOperador | null;
 }
 
 export interface AsignacionAdmin {
@@ -504,6 +550,22 @@ export const api = {
     llamar<{ prioridad: Prioridad; origen: 'revisada' }>(`/api/v1/operador/incidentes/${enc(id)}/prioridad`, { metodo: 'POST', cuerpo: { valor, motivo } }),
   vincularDuplicado: (id: string, referenciaPrincipal: string, motivo: string) =>
     llamar<{ vinculado: true }>(`/api/v1/operador/incidentes/${enc(id)}/vinculo`, { metodo: 'POST', cuerpo: { referenciaPrincipal, motivo } }),
+  // Mapa operativo (P7 grupo B) y limites distritales.
+  mapaOperativo: (f: { distrito?: string; categoria?: string; periodo: PeriodoOperativo }, senal?: AbortSignal) => {
+    const q = new URLSearchParams({ ...(f.distrito ? { distrito: f.distrito } : {}), ...(f.categoria ? { categoria: f.categoria } : {}), periodo: f.periodo });
+    return llamar<MapaOperativo>(`/api/v1/operador/mapa?${q.toString()}`, { senal });
+  },
+  limites: (senal?: AbortSignal) => llamar<LimitesDistritales>('/api/v1/publico/territorio/limites', { senal }),
+  // Publicacion controlada (P7).
+  publicarIncidente: (id: string, cuerpo: { estadoEsperado: EstadoIncidente; reservada?: boolean; motivoReserva?: string }) =>
+    llamar<{ publicacion: { estado: 'VIGENTE'; reservada: boolean; publicadaEn: string; venceEn: string } }>(
+      `/api/v1/operador/incidentes/${enc(id)}/publicacion`,
+      { metodo: 'POST', cuerpo },
+    ),
+  retirarPublicacion: (id: string, motivo: string) =>
+    llamar<{ retirada: true }>(`/api/v1/operador/incidentes/${enc(id)}/publicacion/retiro`, { metodo: 'POST', cuerpo: { motivo } }),
+  reservarPublicacion: (id: string, reservada: boolean, motivo: string) =>
+    llamar<{ reservada: boolean }>(`/api/v1/operador/incidentes/${enc(id)}/publicacion/reserva`, { metodo: 'POST', cuerpo: { reservada, motivo } }),
   asignaciones: (senal?: AbortSignal) => llamar<{ elementos: readonly AsignacionAdmin[] }>(ASI, { senal }),
   candidatosReasignacion: (id: string, senal?: AbortSignal) =>
     llamar<{ elementos: readonly CandidatoReasignacion[] }>(`${ASI}/${enc(id)}/candidatos`, { senal }),
