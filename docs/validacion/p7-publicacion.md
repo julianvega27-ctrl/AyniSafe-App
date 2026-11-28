@@ -73,6 +73,29 @@ Desglose de cobertura de P7 (líneas / ramas):
 - Paneles (API y web) y navegación móvil: Mapa pasa de destino pendiente a operativo. Alertas sigue pendiente.
 - `estatico.test.ts`: la CSP admite como único origen externo `https://tile.openstreetmap.org`, solo en `img-src`. Sigue prohibiendo otros orígenes, `unsafe-*` y comodines.
 
+## Grupo E: publicación al verificar (decisión del 27/11/2026, tras la primera revisión)
+
+El responsable pidió que los ciudadanos pudieran ver los incidentes reportados. Se le presentó el conflicto con el documento 11 §5 y RF49 y eligió **publicar al verificar**: la verificación autoriza la publicación. Los incidentes sin verificar siguen sin mostrarse.
+
+La decisión se registró antes del código en el documento 11 §5, RF49 y las specs del cambio.
+
+**Comportamiento:**
+- **Al verificar:** marcar VERIFICADO (desde SIN_VERIFICAR o NO_VERIFICADO) publica en la misma transacción si el incidente es publicable. Si no lo es (más de 7 días o distrito pendiente), se verifica sin publicar.
+- **Historial:** registra `publicar` con el valor `VERIFICACION`.
+- **Repetir:** repetir VERIFICADO no republica un retiro por decisión. «Publicar» queda para republicar.
+- **Al corregir:** NO_VERIFICADO retira la publicación, y volver a VERIFICADO republica.
+
+**Cambios:**
+- Textos del panel (control y diálogo de verificación, bloque «Publicación»), de la app y del OpenAPI.
+- Pruebas ajustadas y una nueva prueba web del aviso al verificar.
+
+**UI:** los filtros del mapa operativo usan el `CampoSeleccion` compartido, con la etiqueta arriba y la misma altura y foco que los demás campos del panel. Antes eran selects nativos sin estilo.
+
+**Verificación tras el grupo E:**
+- **API:** 83 suites y 1493 pruebas Jest, con 89,26 % de líneas y 90,88 % de ramas. OpenAPI válido con 63 operaciones y 0 infracciones de arquitectura.
+- **Web:** 16 archivos y 200 pruebas.
+- **Flutter:** la prueba del mapa aprobada y el análisis sin problemas.
+
 ## No verificado, sin presentarlo como hecho
 
 - **Revisión visual renderizada:** queda para la prueba manual del responsable, en escritorio y en pantalla estrecha:
