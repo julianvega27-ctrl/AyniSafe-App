@@ -26,15 +26,19 @@ Un operador activo MUST poder listar los incidentes con una participación de su
 - **THEN** se responde 200 con una lista vacía
 
 ### Requirement: Contenido de la fila de bandeja
-Cada fila MUST incluir referencia, categoría, distrito, estado, instante de registro, papel de la institución del operador, condición médica por confirmar y la etiqueta de prioridad «Sin evaluar» mientras no exista evaluación. MUST NOT incluir teléfono, coordenadas, código, autor ni otras sedes u operadores.
+Cada fila MUST incluir referencia, categoría, distrito, estado efectivo, resultado si está cerrado, verificación, instante de registro, papel de la institución del operador, condición médica por confirmar, si su institución tiene responsable y si es él, indicación de duplicado vinculado y la prioridad vigente con su origen («Sin evaluar» sin propuesta válida). MUST NOT incluir teléfono, coordenadas, código, autor ni otras sedes u operadores.
 
 #### Scenario: Campos permitidos
 - **WHEN** se inspecciona una fila de la bandeja
-- **THEN** contiene solo los campos enumerados y la prioridad es «Sin evaluar»
+- **THEN** contiene solo los campos enumerados, sin nombres de operadores
 
 #### Scenario: Revisión resuelta y papel actualizado
 - **WHEN** una aclaración resuelve la revisión médica y cambia el papel de la institución del operador
 - **THEN** la siguiente consulta ya no marca la condición médica por confirmar y muestra el papel vigente
+
+#### Scenario: Responsable propio
+- **WHEN** el operador asumió el incidente
+- **THEN** su fila indica que él es el responsable de su institución
 
 ### Requirement: Ámbito vigente en cada consulta
 La bandeja y el resumen MUST filtrarse en el backend con el ámbito vigente del operador: sede activa y habilitada, distrito del incidente dentro de su cobertura y categoría dentro de sus competencias. Una participación designada por el administrador MUST seguir visible aunque no cumpla cobertura o competencia. Un operador sin ámbito MUST recibir 403.
@@ -52,7 +56,7 @@ La bandeja y el resumen MUST filtrarse en el backend con el ámbito vigente del 
 - **THEN** recibe 401 o 403 y ningún dato de incidentes
 
 ### Requirement: Resumen por identificador
-El operador MUST poder leer por identificador el resumen de un incidente de su bandeja: campos de la fila, descripción, ocurrencia, resultado territorial, respuestas originales de heridos y atención médica como informadas por el ciudadano, condición médica vigente (resumen de heridos), si tiene acceso al detalle sanitario y tipos de las demás instituciones participantes. MUST NOT incluir teléfono, coordenadas, código, autor, contenido de fotos ni observaciones de la persona principal.
+El operador MUST poder leer por identificador el resumen de un incidente de su bandeja: campos de la fila, descripción, ocurrencia, resultado territorial, respuestas originales de heridos y atención médica como informadas por el ciudadano, condición médica vigente (resumen de heridos), si tiene acceso al detalle sanitario, tipos de las demás instituciones participantes. MUST NOT incluir teléfono, coordenadas, código, autor, contenido de fotos ni observaciones de la persona principal.
 
 #### Scenario: Resumen propio
 - **WHEN** el operador abre un incidente de su bandeja
@@ -91,3 +95,17 @@ El resumen del operador MUST incluir la lista de fotos disponibles del incidente
 #### Scenario: Incidente sin fotos
 - **WHEN** el incidente no tiene fotos disponibles
 - **THEN** el resumen trae la lista vacía
+
+### Requirement: Atención en el resumen del operador
+El resumen MUST incluir el responsable de la institución del operador (nombre solo para operadores de esa institución), las acciones permitidas para él según estado, papel y asignación, y el historial operativo del incidente sin motivos sanitarios.
+
+#### Scenario: Acciones permitidas
+- **WHEN** el responsable de la principal abre un incidente EN_REVISION
+- **THEN** las acciones permitidas incluyen iniciar atención, descartar y registrar verificación, y no incluyen cerrar como atendido
+
+### Requirement: Filtro por responsable en la bandeja
+La bandeja MUST admitir un filtro opcional `responsable` con los valores `sin_tomar` (la institución del operador no tiene responsable activo en un caso abierto) y `mios` (el operador es el responsable activo). El filtro MUST aplicarse en el backend y MUST NOT cambiar el orden FIFO ni la paginación por cursor. Un valor no admitido MUST responder 400.
+
+#### Scenario: Mis casos
+- **WHEN** el operador consulta con `responsable=mios`
+- **THEN** recibe solo los incidentes que él tiene asignados, del más antiguo al más reciente
