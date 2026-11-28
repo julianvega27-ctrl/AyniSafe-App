@@ -2,12 +2,12 @@ import request from 'supertest';
 import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { crearArnes, crearCuentaDePrueba, limpiarBd, ORIGEN_WEB_PRUEBA } from './arnes';
 import { activarTerritorio, cookieInstitucional, crearSedeDePrueba, registrarIncidente } from './fixtures-enrutamiento';
-import { celdaDe, VIGENCIA_MS } from '../../src/modules/operaciones';
+import { VIGENCIA_MS } from '../../src/modules/operaciones';
 
 /**
- * P7, tareas A2.3, A3.4, C1 y C2: publicacion controlada contra PostgreSQL y por HTTP. Publicacion
- * expresa del responsable, retiro manual y automatico, vigencia, lista cerrada de campos publicos
- * (EQ-04/09), categorias sensibles, reserva y conteos con minimo de cinco.
+ * P7, tareas A2.3, A3.4, C1, C2, E2 y F2: publicacion controlada contra PostgreSQL y por HTTP.
+ * Publicacion al verificar, retiro manual y automatico, vigencia, lista cerrada de campos publicos con
+ * ubicacion exacta (EQ-04/09), todas las categorias, reserva y conteos con minimo de cinco.
  */
 let ahora: Date | null = null;
 const arnes = crearArnes({ enrutar: true, ahoraPublicacion: () => ahora ?? new Date() });
@@ -73,9 +73,7 @@ describe('publicar (RF49)', () => {
 
     const envio = await prisma.envioIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } });
     const fila = await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } });
-    const celda = celdaDe(envio.latitud, envio.longitud);
-    expect(fila).toMatchObject({ estado: 'VIGENTE', categoriaId: 'robo', distritoId: envio.distritoId, celdaLat: celda.lat, celdaLon: celda.lon });
-    expect(fila.celdaLat).not.toBe(envio.latitud);
+    expect(fila).toMatchObject({ estado: 'VIGENTE', categoriaId: 'robo', distritoId: envio.distritoId, latitud: envio.latitud, longitud: envio.longitud });
     expect(fila.venceEn.getTime() - envio.ocurridoEn.getTime()).toBe(VIGENCIA_MS);
     expect(await prisma.incidente.findUniqueOrThrow({ where: { id: inc.id } })).toMatchObject({ estado: 'EN_REVISION', verificacion: 'VERIFICADO' });
 
@@ -194,7 +192,7 @@ describe('resumen del operador', () => {
   it('informa estado, vencimiento y acciones; el no responsable solo retira', async () => {
     const { inc, a, b } = await escenario({}, false);
     let r = await resumen(a, inc.id);
-    expect(r.body.atencion.publicacion).toMatchObject({ estado: 'NO_PUBLICADO', noPublicable: 'NO_VERIFICADO', accionesPermitidas: [], sensible: false });
+    expect(r.body.atencion.publicacion).toMatchObject({ estado: 'NO_PUBLICADO', noPublicable: 'NO_VERIFICADO', accionesPermitidas: [] });
     await verificar(a, inc.id, 'VERIFICADO');
     r = await resumen(a, inc.id);
     expect(r.body.atencion.publicacion).toMatchObject({ estado: 'VIGENTE', accionesPermitidas: ['retirar', 'reservar'] });
@@ -205,27 +203,25 @@ describe('resumen del operador', () => {
 });
 
 describe('mapa publico (EQ-04/09)', () => {
-  it('lista cerrada de campos: nunca referencia, punto exacto, descripcion, telefono ni institucion', async () => {
+  it('lista cerrada de campos con ubicacion exacta: nunca referencia, descripcion, telefono ni institucion', async () => {
     const { inc, a } = await escenario();
     await publicar(a, inc.id);
     const r = await mapa();
     expect(r.status).toBe(200);
     expect(r.headers['cache-control']).toBe('public, max-age=30');
-    expect(Object.keys(r.body).sort()).toEqual(['elementos', 'filtros', 'generadoEn', 'radioZonaM', 'reservados']);
+    expect(Object.keys(r.body).sort()).toEqual(['elementos', 'filtros', 'generadoEn', 'reservados']);
     expect(r.body.elementos).toHaveLength(1);
     const e = r.body.elementos[0];
-    expect(Object.keys(e).sort()).toEqual(['antiguedadHoras', 'categoria', 'distrito', 'estado', 'id', 'ocurridoEn', 'zona']);
-    expect(e.zona.aproximada).toBe(true);
+    expect(Object.keys(e).sort()).toEqual(['antiguedadHoras', 'categoria', 'distrito', 'estado', 'id', 'ocurridoEn', 'ubicacion']);
     const envio = await prisma.envioIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } });
     const texto = JSON.stringify(r.body);
     for (const prohibido of [inc.id, inc.referencia, inc.codigo, DESCRIPCION, '987654321', 'pnp']) {
       expect(texto).not.toContain(prohibido);
     }
-    expect([e.zona.lat, e.zona.lon]).not.toContain(envio.latitud);
-    expect([e.zona.lat, e.zona.lon]).not.toContain(envio.longitud);
+    expect(e.ubicacion).toEqual({ lat: envio.latitud, lon: envio.longitud });
   });
 
-  it('retirado, vencido, cerrado y sensibles fuera; filtros combinados', async () => {
+  it('retirado y vencido fuera; todas las categorias verificadas; filtros combinados', async () => {
     const { inc, a } = await escenario();
     await publicar(a, inc.id);
     const agresion = await registrarIncidente(app, prisma, { categoriaId: 'agresion', descripcion: 'Agresión en la vía pública' });
@@ -233,9 +229,8 @@ describe('mapa publico (EQ-04/09)', () => {
     await post(a, `${BASE}/${agresion.id}/asumir`);
     await verificar(a, agresion.id, 'VERIFICADO');
     expect((await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: agresion.id } })).estado).toBe('VIGENTE');
-    expect((await resumen(a, agresion.id)).body.atencion.publicacion.sensible).toBe(true);
-
-    expect((await mapa()).body.elementos.map((e: { categoria: { id: string } }) => e.categoria.id)).toEqual(['robo']);
+    // Decision del 27/11/2026: todas las categorias verificadas se muestran, incluidas las sensibles.
+    expect((await mapa()).body.elementos.map((e: { categoria: { id: string } }) => e.categoria.id).sort()).toEqual(['agresion', 'robo']);
     expect((await mapa('?distrito=DIS-01&categoria=robo&periodo=24h')).body.elementos).toHaveLength(1);
     expect((await mapa('?distrito=DIS-02')).body.elementos).toHaveLength(0);
     expect((await mapa('?categoria=vandalismo')).body.elementos).toHaveLength(0);
@@ -244,6 +239,7 @@ describe('mapa publico (EQ-04/09)', () => {
     expect((await mapa()).body.elementos).toHaveLength(0);
     ahora = null;
     await retirar(a, inc.id);
+    await retirar(a, agresion.id);
     expect((await mapa()).body.elementos).toHaveLength(0);
   });
 
@@ -279,14 +275,14 @@ describe('reserva y conteos (grupo C)', () => {
     expect((await mapa()).body.elementos).toHaveLength(0);
   });
 
-  it('conteos por distrito y mes solo con al menos cinco y sin retirados por decision', async () => {
+  it('conteos de reservados por distrito y mes solo con al menos cinco y sin retirados por decision', async () => {
     const ids: string[] = [];
     for (let i = 0; i < 6; i++) ids.push((await registrarIncidente(app, prisma, { categoriaId: 'agresion', descripcion: 'Agresión en la vía pública' })).id);
     await enrutarTodo();
     const insertar = (id: string, causa: string | null) => prisma.$executeRaw`
-      INSERT INTO publicaciones_incidente (incidente_id, estado, institucion, categoria_id, distrito_id, celda_lat, celda_lon,
+      INSERT INTO publicaciones_incidente (incidente_id, estado, reservada, institucion, categoria_id, distrito_id, latitud, longitud,
                                            ocurrido_en, vence_en, retirada_en, causa_retiro)
-      SELECT incidente_id, CASE WHEN ${causa}::text IS NULL THEN 'VIGENTE' ELSE 'RETIRADA' END, 'pnp', categoria_id, distrito_id, 0, 0,
+      SELECT incidente_id, CASE WHEN ${causa}::text IS NULL THEN 'VIGENTE' ELSE 'RETIRADA' END, true, 'pnp', categoria_id, distrito_id, 0, 0,
              ocurrido_en, ocurrido_en + INTERVAL '7 days', CASE WHEN ${causa}::text IS NULL THEN NULL ELSE now() END, ${causa}
         FROM envios_incidente WHERE incidente_id = ${id}::uuid`;
     for (const id of ids.slice(0, 4)) await insertar(id, null);

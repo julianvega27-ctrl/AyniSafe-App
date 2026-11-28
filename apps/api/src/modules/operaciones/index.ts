@@ -110,9 +110,6 @@ export {
   type VistaPublicacion,
 } from './aplicacion/publicacion';
 export {
-  CATEGORIAS_SENSIBLES,
-  celdaDe,
-  LADO_CELDA_M,
   MINIMO_CONTEO,
   VIGENCIA_MS,
   type CausaRetiro,

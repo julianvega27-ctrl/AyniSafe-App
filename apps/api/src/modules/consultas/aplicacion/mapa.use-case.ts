@@ -2,16 +2,17 @@ import { DISTRITOS_PILOTO } from '../dominio/territorio';
 
 /**
  * Mapa publico (P7, spec `consultas/mapa-publico`, documento 11 §5). Lee por un puerto la instantanea
- * de las publicaciones vigentes de Operaciones. Las vistas usan una lista cerrada de campos: nunca
- * referencia, identificador interno, coordenadas exactas, descripcion, institucion ni datos personales.
+ * de las publicaciones vigentes de Operaciones con su ubicacion exacta (decision del 27/11/2026). Las
+ * vistas usan una lista cerrada de campos: nunca referencia, identificador interno, descripcion,
+ * institucion ni datos personales.
  */
 
 export interface PuntoPublico {
   readonly idPublico: string;
   readonly categoriaId: string;
   readonly distritoId: string;
-  readonly celdaLat: number;
-  readonly celdaLon: number;
+  readonly latitud: number;
+  readonly longitud: number;
   readonly ocurridoEn: Date;
   readonly estado: string;
 }
@@ -38,8 +39,6 @@ export const PERIODOS_PUBLICOS = { '24h': 24, '3d': 72, '7d': 168 } as const;
 export type PeriodoPublico = keyof typeof PERIODOS_PUBLICOS;
 /** Tope defensivo de puntos por respuesta; la vigencia de 7 dias lo mantiene bajo en el piloto. */
 export const LIMITE_PUNTOS_PUBLICOS = 500;
-/** Radio de la zona aproximada que dibujan los clientes: media celda de 300 m. */
-export const RADIO_ZONA_M = 150;
 
 export class FiltroMapaInvalidoError extends Error {
   constructor(readonly campos: Readonly<Record<string, string>>) {
@@ -87,12 +86,11 @@ export class MapaPublico {
     return {
       filtros: { distrito: f.distritoId, categoria: f.categoriaId, periodo: f.periodo },
       generadoEn: ahora.toISOString(),
-      radioZonaM: RADIO_ZONA_M,
       elementos: puntos.map((p) => ({
         id: p.idPublico,
         categoria: { id: p.categoriaId, nombre: nombres.get(p.categoriaId) ?? null },
         distrito: { id: p.distritoId, nombre: nombreDistrito(p.distritoId) },
-        zona: { lat: p.celdaLat, lon: p.celdaLon, aproximada: true as const },
+        ubicacion: { lat: p.latitud, lon: p.longitud },
         estado: p.estado,
         ocurridoEn: p.ocurridoEn.toISOString(),
         antiguedadHoras: Math.max(0, Math.floor((ahora.getTime() - p.ocurridoEn.getTime()) / HORA_MS)),

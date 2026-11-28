@@ -4,7 +4,7 @@ import type { ContextoTransaccional } from '../../../compartido/transaccion';
 import type { NuevaPublicacion, Publicacion, PublicacionRepositorio } from '../aplicacion/publicacion';
 import type { Verificacion } from '../dominio/atencion';
 import type { EstadoIncidente } from '../dominio/incidente';
-import { CATEGORIAS_SENSIBLES, MINIMO_CONTEO, type CausaRetiro } from '../dominio/publicacion';
+import { MINIMO_CONTEO, type CausaRetiro } from '../dominio/publicacion';
 
 interface FilaPublicacion {
   readonly incidente_id: string;
@@ -14,8 +14,8 @@ interface FilaPublicacion {
   readonly institucion: string;
   readonly categoria_id: string;
   readonly distrito_id: string;
-  readonly celda_lat: number;
-  readonly celda_lon: number;
+  readonly latitud: number;
+  readonly longitud: number;
   readonly ocurrido_en: Date;
   readonly vence_en: Date;
   readonly publicada_en: Date;
@@ -24,7 +24,7 @@ interface FilaPublicacion {
 }
 
 const COLUMNAS = `incidente_id::text, id_publico::text, estado, reservada, institucion, categoria_id, distrito_id,
-  celda_lat, celda_lon, ocurrido_en, vence_en, publicada_en, retirada_en, causa_retiro`;
+  latitud, longitud, ocurrido_en, vence_en, publicada_en, retirada_en, causa_retiro`;
 
 const aPublicacion = (f: FilaPublicacion): Publicacion => ({
   incidenteId: f.incidente_id,
@@ -34,8 +34,8 @@ const aPublicacion = (f: FilaPublicacion): Publicacion => ({
   institucion: f.institucion,
   categoriaId: f.categoria_id,
   distritoId: f.distrito_id,
-  celdaLat: f.celda_lat,
-  celdaLon: f.celda_lon,
+  latitud: f.latitud,
+  longitud: f.longitud,
   ocurridoEn: f.ocurrido_en,
   venceEn: f.vence_en,
   publicadaEn: f.publicada_en,
@@ -48,8 +48,8 @@ export interface PuntoPublicoFila {
   readonly idPublico: string;
   readonly categoriaId: string;
   readonly distritoId: string;
-  readonly celdaLat: number;
-  readonly celdaLon: number;
+  readonly latitud: number;
+  readonly longitud: number;
   readonly ocurridoEn: Date;
   readonly estado: EstadoIncidente;
 }
@@ -68,8 +68,6 @@ export interface FiltroPublico {
   readonly limite: number;
 }
 
-const SENSIBLES = [...CATEGORIAS_SENSIBLES];
-
 /** Publicaciones (solo Operaciones escribe esta tabla). Las lecturas publicas no tocan los originales. */
 export class PrismaPublicacionAdapter implements PublicacionRepositorio {
   constructor(private readonly prisma: PrismaClient) {}
@@ -86,7 +84,7 @@ export class PrismaPublicacionAdapter implements PublicacionRepositorio {
   async guardar(tx: ContextoTransaccional, p: NuevaPublicacion): Promise<Publicacion> {
     const filas = await clienteDe(tx).$queryRawUnsafe<FilaPublicacion[]>(
       `INSERT INTO publicaciones_incidente
-         (incidente_id, estado, reservada, institucion, categoria_id, distrito_id, celda_lat, celda_lon, ocurrido_en, vence_en)
+         (incidente_id, estado, reservada, institucion, categoria_id, distrito_id, latitud, longitud, ocurrido_en, vence_en)
        VALUES ($1::uuid, 'VIGENTE', $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (incidente_id) DO UPDATE
           SET estado = 'VIGENTE', reservada = EXCLUDED.reservada, institucion = EXCLUDED.institucion,
@@ -97,8 +95,8 @@ export class PrismaPublicacionAdapter implements PublicacionRepositorio {
       p.institucion,
       p.categoriaId,
       p.distritoId,
-      p.celdaLat,
-      p.celdaLon,
+      p.latitud,
+      p.longitud,
       p.ocurridoEn,
       p.venceEn,
     );
@@ -124,18 +122,18 @@ export class PrismaPublicacionAdapter implements PublicacionRepositorio {
   }
 
   /**
-   * Puntos publicos vigentes: sin sensibles ni reservados y solo de incidentes abiertos (defensa
+   * Puntos publicos vigentes: sin reservados y solo de incidentes abiertos (defensa
    * adicional al retiro automatico). Lee unicamente la instantanea y el estado del incidente.
    */
   async puntosPublicos(f: FiltroPublico): Promise<readonly PuntoPublicoFila[]> {
     const filas = await this.prisma.$queryRaw<
-      { id_publico: string; categoria_id: string; distrito_id: string; celda_lat: number; celda_lon: number; ocurrido_en: Date; estado: string }[]
+      { id_publico: string; categoria_id: string; distrito_id: string; latitud: number; longitud: number; ocurrido_en: Date; estado: string }[]
     >`
-      SELECT p.id_publico::text, p.categoria_id, p.distrito_id, p.celda_lat, p.celda_lon, p.ocurrido_en, i.estado
+      SELECT p.id_publico::text, p.categoria_id, p.distrito_id, p.latitud, p.longitud, p.ocurrido_en, i.estado
         FROM publicaciones_incidente p
         JOIN incidentes i ON i.id = p.incidente_id
        WHERE p.estado = 'VIGENTE' AND p.vence_en > ${f.ahora}
-         AND NOT p.reservada AND NOT (p.categoria_id = ANY(${SENSIBLES}::text[]))
+         AND NOT p.reservada
          AND i.estado IN ('EN_REVISION', 'EN_ATENCION') AND i.principal_id IS NULL
          AND p.ocurrido_en >= ${f.desde}
          AND (${f.distritoId}::text IS NULL OR p.distrito_id = ${f.distritoId})
@@ -146,22 +144,22 @@ export class PrismaPublicacionAdapter implements PublicacionRepositorio {
       idPublico: r.id_publico,
       categoriaId: r.categoria_id,
       distritoId: r.distrito_id,
-      celdaLat: r.celda_lat,
-      celdaLon: r.celda_lon,
+      latitud: r.latitud,
+      longitud: r.longitud,
       ocurridoEn: r.ocurrido_en,
       estado: r.estado as EstadoIncidente,
     }));
   }
 
   /**
-   * Conteos de sensibles y reservados por distrito y mes de ocurrencia (hora de Peru), desde `desde`.
+   * Conteos de casos reservados por distrito y mes de ocurrencia (hora de Peru), desde `desde`.
    * Excluye retiradas por decision o NO_VERIFICADO; suprime grupos menores que el minimo.
    */
   async conteosReservados(f: { readonly distritoId: string | null; readonly desde: Date }): Promise<readonly ConteoReservadoFila[]> {
     const filas = await this.prisma.$queryRaw<{ distrito_id: string; mes: string; total: bigint }[]>`
       SELECT distrito_id, to_char(ocurrido_en AT TIME ZONE 'America/Lima', 'YYYY-MM') AS mes, count(*) AS total
         FROM publicaciones_incidente
-       WHERE (reservada OR categoria_id = ANY(${SENSIBLES}::text[]))
+       WHERE reservada
          AND (causa_retiro IS NULL OR causa_retiro NOT IN ('DECISION', 'NO_VERIFICADO'))
          AND ocurrido_en >= ${f.desde}
          AND (${f.distritoId}::text IS NULL OR distrito_id = ${f.distritoId})

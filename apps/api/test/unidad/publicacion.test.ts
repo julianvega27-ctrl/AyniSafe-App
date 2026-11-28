@@ -1,12 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import {
   accionesPublicacion,
-  CATEGORIAS_SENSIBLES,
-  celdaDe,
-  esSensible,
   noPublicable,
-  PASO_LAT,
-  PASO_LON,
   validarPublicar,
   validarReserva,
   validarRetiro,
@@ -28,46 +23,12 @@ const campos = (fn: () => unknown) => {
   return [];
 };
 
-describe('celdaDe (cuadricula fija de 300 m)', () => {
-  it('dos puntos de la misma celda dan el mismo centro y nunca el punto original', () => {
-    const a = celdaDe(-13.1601, -74.2251);
-    const b = celdaDe(-13.1602, -74.2252);
-    expect(a).toEqual(b);
-    expect(a).not.toEqual({ lat: -13.1601, lon: -74.2251 });
-  });
-
-  it('el centro esta a menos de media celda del punto en cada eje', () => {
-    const p = { lat: -13.15872, lon: -74.22213 };
-    const c = celdaDe(p.lat, p.lon);
-    expect(Math.abs(c.lat - p.lat)).toBeLessThanOrEqual(PASO_LAT / 2 + 1e-7);
-    expect(Math.abs(c.lon - p.lon)).toBeLessThanOrEqual(PASO_LON / 2 + 1e-7);
-  });
-
-  it('el lado de la celda mide unos 300 m', () => {
-    expect(PASO_LAT * 111_320).toBeCloseTo(300, 5);
-    expect(PASO_LON * 111_320 * Math.cos((13.16 * Math.PI) / 180)).toBeCloseTo(300, 5);
-  });
-
-  it('puntos a ambos lados de un borde caen en celdas distintas', () => {
-    const borde = Math.floor(-13.16 / PASO_LAT) * PASO_LAT;
-    expect(celdaDe(borde + 1e-6, -74.2)).not.toEqual(celdaDe(borde - 1e-6, -74.2));
-  });
-
-  it('rechaza coordenadas no finitas', () => {
-    expect(() => celdaDe(Number.NaN, 0)).toThrow(RangeError);
-  });
-});
-
-describe('vigencia y sensibles', () => {
+describe('vigencia', () => {
   it('vence 7 dias despues de la ocurrencia', () => {
     const o = new Date('2026-11-20T10:00:00Z');
     expect(vencimientoDe(o).getTime() - o.getTime()).toBe(VIGENCIA_MS);
   });
 
-  it('las cuatro categorias sensibles del documento 11', () => {
-    expect([...CATEGORIAS_SENSIBLES].sort()).toEqual(['acoso', 'agresion', 'emergencia-medica', 'violencia']);
-    expect(esSensible('robo')).toBe(false);
-  });
 });
 
 describe('noPublicable', () => {

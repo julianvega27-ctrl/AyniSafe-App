@@ -337,7 +337,7 @@ model HistorialIncidente {
   @@map("historial_incidente")
 }
 
-/// P7 (Operaciones): publicacion de un incidente con instantanea publica minima (documento 11 §5).
+/// P7 (Operaciones): publicacion de un incidente con instantanea publica minima y ubicacion exacta (documento 11 §5).
 /// Una fila por incidente; republicar la actualiza y conserva el vencimiento. CHECK en la migracion.
 model PublicacionIncidente {
   incidenteId String    @id @map("incidente_id") @db.Uuid
@@ -347,8 +347,8 @@ model PublicacionIncidente {
   institucion String
   categoriaId String    @map("categoria_id")
   distritoId  String    @map("distrito_id")
-  celdaLat    Float     @map("celda_lat")
-  celdaLon    Float     @map("celda_lon")
+  latitud     Float
+  longitud    Float
   ocurridoEn  DateTime  @map("ocurrido_en") @db.Timestamptz(3)
   venceEn     DateTime  @map("vence_en") @db.Timestamptz(3)
   publicadaEn DateTime  @default(dbgenerated("clock_timestamp()")) @map("publicada_en") @db.Timestamptz(3)

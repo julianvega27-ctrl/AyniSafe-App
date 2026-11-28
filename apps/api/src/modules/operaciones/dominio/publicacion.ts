@@ -4,46 +4,22 @@ import { ValidacionAtencionError, type Verificacion } from './atencion';
 
 /**
  * Publicacion controlada (P7, spec `operaciones/publicacion`, documento 11 §5). Reglas puras:
- * cuadricula fija de 300 m, vigencia de 7 dias desde la ocurrencia, categorias sensibles,
- * elegibilidad, acciones permitidas y validacion de los cuerpos.
+ * vigencia de 7 dias desde la ocurrencia, elegibilidad, acciones permitidas y validacion de los
+ * cuerpos. Desde el 27/11/2026 se publica la ubicacion exacta y todas las categorias.
  */
-
-/** Lado de la celda publica en metros (valor inicial del documento 11 §5). */
-export const LADO_CELDA_M = 300;
-const METROS_POR_GRADO = 111_320;
-/** Latitud de referencia fija del piloto (Ayacucho): la cuadricula no depende del punto. */
-const LATITUD_REFERENCIA = -13.16;
-export const PASO_LAT = LADO_CELDA_M / METROS_POR_GRADO;
-export const PASO_LON = LADO_CELDA_M / (METROS_POR_GRADO * Math.cos((LATITUD_REFERENCIA * Math.PI) / 180));
 
 /** Vigencia maxima de una publicacion desde la ocurrencia. */
 export const VIGENCIA_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Nunca se muestran como punto ni elemento individual (documento 11 §5). */
-export const CATEGORIAS_SENSIBLES: ReadonlySet<string> = new Set(['acoso', 'violencia', 'agresion', 'emergencia-medica']);
-
-/** Minimo de elementos para informar un conteo agregado de sensibles y reservados. */
+/** Minimo de elementos para informar un conteo agregado de casos reservados. */
 export const MINIMO_CONTEO = 5;
 
 export const CAUSAS_RETIRO = ['DECISION', 'CIERRE', 'NO_VERIFICADO', 'DUPLICADO'] as const;
 export type CausaRetiro = (typeof CAUSAS_RETIRO)[number];
 
-/** Redondeo estable a 7 decimales (~1 cm), para que dos puntos de la misma celda den el mismo valor. */
-const redondear = (v: number) => Math.round(v * 1e7) / 1e7;
-
-/** Centro de la celda fija de 300 m que contiene el punto. Determinista: sin ruido promediable. */
-export function celdaDe(latitud: number, longitud: number): { readonly lat: number; readonly lon: number } {
-  if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) throw new RangeError('Coordenadas no validas');
-  const fila = Math.floor(latitud / PASO_LAT);
-  const columna = Math.floor(longitud / PASO_LON);
-  return { lat: redondear((fila + 0.5) * PASO_LAT), lon: redondear((columna + 0.5) * PASO_LON) };
-}
-
 export function vencimientoDe(ocurridoEn: Date): Date {
   return new Date(ocurridoEn.getTime() + VIGENCIA_MS);
 }
-
-export const esSensible = (categoriaId: string) => CATEGORIAS_SENSIBLES.has(categoriaId);
 
 export type CodigoNoPublicable = 'NO_VERIFICADO' | 'FUERA_DE_VIGENCIA' | 'DISTRITO_PENDIENTE' | 'INCIDENTE_CERRADO' | 'INCIDENTE_VINCULADO';
 

@@ -952,14 +952,13 @@ paths:
     get:
       tags: [Publicacion]
       operationId: consultarMapaPublico
-      summary: Incidentes publicados y vigentes con zona aproximada (sin sesion, P7)
+      summary: Incidentes publicados y vigentes con su ubicacion exacta (sin sesion, P7)
       description: |
         Solo publicaciones vigentes (menos de 7 dias desde la ocurrencia, no retiradas) de incidentes abiertos, con
-        lista cerrada de campos: identificador publico opaco, categoria, distrito, centro de la celda de 300 m,
-        estado y antiguedad. Nunca referencia, coordenadas exactas, descripcion, fotos, telefono, institucion ni
-        datos sanitarios. Acoso, Violencia, Agresion, Emergencia medica y los casos reservados no aparecen como
-        punto; `reservados` los cuenta por distrito y mes solo si el grupo tiene al menos cinco. Cache publica de
-        30 s.
+        lista cerrada de campos: identificador publico opaco, categoria, distrito, ubicacion exacta del reporte
+        (decision del 27/11/2026), estado y antiguedad. Nunca referencia, descripcion, fotos, telefono, institucion
+        ni datos sanitarios. Los casos reservados no aparecen como punto; `reservados` los cuenta por distrito y mes
+        solo si el grupo tiene al menos cinco. Cache publica de 30 s.
       security: []
       parameters:
         - name: distrito
@@ -1938,8 +1937,8 @@ paths:
         Verificar ya publica (decision del 27/11/2026); esta ruta sirve para republicar tras un retiro, solo por el
         responsable activo de la principal (documento 11 §5, RF49). Exige VERIFICADO,
         EN_REVISION o EN_ATENCION, no vinculado, distrito resuelto y ocurrencia de menos de 7 dias. Guarda una
-        instantanea con categoria, distrito real y centro de la celda fija de 300 m; nunca el punto exacto ni datos
-        personales o sanitarios. Repetir con una publicacion vigente devuelve 200 sin duplicarla. Con `reservada`
+        instantanea con categoria, distrito real y punto exacto; nunca descripcion ni datos personales o
+        sanitarios. Repetir con una publicacion vigente devuelve 200 sin duplicarla. Con `reservada`
         (y `motivoReserva`) el caso solo cuenta en los conteos agregados.
       security: [{ cookieAuth: [] }]
       parameters:
@@ -3558,13 +3557,10 @@ components:
       type: object
       additionalProperties: false
       description: Estado de publicacion para el resumen del operador (P7). Sin coordenadas ni identificador publico.
-      required: [estado, reservada, sensible, publicadaEn, venceEn, causaRetiro, noPublicable, accionesPermitidas]
+      required: [estado, reservada, publicadaEn, venceEn, causaRetiro, noPublicable, accionesPermitidas]
       properties:
         estado: { enum: [NO_PUBLICADO, VIGENTE, RETIRADA, VENCIDA] }
         reservada: { type: boolean }
-        sensible:
-          type: boolean
-          description: Categoria que nunca se muestra como punto (Acoso, Violencia, Agresion, Emergencia medica).
         publicadaEn: { type: [string, 'null'], format: date-time }
         venceEn: { type: [string, 'null'], format: date-time }
         causaRetiro: { enum: [DECISION, CIERRE, NO_VERIFICADO, DUPLICADO, null] }
@@ -3682,7 +3678,7 @@ components:
     MapaPublico:
       type: object
       additionalProperties: false
-      required: [filtros, generadoEn, radioZonaM, elementos, reservados]
+      required: [filtros, generadoEn, elementos, reservados]
       properties:
         filtros:
           type: object
@@ -3693,14 +3689,13 @@ components:
             categoria: { type: [string, 'null'] }
             periodo: { enum: ['24h', '3d', '7d'] }
         generadoEn: { type: string, format: date-time }
-        radioZonaM: { const: 150, description: Radio sugerido para dibujar la zona aproximada (media celda). }
         elementos:
           type: array
           maxItems: 500
           items:
             type: object
             additionalProperties: false
-            required: [id, categoria, distrito, zona, estado, ocurridoEn, antiguedadHoras]
+            required: [id, categoria, distrito, ubicacion, estado, ocurridoEn, antiguedadHoras]
             properties:
               id: { type: string, format: uuid, description: Identificador publico opaco; no es el del incidente. }
               categoria:
@@ -3717,21 +3712,20 @@ components:
                 properties:
                   id: { type: string }
                   nombre: { type: [string, 'null'] }
-              zona:
+              ubicacion:
                 type: object
                 additionalProperties: false
-                required: [lat, lon, aproximada]
-                description: Centro de la celda fija de 300 m; nunca el punto informado.
+                required: [lat, lon]
+                description: Punto informado en el reporte (decision del 27/11/2026).
                 properties:
                   lat: { type: number }
                   lon: { type: number }
-                  aproximada: { const: true }
               estado: { enum: [EN_REVISION, EN_ATENCION] }
               ocurridoEn: { type: string, format: date-time }
               antiguedadHoras: { type: integer, minimum: 0 }
         reservados:
           type: array
-          description: Sensibles y reservados por distrito y mes (hora de Peru), solo grupos de al menos cinco.
+          description: Casos reservados por distrito y mes (hora de Peru), solo grupos de al menos cinco.
           items:
             type: object
             additionalProperties: false

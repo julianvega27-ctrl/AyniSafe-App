@@ -42,7 +42,6 @@ export type { IdentificarOperador } from './presentacion/bandeja.routes';
 export {
   MapaPublico,
   PERIODOS_PUBLICOS,
-  RADIO_ZONA_M,
   type ConteoReservado,
   type DependenciasMapaPublico,
   type PublicacionesPublicasPort,

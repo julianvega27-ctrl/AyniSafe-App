@@ -4,8 +4,6 @@ import type { EstadoIncidente } from '../dominio/incidente';
 import type { InstitucionDestino, Papel } from '../dominio/matriz';
 import {
   accionesPublicacion,
-  celdaDe,
-  esSensible,
   noPublicable,
   validarPublicar,
   validarReserva,
@@ -20,7 +18,7 @@ import type { AtencionRepositorio, ParticipacionOperador } from './atencion';
 /**
  * Publicacion controlada (P7, spec `operaciones/publicacion`, documento 11 §5). Operaciones es el
  * unico que escribe `publicaciones_incidente`. Cada mutacion bloquea la fila del incidente y escribe
- * su historial en la misma transaccion. La instantanea guarda solo el centro de la celda de 300 m.
+ * su historial en la misma transaccion. La instantanea guarda el punto exacto (decision 27/11/2026).
  */
 
 export interface Publicacion {
@@ -31,8 +29,8 @@ export interface Publicacion {
   readonly institucion: string;
   readonly categoriaId: string;
   readonly distritoId: string;
-  readonly celdaLat: number;
-  readonly celdaLon: number;
+  readonly latitud: number;
+  readonly longitud: number;
   readonly ocurridoEn: Date;
   readonly venceEn: Date;
   readonly publicadaEn: Date;
@@ -45,8 +43,8 @@ export interface NuevaPublicacion {
   readonly institucion: InstitucionDestino;
   readonly categoriaId: string;
   readonly distritoId: string;
-  readonly celdaLat: number;
-  readonly celdaLon: number;
+  readonly latitud: number;
+  readonly longitud: number;
   readonly ocurridoEn: Date;
   readonly venceEn: Date;
   readonly reservada: boolean;
@@ -94,7 +92,6 @@ export type EstadoPublicacionVista = 'NO_PUBLICADO' | 'VIGENTE' | 'RETIRADA' | '
 export interface VistaPublicacion {
   readonly estado: EstadoPublicacionVista;
   readonly reservada: boolean;
-  readonly sensible: boolean;
   readonly publicadaEn: string | null;
   readonly venceEn: string | null;
   readonly causaRetiro: CausaRetiro | null;
@@ -131,14 +128,13 @@ export class ServicioPublicacion {
         ahora,
       });
       if (codigo) throw new ConflictoAtencionError(codigo, inc.estado);
-      const celda = celdaDe(datos.latitud, datos.longitud);
       const publicacion = await this.d.repositorio.guardar(tx, {
         incidenteId: p.incidenteId,
         institucion: p.institucion,
         categoriaId: datos.categoriaId,
         distritoId: datos.distritoId!,
-        celdaLat: celda.lat,
-        celdaLon: celda.lon,
+        latitud: datos.latitud,
+        longitud: datos.longitud,
         ocurridoEn: datos.ocurridoEn,
         venceEn: vencimientoDe(datos.ocurridoEn),
         reservada: s.reservada,
@@ -233,14 +229,13 @@ export class ServicioPublicacion {
       ahora,
     });
     if (codigo) return false;
-    const celda = celdaDe(datos.latitud, datos.longitud);
     await this.d.repositorio.guardar(tx, {
       incidenteId: c.incidenteId,
       institucion: c.institucion,
       categoriaId: datos.categoriaId,
       distritoId: datos.distritoId!,
-      celdaLat: celda.lat,
-      celdaLon: celda.lon,
+      latitud: datos.latitud,
+      longitud: datos.longitud,
       ocurridoEn: datos.ocurridoEn,
       venceEn: vencimientoDe(datos.ocurridoEn),
       reservada: actual?.reservada ?? false,
@@ -300,7 +295,6 @@ export class ServicioPublicacion {
     return {
       estado,
       reservada,
-      sensible: datos ? esSensible(datos.categoriaId) : false,
       publicadaEn: actual ? actual.publicadaEn.toISOString() : null,
       venceEn: actual ? actual.venceEn.toISOString() : datos ? vencimientoDe(datos.ocurridoEn).toISOString() : null,
       causaRetiro: actual?.causaRetiro ?? null,
