@@ -11,7 +11,11 @@ El control del caso MUST incluir un bloque «Publicación» con el estado (no pu
 
 #### Scenario: No publicable
 - **WHEN** el incidente no está verificado
-- **THEN** el bloque explica que solo se publican incidentes verificados y no ofrece «Publicar»
+- **THEN** el bloque explica que se publicará al verificarlo y no ofrece «Publicar»
+
+#### Scenario: Aviso al verificar
+- **WHEN** el responsable abre el diálogo de verificación
+- **THEN** se le explica que marcarlo verificado lo publica en el mapa ciudadano como zona aproximada
 
 #### Scenario: Retirar
 - **WHEN** un operador de la principal retira con motivo

@@ -18,11 +18,11 @@ Cerrar MUST exigir resultado ATENDIDO o DESCARTADO, un motivo interno de 10 a 50
 - **THEN** la publicación queda retirada por cierre en la misma transacción y deja de ser pública
 
 ### Requirement: Verificación separada del estado
-Cada incidente MUST tener una verificación SIN_VERIFICAR, VERIFICADO o NO_VERIFICADO, inicialmente SIN_VERIFICAR. El responsable de la principal MUST poder registrarla o corregirla con motivo de 10 a 500 caracteres mientras el incidente no esté CERRADO. La verificación MUST NOT cambiar el estado, crear otro caso ni publicar, y MUST NOT exigirse para cerrar. Corregirla a NO_VERIFICADO MUST retirar la publicación vigente en la misma transacción.
+Cada incidente MUST tener una verificación SIN_VERIFICAR, VERIFICADO o NO_VERIFICADO, inicialmente SIN_VERIFICAR. El responsable de la principal MUST poder registrarla o corregirla con motivo de 10 a 500 caracteres mientras el incidente no esté CERRADO. La verificación MUST NOT cambiar el estado ni crear otro caso, y MUST NOT exigirse para cerrar. VERIFICADO MUST publicar y NO_VERIFICADO MUST retirar en la misma transacción (`operaciones/publicacion`).
 
 #### Scenario: Verificar sin cambiar estado
 - **WHEN** el responsable marca VERIFICADO un incidente EN_REVISION
-- **THEN** la verificación cambia, el estado sigue EN_REVISION y el cambio queda auditado
+- **THEN** la verificación cambia, el estado sigue EN_REVISION, el cambio queda auditado y el incidente se publica si cumple las condiciones
 
 #### Scenario: Corrección
 - **WHEN** el responsable cambia VERIFICADO a NO_VERIFICADO con motivo

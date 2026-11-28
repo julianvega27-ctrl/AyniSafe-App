@@ -69,6 +69,12 @@ Grupos verticales por prioridad. Durante la implementación solo se ejecutan las
 - [x] C2 Conteos por distrito y mes con mínimo de cinco en `GET /publico/mapa`; pruebas con 4 y 5 elementos y sin los retirados por decisión.
 - [x] C3 Clientes: «Reservar/Quitar reserva» en el panel y conteos como texto en la app.
 
+## E. Publicación al verificar (decisión del responsable, 27/11/2026)
+- [x] E1 Documento 11 §5, RF49 y specs: la verificación autoriza la publicación.
+- [x] E2 API: publicar en la transacción de la verificación (`VERIFICADO`), con historial y sin republicar retiros por decisión; pruebas de integración y contrato.
+- [x] E3 Panel: textos de verificación y del bloque «Publicación»; pruebas.
+- [x] E4 Filtros del mapa operativo con `CampoSeleccion` (ajuste de UI tras la revisión).
+
 ## Z. Cierre
 - [x] Z1 Suite completa con cobertura, validación OpenAPI y verificador de arquitectura, una vez.
 - [ ] Z2 Migrar `ayni_safe_dev` (`npm run db:migrar`) y comprobar `adb reverse tcp:3000` en el teléfono.

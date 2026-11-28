@@ -7,7 +7,7 @@ Publicación expresa y retiro de incidentes verificados con una instantánea pú
 ## ADDED Requirements
 
 ### Requirement: Publicación expresa por el responsable de la principal
-Solo el responsable activo de la institución principal MUST poder publicar, con una solicitud expresa que indique el estado esperado. El incidente MUST estar VERIFICADO, en EN_REVISION o EN_ATENCION, no vinculado como duplicado, con distrito resuelto y ocurrido hace menos de 7 días. Cualquier otro caso MUST rechazarse sin publicar. Publicar MUST NOT cambiar estado, verificación ni prioridad.
+Solo el responsable activo de la institución principal MUST poder publicar, al verificar el incidente o con una solicitud expresa que indique el estado esperado. El incidente MUST estar VERIFICADO, en EN_REVISION o EN_ATENCION, no vinculado como duplicado, con distrito resuelto y ocurrido hace menos de 7 días. Cualquier otro caso MUST rechazarse sin publicar. Publicar MUST NOT cambiar estado, verificación ni prioridad.
 
 #### Scenario: Publicar un verificado
 - **WHEN** el responsable de la principal publica un incidente VERIFICADO EN_ATENCION de su distrito ocurrido hace 2 horas
@@ -32,6 +32,21 @@ Solo el responsable activo de la institución principal MUST poder publicar, con
 #### Scenario: Repetir la publicación
 - **WHEN** el responsable publica un incidente que ya tiene publicación vigente
 - **THEN** la API devuelve la publicación vigente sin duplicarla ni registrar otra entrada
+
+### Requirement: Publicación al verificar
+Marcar un incidente VERIFICADO, desde SIN_VERIFICAR o NO_VERIFICADO, MUST publicarlo en la misma transacción si cumple las condiciones de publicación y no tiene publicación vigente. Si no las cumple, MUST verificarse sin publicar. La publicación MUST registrarse en el historial como consecuencia de la verificación. Repetir VERIFICADO sobre un incidente ya verificado MUST NOT republicar una publicación retirada por decisión.
+
+#### Scenario: Verificar publica
+- **WHEN** el responsable marca VERIFICADO un robo EN_REVISION de su distrito ocurrido hace 2 horas
+- **THEN** queda publicado en la misma respuesta y el historial registra la verificación y la publicación
+
+#### Scenario: Verificar fuera de plazo
+- **WHEN** el incidente verificado ocurrió hace más de 7 días
+- **THEN** la verificación se registra y no se crea publicación
+
+#### Scenario: Corrección a verificado
+- **WHEN** un incidente pasa de NO_VERIFICADO a VERIFICADO
+- **THEN** vuelve a publicarse conservando el vencimiento original
 
 ### Requirement: Instantánea pública mínima y generalizada
 Al publicar MUST guardarse solo categoría, distrito real del envío, centro de la celda de 300 m que contiene el punto, instante de ocurrencia y vencimiento; el estado publicable (En revisión o En atención) se lee vigente. La celda MUST pertenecer a una cuadrícula fija y el distrito MUST NOT calcularse desde la celda. MUST NOT guardarse ni exponerse coordenadas exactas, descripción, fotos, identidad, teléfono, código ni datos sanitarios.
@@ -79,7 +94,7 @@ La publicación vigente MUST retirarse en la misma transacción cuando el incide
 
 #### Scenario: Corrección de verificación
 - **WHEN** el responsable corrige un incidente publicado a NO_VERIFICADO
-- **THEN** la publicación queda retirada y no reaparece si luego vuelve a VERIFICADO sin nueva autorización
+- **THEN** la publicación queda retirada y solo reaparece si se vuelve a verificar
 
 ### Requirement: Categorías sensibles sin puntos
 Acoso, Violencia, Agresión y Emergencia médica MUST NOT mostrarse como punto ni como elemento individual en ninguna lectura pública, aunque estén publicados. Solo MAY contarse según el requisito de conteos agregados.

@@ -98,7 +98,7 @@ La prioridad se copia de la categoría al crear el incidente en el origen y pued
 
 ## 5. Publicación y mapa ciudadano
 
-Solo se publica un incidente validado con autorización expresa de un operador competente. Una institución principal puede retirar publicación inmediatamente con motivo. Mostrar categoría pública, distrito, zona aproximada, estado publicable y antigüedad; nunca la descripción original, fotografías, identidad, teléfono ni fichas de evaluación rápida.
+Solo se publica un incidente validado por un operador competente; desde el 27/11/2026 la verificación es la autorización de publicación (ver «Publicación al verificar» abajo). Una institución principal puede retirar publicación inmediatamente con motivo. Mostrar categoría pública, distrito, zona aproximada, estado publicable y antigüedad; nunca la descripción original, fotografías, identidad, teléfono ni fichas de evaluación rápida.
 
 Valor inicial: **Acoso, Violencia, Agresión y Emergencia médica** no muestran puntos individuales. Se pueden incluir únicamente en conteos por distrito y mes cuando haya al menos cinco incidentes en el grupo y la agregación no permita identificar personas; si no se cumple, suprimir el grupo. Para las otras categorías, usar zonas aproximadas de 300 metros y mostrar que son aproximaciones; respetar el distrito real, sin calcularlo desde la posición generalizada. El operador puede marcar reservado cualquier caso adicional.
 
@@ -107,6 +107,15 @@ Un incidente cerrado deja de generar alertas preventivas y sale del mapa activo.
 **Precisiones de P7, decisión del 27/11/2026.** Concretan esta sección sin cambiar sus valores iniciales.
 
 - **Quién publica.** Publica el responsable asignado de la institución principal, el mismo que verifica y cierra. Solo puede publicar si el incidente está VERIFICADO y abierto (EN_REVISION o EN_ATENCION), no está vinculado como duplicado, tiene el distrito resuelto y ocurrió hace menos de siete días.
+- **Publicación al verificar (decisión del 27/11/2026, tras revisar P7).** El responsable de la principal autoriza la publicación al marcar el incidente VERIFICADO. Si cumple las condiciones anteriores, se publica en la misma operación, sin un segundo paso.
+  - **Registro:** el historial registra la publicación como consecuencia de la verificación.
+  - **Fuera de plazo:** si el incidente no cumple las condiciones (por ejemplo, ocurrió hace más de siete días o el distrito está pendiente), se verifica sin publicar.
+  - **Sin verificar:** los incidentes sin verificar o NO_VERIFICADO no se muestran a la ciudadanía.
+  - **Al corregir:** pasar de NO_VERIFICADO a VERIFICADO vuelve a publicar.
+  - **Republicar:** tras un retiro por decisión, el incidente sigue verificado, así que «Publicar» queda como acción expresa para republicarlo.
+  - **Reserva y sensibles:** el responsable puede marcar el caso como reservado. Las categorías sensibles siguen sin mostrarse como punto.
+
+  Esta decisión sustituye la autorización expresa separada de la verificación.
 - **Quién retira.** Retira, con motivo, cualquier operador activo de la principal.
 - **Sin publicación del administrador.** El administrador no publica ni retira.
 - **Retiro automático.** El sistema retira la publicación, en la misma operación, en tres casos:
