@@ -131,7 +131,6 @@ export type CodigoNoPublicable = 'NO_VERIFICADO' | 'FUERA_DE_VIGENCIA' | 'DISTRI
 export interface PublicacionOperador {
   readonly estado: 'NO_PUBLICADO' | 'VIGENTE' | 'RETIRADA' | 'VENCIDA';
   readonly reservada: boolean;
-  readonly sensible: boolean;
   readonly publicadaEn: string | null;
   readonly venceEn: string | null;
   readonly causaRetiro: CausaRetiro | null;

@@ -14,7 +14,6 @@ const MOTIVO = 'Riesgo de identificar a la víctima';
 const publicacion = (extra: Partial<PublicacionOperador> = {}): PublicacionOperador => ({
   estado: 'NO_PUBLICADO',
   reservada: false,
-  sensible: false,
   publicadaEn: null,
   venceEn: '2026-12-03T09:58:00.000Z',
   causaRetiro: null,
@@ -85,12 +84,12 @@ describe('publicación en el control del caso', () => {
     const control = await abrirControl();
     expect(within(control).getByText('No publicado')).toBeInTheDocument();
     const previa = within(control).getByText('Lo que verá la ciudadanía').parentElement!;
-    expect(previa).toHaveTextContent('Robo · Ayacucho · zona aproximada de 300 m');
+    expect(previa).toHaveTextContent('Robo · Ayacucho · ubicación exacta del reporte');
     expect(previa).not.toHaveTextContent('Me arrebataron');
     await userEvent.click(within(control).getByRole('button', { name: 'Publicar en el mapa' }));
     const dialogo = await screen.findByRole('dialog');
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Publicar en el mapa' }));
-    expect(await screen.findByText('Incidente publicado en el mapa como zona aproximada.')).toBeInTheDocument();
+    expect(await screen.findByText('Incidente publicado en el mapa ciudadano.')).toBeInTheDocument();
     const envios = llamadas.filter((l) => l.metodo === 'POST');
     expect(envios.map((l) => [l.ruta, l.cuerpo])).toEqual([[`/api/v1/operador/incidentes/${ID}/publicacion`, { estadoEsperado: 'EN_REVISION' }]]);
     const control2 = await abrirControl();
@@ -140,11 +139,11 @@ describe('publicación en el control del caso', () => {
     expect(within(control2).getByText('No publicado: retirada por decisión de la institución principal')).toBeInTheDocument();
   });
 
-  it('categoría sensible: la vista previa indica que solo cuenta en el total', async () => {
-    montar([resumen(publicacion({ sensible: true }), { categoria: { id: 'agresion', nombre: 'Agresión' } })], () => json(500, {}));
+  it('caso reservado: la vista previa indica que solo cuenta en el total', async () => {
+    montar([resumen(publicacion({ estado: 'VIGENTE', reservada: true, publicadaEn: '2026-11-26T10:10:00.000Z', accionesPermitidas: ['retirar', 'quitar_reserva'] }))], () => json(500, {}));
     renderizarApp(RUTA);
     const control = await abrirControl();
-    expect(within(control).getByText(/Categoría reservada: no se muestra como punto/)).toBeInTheDocument();
+    expect(within(control).getByText(/Caso reservado: no se muestra como punto/)).toBeInTheDocument();
   });
 
   it('el diálogo de verificación avisa que verificar publica en el mapa', async () => {
@@ -153,7 +152,7 @@ describe('publicación en el control del caso', () => {
     const control = await abrirControl();
     await userEvent.click(within(control).getByRole('button', { name: 'Registrar verificación' }));
     const dialogo = await screen.findByRole('dialog');
-    expect(within(dialogo).getByText(/Marcarlo verificado lo publica en el mapa ciudadano/)).toBeInTheDocument();
+    expect(within(dialogo).getByText(/Marcarlo verificado lo publica en el mapa ciudadano con la\s+ubicación exacta/)).toBeInTheDocument();
   });
 
   it('un apoyo no ve el bloque de publicación', async () => {

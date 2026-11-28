@@ -41,22 +41,21 @@ function estadoTexto(p: PublicacionOperador): string {
 
 /** Lo que vera el ciudadano en el mapa publico: nunca descripcion, fotos ni datos personales. */
 function VistaPrevia({ resumen, p }: { resumen: ResumenIncidente; p: PublicacionOperador }) {
-  const soloConteo = p.sensible || p.reservada;
+  const soloConteo = p.reservada;
   return (
     <div className="mini-card" aria-live="polite">
       <span className="eyebrow">Lo que verá la ciudadanía</span>
       {soloConteo ? (
         <span>
-          {p.sensible ? 'Categoría reservada' : 'Caso reservado'}: no se muestra como punto. Solo cuenta en el total por distrito y mes, si
-          hay al menos cinco casos.
+          Caso reservado: no se muestra como punto. Solo cuenta en el total por distrito y mes, si hay al menos cinco casos.
         </span>
       ) : (
         <span>
-          {resumen.categoria.nombre ?? 'Incidente'} · {resumen.distrito?.nombre ?? 'Distrito pendiente'} · zona aproximada de 300 m ·{' '}
+          {resumen.categoria.nombre ?? 'Incidente'} · {resumen.distrito?.nombre ?? 'Distrito pendiente'} · ubicación exacta del reporte ·{' '}
           {ESTADO[resumen.estado]} · antigüedad desde la ocurrencia
         </span>
       )}
-      <span className="metadatos">Nunca se publican la descripción, las fotos, el teléfono ni la ubicación exacta.</span>
+      <span className="metadatos">Nunca se publican la descripción, las fotos, el teléfono ni datos de quien reportó.</span>
     </div>
   );
 }
@@ -120,10 +119,10 @@ const TITULO: Record<Modo, string> = {
 
 const EXPLICA: Record<Modo, string> = {
   publicar:
-    'Vuelves a mostrar este incidente verificado en el mapa ciudadano, como zona aproximada, hasta 7 días desde la ocurrencia. Saldrá del mapa al cerrarlo.',
+    'Vuelves a mostrar este incidente verificado en el mapa ciudadano, en su ubicación exacta, hasta 7 días desde la ocurrencia. Saldrá del mapa al cerrarlo.',
   retirar: 'Deja de mostrarse en el mapa de inmediato. Para volver a publicarlo hará falta otra autorización del responsable.',
   reservar: 'El caso dejará de mostrarse como punto y solo contará en el total por distrito y mes.',
-  quitar_reserva: 'El caso volverá a mostrarse como zona aproximada en el mapa.',
+  quitar_reserva: 'El caso volverá a mostrarse en su ubicación en el mapa.',
 };
 
 function DialogoPublicacion({ resumen, modo, onCerrar, onResultado }: {
@@ -164,7 +163,7 @@ function DialogoPublicacion({ resumen, modo, onCerrar, onResultado }: {
     if (r.tipo === 'ok') {
       return onResultado(
         modo === 'publicar'
-          ? 'Incidente publicado en el mapa como zona aproximada.'
+          ? 'Incidente publicado en el mapa ciudadano.'
           : modo === 'retirar'
             ? 'Publicación retirada del mapa.'
             : modo === 'reservar'
