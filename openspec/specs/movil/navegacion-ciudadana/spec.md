@@ -41,11 +41,15 @@ Inicio MUST presentar «Reportar un incidente» como acción principal operable 
 - **THEN** ve un estado vacío o un error con reintento, sin datos de ejemplo
 
 ### Requirement: Destinos no construidos
-Mapa y Alertas MUST indicar que aún no están disponibles con texto e icono y explicación acorde al producto. MUST NOT mostrar mapas públicos, reportes, avisos ni cifras de ejemplo en esos destinos, ni solicitar ubicación o notificaciones desde ellos. La ubicación del destino en barra o Drawer MUST NOT interpretarse como capacidad implementada. Reportar y Mis reportes son destinos operativos según sus capacidades.
+Alertas MUST indicar que aún no está disponible con texto e icono y explicación acorde al producto. MUST NOT mostrar reportes, avisos ni cifras de ejemplo en ese destino, ni solicitar ubicación o notificaciones desde él. La ubicación del destino en barra o Drawer MUST NOT interpretarse como capacidad implementada. Reportar, Mis reportes y Mapa son destinos operativos según sus capacidades; Mapa sigue `movil/mapa-publico`.
 
 #### Scenario: Destino pendiente
-- **WHEN** el usuario abre Mapa o Alertas
+- **WHEN** el usuario abre Alertas
 - **THEN** ve un estado «aún no disponible» comprensible, sin datos simulados ni solicitudes de permiso
+
+#### Scenario: Mapa operativo
+- **WHEN** el usuario abre Mapa desde la barra inferior
+- **THEN** ve el mapa público de publicaciones vigentes sin solicitud de permisos
 
 #### Scenario: Reportar desde la barra
 - **WHEN** el usuario abre Reportar desde la navegación inferior
@@ -93,7 +97,7 @@ Sin cuenta, la app MUST ofrecer Inicio público, barra Inicio/Reportar/Mapa/Cont
 
 #### Scenario: Primera apertura sin sesión guardada
 - **WHEN** se abre la app sin sesión
-- **THEN** muestra Inicio público con acceso a cuenta, Reportar y Consultar con código operativos, contenido público aprobado y Mapa y Alertas identificados como pendientes
+- **THEN** muestra Inicio público con acceso a cuenta, Reportar y Consultar con código operativos, contenido público aprobado, Mapa operativo y Alertas identificado como pendiente
 
 #### Scenario: Acceso a cuenta desde la navegación pública
 - **WHEN** una persona sin cuenta abre el control de cuenta o solicita un destino privado

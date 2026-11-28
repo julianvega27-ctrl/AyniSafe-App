@@ -7,7 +7,7 @@ Vincular incidentes del mismo hecho a un incidente principal para coordinar una 
 ## Requirements
 
 ### Requirement: Vinculación auditada a un principal
-El responsable activo de la institución principal de un incidente abierto MUST poder vincularlo como duplicado de otro incidente abierto que su sede también ve dentro de su ámbito, con motivo de 10 a 500 caracteres. La vinculación MUST registrarse con actor, instante y motivo y MUST NOT cerrar, descartar ni marcar como falso al duplicado.
+El responsable activo de la institución principal de un incidente abierto MUST poder vincularlo como duplicado de otro incidente abierto que su sede también ve dentro de su ámbito, con motivo de 10 a 500 caracteres. La vinculación MUST registrarse con actor, instante y motivo y MUST NOT cerrar, descartar ni marcar como falso al duplicado. MUST retirar en la misma transacción la publicación vigente del duplicado, y la vigencia del principal MUST NOT renovarse.
 
 #### Scenario: Vincular
 - **WHEN** el responsable vincula un incidente EN_REVISION a otro abierto que ve
@@ -16,6 +16,10 @@ El responsable activo de la institución principal de un incidente abierto MUST 
 #### Scenario: Principal no visible
 - **WHEN** el principal indicado no es visible para la sede del responsable
 - **THEN** recibe el mismo 404 que ante un incidente inexistente
+
+#### Scenario: Vincular un publicado
+- **WHEN** se vincula como duplicado un incidente con publicación vigente
+- **THEN** su publicación queda retirada y la del principal conserva su vencimiento
 
 ### Requirement: Sin ciclos ni cadenas
 Un incidente MUST NOT vincularse a sí mismo, a un incidente que ya es duplicado ni a uno cerrado. Un incidente que tiene duplicados MUST NOT vincularse como duplicado de otro. Las vinculaciones simultáneas MUST resolverse en la BD sin dejar ciclos.
