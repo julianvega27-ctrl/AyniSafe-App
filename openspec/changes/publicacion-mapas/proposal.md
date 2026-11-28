@@ -10,6 +10,10 @@ Ordenado por prioridad de entrega. El grupo A es el núcleo obligatorio; B y C s
 
 Decisiones del responsable (27/11/2026), registradas en el documento 11 §5 antes de implementar: teselas OSM estándar configurables; documento 11 tal cual (celda fija de 300 m, cuatro categorías sensibles sin puntos, conteos con mínimo de cinco); publica el responsable de la principal y retira cualquier operador activo de la principal; mapa público en la app y mapa operativo con puntos exactos en el panel del operador.
 
+**Decisión del 27/11/2026, segunda revisión.** La documentan el documento 11 §5 y el diseño (decisión 12). Sustituye la zona de 300 m y la exclusión de categorías sensibles que se describen abajo:
+- el mapa público muestra la ubicación exacta de todas las categorías verificadas; solo los casos reservados quedan fuera;
+- la app ofrece «Mi ubicación», que calcula la distancia en el teléfono sin enviar la posición.
+
 **Grupo A — publicación controlada (núcleo).**
 - **Publicar (RF49).** Decisión del 27/11/2026, tras la primera revisión: verificar es autorizar la publicación. Al marcarlo VERIFICADO, se publica en la misma transacción si es publicable. «Publicar» queda para republicar tras un retiro. El responsable asignado de la institución principal publica un incidente VERIFICADO, abierto (EN_REVISION o EN_ATENCION), no vinculado como duplicado, con distrito resuelto y ocurrido hace menos de 7 días. Al publicar se guarda una instantánea pública mínima: categoría, distrito real, centro de la celda de 300 m, estado publicable, instante de ocurrencia y vencimiento. Nunca descripción, fotos, identidad, teléfono, código, coordenadas exactas ni datos sanitarios.
 - **Retirar.** Cualquier operador activo de la principal retira con motivo, de inmediato. El sistema retira en la misma transacción al cerrar, al corregir a NO_VERIFICADO o al vincular como duplicado; la vigencia vence a los 7 días desde la ocurrencia sin tarea programada. Cada publicación y retiro queda en el historial. Republicar tras un retiro exige otra autorización y conserva el vencimiento original.

@@ -99,6 +99,15 @@ Las capas usan los componentes y tokens existentes, sin colores locales nuevos.
 ### 11. Proveedor de teselas
 Se adopta OSM estándar como valor por defecto configurable, cumpliendo su política: atribución visible, User-Agent o Referer identificable, sin precarga masiva y respetando la caché HTTP. Se registra en ADR-009. Su cuota no es contractual: para uso institucional real se cambia la URL sin tocar código.
 
+### 12. Ubicación exacta y «Mi ubicación» (decisión del 27/11/2026, segunda revisión)
+Sustituye las decisiones 3 y 6 en lo que toca a lo público.
+
+- **Instantánea:** guarda el punto exacto del envío. La migración `20261201110000_publicacion_ubicacion_exacta` renombra `celda_lat/celda_lon` a `latitud/longitud`. Se eliminan `celdaDe` y `CATEGORIAS_SENSIBLES`.
+- **Lectura pública:** excluye solo los reservados y responde `ubicacion: {lat, lon}`, sin `radioZonaM`. Los conteos agregados quedan solo para reservados.
+- **App:** el botón «Mi ubicación» usa el `UbicacionPuerto` existente, que pide el permiso solo al pulsarlo. La distancia se calcula en el teléfono con `latlong2` (`Distance`) y la lista se ordena por cercanía. La posición no viaja en ninguna solicitud ni se guarda.
+
+*Riesgo aceptado por el responsable:* el punto exacto puede revelar el domicilio o la ubicación de la víctima. La mitigación es la reserva por caso.
+
 ## Risks / Trade-offs
 
 - **Bloqueo de la política de OSM:** OSM puede bloquear o limitar el uso. → La URL es configurable y el mapa degrada a límites y lista. La evidencia registra que no se midieron cuotas.

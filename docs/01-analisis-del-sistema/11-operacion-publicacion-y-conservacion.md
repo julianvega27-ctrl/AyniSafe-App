@@ -98,9 +98,9 @@ La prioridad se copia de la categoría al crear el incidente en el origen y pued
 
 ## 5. Publicación y mapa ciudadano
 
-Solo se publica un incidente validado por un operador competente; desde el 27/11/2026 la verificación es la autorización de publicación (ver «Publicación al verificar» abajo). Una institución principal puede retirar publicación inmediatamente con motivo. Mostrar categoría pública, distrito, zona aproximada, estado publicable y antigüedad; nunca la descripción original, fotografías, identidad, teléfono ni fichas de evaluación rápida.
+Solo se publica un incidente validado por un operador competente; desde el 27/11/2026 la verificación es la autorización de publicación (ver «Publicación al verificar» abajo). Una institución principal puede retirar publicación inmediatamente con motivo. Mostrar categoría pública, distrito, ubicación exacta del reporte (decisión del 27/11/2026, abajo), estado publicable y antigüedad; nunca la descripción original, fotografías, identidad, teléfono ni fichas de evaluación rápida.
 
-Valor inicial: **Acoso, Violencia, Agresión y Emergencia médica** no muestran puntos individuales. Se pueden incluir únicamente en conteos por distrito y mes cuando haya al menos cinco incidentes en el grupo y la agregación no permita identificar personas; si no se cumple, suprimir el grupo. Para las otras categorías, usar zonas aproximadas de 300 metros y mostrar que son aproximaciones; respetar el distrito real, sin calcularlo desde la posición generalizada. El operador puede marcar reservado cualquier caso adicional.
+Valor inicial, **sustituido el 27/11/2026** por «Ubicación exacta y todas las categorías» (abajo): **Acoso, Violencia, Agresión y Emergencia médica** no muestran puntos individuales. Se pueden incluir únicamente en conteos por distrito y mes cuando haya al menos cinco incidentes en el grupo y la agregación no permita identificar personas; si no se cumple, suprimir el grupo. Para las otras categorías, usar zonas aproximadas de 300 metros y mostrar que son aproximaciones; respetar el distrito real, sin calcularlo desde la posición generalizada. El operador puede marcar reservado cualquier caso adicional.
 
 Un incidente cerrado deja de generar alertas preventivas y sale del mapa activo. Valor inicial de publicación: hasta siete días desde la ocurrencia o hasta el cierre/retiro, lo que suceda primero; no renovar la antigüedad por agregar otro reporte al mismo caso. El historial identificable no es público. Datos originales y seguimiento del autor siguen sujetos a sus permisos y plazos de conservación.
 
@@ -113,7 +113,7 @@ Un incidente cerrado deja de generar alertas preventivas y sale del mapa activo.
   - **Sin verificar:** los incidentes sin verificar o NO_VERIFICADO no se muestran a la ciudadanía.
   - **Al corregir:** pasar de NO_VERIFICADO a VERIFICADO vuelve a publicar.
   - **Republicar:** tras un retiro por decisión, el incidente sigue verificado, así que «Publicar» queda como acción expresa para republicarlo.
-  - **Reserva y sensibles:** el responsable puede marcar el caso como reservado. Las categorías sensibles siguen sin mostrarse como punto.
+  - **Reserva:** el responsable puede marcar el caso como reservado.
 
   Esta decisión sustituye la autorización expresa separada de la verificación.
 - **Quién retira.** Retira, con motivo, cualquier operador activo de la principal.
@@ -124,14 +124,15 @@ Un incidente cerrado deja de generar alertas preventivas y sale del mapa activo.
   - al vincularlo como duplicado.
 
   Republicar exige otra autorización y conserva el vencimiento original.
-- **Zona aproximada.** Se calcula con una cuadrícula fija de 300 m y se publica el centro de la celda, nunca el punto. Se guarda al publicar una instantánea con solo:
-  - la categoría;
-  - el distrito real;
-  - la celda;
-  - la ocurrencia y el vencimiento.
-- **Categorías sensibles y casos reservados.** Sus conteos por distrito y mes excluyen las publicaciones retiradas por decisión o por NO_VERIFICADO. Cuentan juntos, sin revelar la categoría.
+- **Ubicación exacta y todas las categorías (decisión del 27/11/2026, tras revisar P7).** Sustituye la zona aproximada de 300 m y la exclusión de categorías sensibles.
+  - **Ubicación:** el mapa público muestra el punto exacto informado en el reporte.
+  - **Categorías:** se muestran todas las categorías verificadas, incluidas Acoso, Violencia, Agresión y Emergencia médica.
+  - **Instantánea:** al publicar se guarda solo la categoría, el distrito real, el punto, la ocurrencia y el vencimiento.
+  - **Se mantienen** la vigencia de siete días, el filtro de período y la exclusión de descripción, fotos, identidad, teléfono, código y datos sanitarios.
+  - **Riesgo aceptado:** el responsable aceptó que el punto exacto puede revelar el domicilio o la ubicación de la víctima. La mitigación es la reserva: el operador marca como reservado el caso que no deba mostrarse.
+- **Casos reservados.** No se muestran como punto. Se cuentan por distrito y mes solo si hay al menos cinco en el grupo, sin revelar la categoría. Los conteos excluyen las publicaciones retiradas por decisión o por NO_VERIFICADO.
 - **Mapas.**
-  - **Mapa público:** está en la app.
+  - **Mapa público:** está en la app. Ofrece el botón «Mi ubicación» (decisión del 27/11/2026): al pulsarlo se pide el permiso, se muestra la posición actual y se indica la distancia a cada incidente, ordenando la lista de la más cercana a la más lejana. La ubicación se usa solo en el teléfono: no se envía al servidor ni se guarda. Sin pulsarlo, el mapa no pide permisos.
   - **Mapa operativo del panel:** es una consulta autorizada, distinta del mapa público. Muestra al operador el punto exacto solo de los incidentes en que participa su sede dentro de su ámbito. No es público ni lo ve el administrador.
 - **Teselas.** El proveedor por defecto es OpenStreetMap estándar, con atribución visible, Referer o User-Agent identificable y sin precarga masiva. Es configurable; su cuota no es contractual. Si falla, siguen la lista, los filtros y los límites distritales.
 

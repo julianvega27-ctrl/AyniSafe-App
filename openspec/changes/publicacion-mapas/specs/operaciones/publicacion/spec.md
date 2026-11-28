@@ -48,16 +48,16 @@ Marcar un incidente VERIFICADO, desde SIN_VERIFICAR o NO_VERIFICADO, MUST public
 - **WHEN** un incidente pasa de NO_VERIFICADO a VERIFICADO
 - **THEN** vuelve a publicarse conservando el vencimiento original
 
-### Requirement: Instantánea pública mínima y generalizada
-Al publicar MUST guardarse solo categoría, distrito real del envío, centro de la celda de 300 m que contiene el punto, instante de ocurrencia y vencimiento; el estado publicable (En revisión o En atención) se lee vigente. La celda MUST pertenecer a una cuadrícula fija y el distrito MUST NOT calcularse desde la celda. MUST NOT guardarse ni exponerse coordenadas exactas, descripción, fotos, identidad, teléfono, código ni datos sanitarios.
+### Requirement: Instantánea pública mínima con ubicación exacta
+Al publicar MUST guardarse solo categoría, distrito real del envío, punto exacto informado, instante de ocurrencia y vencimiento; el estado publicable (En revisión o En atención) se lee vigente. MUST NOT guardarse ni exponerse descripción, fotos, identidad, teléfono, código, institución ni datos sanitarios (decisión del 27/11/2026: ubicación exacta en lugar de zona de 300 m).
 
-#### Scenario: Dos puntos de la misma celda
-- **WHEN** se publican dos incidentes cuyos puntos están en la misma celda de 300 m
-- **THEN** ambas instantáneas tienen el mismo centro de celda y ninguna contiene el punto original
+#### Scenario: Punto exacto
+- **WHEN** se publica un incidente
+- **THEN** la instantánea contiene el mismo punto del envío y su distrito real
 
-#### Scenario: Celda en otro distrito
-- **WHEN** el centro de la celda cae fuera del distrito real del incidente
-- **THEN** la instantánea conserva el distrito real
+#### Scenario: Sin datos restringidos
+- **WHEN** se revisa la instantánea guardada
+- **THEN** no contiene descripción, teléfono, código, autor ni datos sanitarios
 
 ### Requirement: Vigencia de siete días desde la ocurrencia
 Cada publicación MUST vencer a los 7 días desde la ocurrencia, sin renovarse por republicar, por vincular otros reportes ni por cambios de estado. Una publicación vencida MUST dejar de ser pública sin depender de una tarea programada.
@@ -96,15 +96,15 @@ La publicación vigente MUST retirarse en la misma transacción cuando el incide
 - **WHEN** el responsable corrige un incidente publicado a NO_VERIFICADO
 - **THEN** la publicación queda retirada y solo reaparece si se vuelve a verificar
 
-### Requirement: Categorías sensibles sin puntos
-Acoso, Violencia, Agresión y Emergencia médica MUST NOT mostrarse como punto ni como elemento individual en ninguna lectura pública, aunque estén publicados. Solo MAY contarse según el requisito de conteos agregados.
+### Requirement: Todas las categorías verificadas
+Todas las categorías, incluidas Acoso, Violencia, Agresión y Emergencia médica, MUST mostrarse como punto cuando están publicadas y no reservadas (decisión del 27/11/2026). La reserva por caso es la mitigación para no exponer a la víctima.
 
 #### Scenario: Publicar una agresión
-- **WHEN** se publica un incidente de Agresión
-- **THEN** la publicación consta en el historial, pero la lectura pública de puntos no la incluye
+- **WHEN** se verifica y publica un incidente de Agresión no reservado
+- **THEN** aparece como punto en la lectura pública
 
 ### Requirement: Caso reservado
-El responsable de la principal MUST poder marcar como reservado, con motivo, un incidente publicado o al publicarlo, y quitar la reserva con motivo. Un caso reservado MUST tratarse como categoría sensible en las lecturas públicas. Cada cambio MUST registrarse en el historial.
+El responsable de la principal MUST poder marcar como reservado, con motivo, un incidente publicado o al publicarlo, y quitar la reserva con motivo. Un caso reservado MUST NOT mostrarse como punto y solo MAY contarse en los conteos agregados. Cada cambio MUST registrarse en el historial.
 
 #### Scenario: Reservar un caso publicado
 - **WHEN** el responsable marca reservado un robo publicado

@@ -75,6 +75,12 @@ Grupos verticales por prioridad. Durante la implementación solo se ejecutan las
 - [x] E3 Panel: textos de verificación y del bloque «Publicación»; pruebas.
 - [x] E4 Filtros del mapa operativo con `CampoSeleccion` (ajuste de UI tras la revisión).
 
+## F. Ubicación exacta y «Mi ubicación» (decisión del responsable, 27/11/2026)
+- [x] F1 Documento 11 §5, RF49, guía UI y specs: punto exacto, todas las categorías, solo los reservados ocultos y «Mi ubicación» en la app.
+- [x] F2 API: migración de renombre, instantánea con el punto exacto, lectura pública con `ubicacion`, conteos solo de reservados; OpenAPI y pruebas.
+- [x] F3 Panel: vista previa y textos con ubicación exacta; sin «sensible».
+- [x] F4 App: marcadores en el punto exacto, botón «Mi ubicación», distancia y orden por cercanía sin enviar la posición; pruebas.
+
 ## Z. Cierre
 - [x] Z1 Suite completa con cobertura, validación OpenAPI y verificador de arquitectura, una vez.
 - [ ] Z2 Migrar `ayni_safe_dev` (`npm run db:migrar`) y comprobar `adb reverse tcp:3000` en el teléfono.

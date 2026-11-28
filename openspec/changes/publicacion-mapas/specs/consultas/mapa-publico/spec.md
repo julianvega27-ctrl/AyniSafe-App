@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Lectura pública, sin sesión, de los incidentes publicados y vigentes con zona aproximada y filtros, sin exponer datos restringidos (documento 11 §5, RF20, RF49).
+Lectura pública, sin sesión, de los incidentes publicados y vigentes con su ubicación exacta y filtros, sin exponer datos restringidos (documento 11 §5, RF20, RF49).
 
 ## ADDED Requirements
 
 ### Requirement: Publicaciones vigentes sin sesión
-La API MUST ofrecer sin sesión las publicaciones vigentes no sensibles ni reservadas, cada una con identificador público opaco, categoría, distrito, centro de celda, indicación de zona aproximada, estado publicable y antigüedad desde la ocurrencia. MUST NOT incluir referencia del incidente, coordenadas exactas, descripción, fotos, identidad, teléfono, código, institución, operadores ni datos sanitarios.
+La API MUST ofrecer sin sesión las publicaciones vigentes no reservadas, cada una con identificador público opaco, categoría, distrito, ubicación exacta, estado publicable y antigüedad desde la ocurrencia. MUST NOT incluir referencia del incidente, descripción, fotos, identidad, teléfono, código, institución, operadores ni datos sanitarios.
 
 #### Scenario: Lectura pública
 - **WHEN** una persona sin sesión consulta el mapa público
@@ -32,11 +32,11 @@ La lectura pública MUST admitir filtros combinables por distrito del catálogo,
 - **WHEN** se envía un distrito inexistente o un período no admitido
 - **THEN** la API responde 422 `VALIDATION_ERROR`
 
-### Requirement: Conteos agregados de casos sensibles y reservados
-La lectura pública MUST informar, por distrito y mes de ocurrencia, el conteo conjunto de publicaciones de categorías sensibles y casos reservados que no fueron retiradas por decisión, solo cuando el grupo tiene al menos cinco. Un grupo con menos de cinco MUST suprimirse. El conteo MUST NOT revelar categoría, celda ni instante individual.
+### Requirement: Conteos agregados de casos reservados
+La lectura pública MUST informar, por distrito y mes de ocurrencia, el conteo de publicaciones de casos reservados que no fueron retiradas por decisión, solo cuando el grupo tiene al menos cinco. Un grupo con menos de cinco MUST suprimirse. El conteo MUST NOT revelar categoría, punto ni instante individual.
 
 #### Scenario: Grupo suficiente
-- **WHEN** un distrito tiene seis publicaciones sensibles o reservadas en el mes
+- **WHEN** un distrito tiene seis publicaciones reservadas en el mes
 - **THEN** la lectura informa «6 casos reservados» para ese distrito y mes
 
 #### Scenario: Grupo pequeño

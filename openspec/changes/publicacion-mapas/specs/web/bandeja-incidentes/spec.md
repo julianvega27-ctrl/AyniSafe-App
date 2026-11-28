@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Publicación en el control del caso
-El control del caso MUST incluir un bloque «Publicación» con el estado (no publicado, publicado hasta una fecha, retirado y su causa), la vista previa de lo que se verá en el mapa público (categoría, distrito, zona aproximada, estado y antigüedad, o «solo en conteos» si es sensible o reservado) y las acciones que la API permite: «Publicar en el mapa», «Retirar» con motivo y «Reservar» o «Quitar reserva» con motivo. Cada acción MUST enviar una sola solicitud y recargar el resumen.
+El control del caso MUST incluir un bloque «Publicación» con el estado (no publicado, publicado hasta una fecha, retirado y su causa), la vista previa de lo que se verá en el mapa público (categoría, distrito, ubicación exacta, estado y antigüedad, o «solo en conteos» si es reservado) y las acciones que la API permite: «Publicar en el mapa», «Retirar» con motivo y «Reservar» o «Quitar reserva» con motivo. Cada acción MUST enviar una sola solicitud y recargar el resumen.
 
 #### Scenario: Publicar
 - **WHEN** el responsable de un incidente verificado pulsa «Publicar en el mapa» y confirma
@@ -15,7 +15,7 @@ El control del caso MUST incluir un bloque «Publicación» con el estado (no pu
 
 #### Scenario: Aviso al verificar
 - **WHEN** el responsable abre el diálogo de verificación
-- **THEN** se le explica que marcarlo verificado lo publica en el mapa ciudadano como zona aproximada
+- **THEN** se le explica que marcarlo verificado lo publica en el mapa ciudadano con su ubicación exacta
 
 #### Scenario: Retirar
 - **WHEN** un operador de la principal retira con motivo
