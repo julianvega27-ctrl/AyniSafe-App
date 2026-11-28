@@ -56,6 +56,8 @@ Desglose de cobertura de P7 (líneas / ramas):
 - `mapa.use-case.ts`: 100 / 97,6.
 - `mapa.routes.ts`: 100 / 80.
 
+**CI del PR #17:** la ejecución `46091664771` aprobó los 4 jobs: API (tipos, arquitectura, contrato y Jest con cobertura), Web, Flutter y escaneo de secretos. Revisión `9b58cf2`.
+
 ## Escenarios de calidad
 
 | EQ | Prueba | Resultado |
