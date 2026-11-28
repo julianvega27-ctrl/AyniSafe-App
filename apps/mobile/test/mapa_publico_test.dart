@@ -1,4 +1,5 @@
 import 'package:ayni_safe/datos/incidentes_repositorio.dart';
+import 'package:ayni_safe/datos/ubicacion.dart';
 import 'package:ayni_safe/presentacion/pantallas/mapa_pantalla.dart';
 import 'package:ayni_safe/presentacion/tema.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +8,22 @@ import 'package:http/http.dart' as http;
 
 import 'dobles.dart';
 
-/// P7, tareas A4.3 y A4.4: mapa público de la app (spec `movil/mapa-publico`).
+/// P7, tareas A4.3, A4.4 y F4: mapa público de la app (spec `movil/mapa-publico`).
+
+/// Ubicación fija de prueba; cuenta cuántas veces se pidió.
+class UbicacionFija implements UbicacionPuerto {
+  UbicacionFija(this.resultado);
+  final ResultadoUbicacion resultado;
+  int pedidas = 0;
+  @override
+  Future<ResultadoUbicacion> obtener() async {
+    pedidas++;
+    return resultado;
+  }
+}
+
+const enAyacucho = UbicacionObtenida(PuntoUbicado(latitud: -13.1600, longitud: -74.2250, precisionM: 8));
+
 Map<String, Object?> punto({
   String id = '0268d5b7-c102-479d-92a3-93a212ad55f3',
   String categoriaId = 'robo',
@@ -16,11 +32,13 @@ Map<String, Object?> punto({
   String distrito = 'Ayacucho',
   String estado = 'EN_REVISION',
   int horas = 3,
+  double lat = -13.1601,
+  double lon = -74.2251,
 }) => {
   'id': id,
   'categoria': {'id': categoriaId, 'nombre': categoria},
   'distrito': {'id': distritoId, 'nombre': distrito},
-  'zona': {'lat': -13.1601, 'lon': -74.2251, 'aproximada': true},
+  'ubicacion': {'lat': lat, 'lon': lon},
   'estado': estado,
   'ocurridoEn': '2026-11-27T09:00:00.000Z',
   'antiguedadHoras': horas,
@@ -29,7 +47,6 @@ Map<String, Object?> punto({
 Map<String, Object?> mapaJson(List<Map<String, Object?>> elementos, {List<Map<String, Object?>> reservados = const []}) => {
   'filtros': {'distrito': null, 'categoria': null, 'periodo': '7d'},
   'generadoEn': '2026-11-27T12:00:00.000Z',
-  'radioZonaM': 150,
   'elementos': elementos,
   'reservados': reservados,
 };
@@ -37,6 +54,7 @@ Map<String, Object?> mapaJson(List<Map<String, Object?>> elementos, {List<Map<St
 Future<ApiFalsa> montar(
   WidgetTester tester, {
   required Future<http.Response> Function(http.Request) mapa,
+  UbicacionPuerto? ubicacion,
 }) async {
   final api = ApiFalsa();
   api.manejador = (req) async {
@@ -65,7 +83,13 @@ Future<ApiFalsa> montar(
   await tester.pumpWidget(
     MaterialApp(
       theme: crearTema(),
-      home: Scaffold(body: MapaPantalla(incidentes: api.incidentes, mostrarTeselas: false)),
+      home: Scaffold(
+        body: MapaPantalla(
+          incidentes: api.incidentes,
+          ubicacion: ubicacion ?? UbicacionFija(const UbicacionDenegada(permanente: false)),
+          mostrarTeselas: false,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -73,13 +97,19 @@ Future<ApiFalsa> montar(
 }
 
 void main() {
-  testWidgets('muestra las zonas publicadas en la lista, con aviso de aproximación y sin permisos', (tester) async {
-    final api = await montar(tester, mapa: (_) async => respuestaJson(200, mapaJson([punto(), punto(id: 'b', estado: 'EN_ATENCION', horas: 30)])));
+  testWidgets('muestra los incidentes publicados en la lista sin pedir permisos al abrir', (tester) async {
+    final ubicacion = UbicacionFija(enAyacucho);
+    final api = await montar(
+      tester,
+      ubicacion: ubicacion,
+      mapa: (_) async => respuestaJson(200, mapaJson([punto(), punto(id: 'b', estado: 'EN_ATENCION', horas: 30)])),
+    );
     expect(find.text('Mapa de incidentes'), findsOneWidget);
-    expect(find.textContaining('nunca el lugar exacto'), findsOneWidget);
+    expect(find.textContaining('tu ubicación no se envía ni se guarda'), findsOneWidget);
     expect(find.text('2 incidentes publicados'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Ayacucho · En atención · hace 1 día · zona aproximada'), 200);
-    expect(find.text('Ayacucho · En revisión · hace 3 horas · zona aproximada'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Ayacucho · En atención · hace 1 día'), 200);
+    expect(find.text('Ayacucho · En revisión · hace 3 horas'), findsOneWidget);
+    expect(ubicacion.pedidas, 0, reason: 'al abrir no se pide la ubicación');
     expect(api.contar('GET', '/publico/mapa'), 1);
     expect(api.solicitudes.singleWhere((s) => s.ruta.endsWith('/publico/mapa')).consulta, 'periodo=7d');
     // Sin teselas: aviso de mapa base no disponible.
@@ -128,6 +158,44 @@ void main() {
   testWidgets('sin red: aviso de conexión con reintento', (tester) async {
     await montar(tester, mapa: (_) async => throw http.ClientException('sin red'));
     expect(find.textContaining('Sin conexión'), findsOneWidget);
+  });
+
+  testWidgets('«Mi ubicación» muestra distancias, ordena por cercanía y no envía la posición', (tester) async {
+    final ubicacion = UbicacionFija(enAyacucho);
+    final api = await montar(
+      tester,
+      ubicacion: ubicacion,
+      mapa: (_) async => respuestaJson(200, mapaJson([
+        punto(id: 'lejos', categoria: 'Incendio', categoriaId: 'incendio', lat: -13.1700, lon: -74.2250),
+        punto(id: 'cerca', lat: -13.1603, lon: -74.2250),
+      ])),
+    );
+    await tester.tap(find.byKey(const Key('mapaMiUbicacion')));
+    await tester.pumpAndSettle();
+    expect(ubicacion.pedidas, 1);
+    expect(find.text('Ordenados del más cercano al más lejano.'), findsOneWidget);
+    final cerca = find.text('Ayacucho · En revisión · hace 3 horas · a 30 m');
+    final lejos = find.text('Ayacucho · En revisión · hace 3 horas · a 1,1 km');
+    await tester.scrollUntilVisible(lejos, 200);
+    expect(cerca, findsOneWidget);
+    expect(tester.getTopLeft(cerca).dy, lessThan(tester.getTopLeft(lejos).dy));
+    for (final s in api.solicitudes) {
+      expect('${s.consulta}${s.cuerpo}', isNot(contains('-13.16')), reason: 'la posición no viaja a la API');
+    }
+  });
+
+  testWidgets('sin permiso de ubicación: aviso y lista sin distancias', (tester) async {
+    await montar(tester, mapa: (_) async => respuestaJson(200, mapaJson([punto()])));
+    await tester.tap(find.byKey(const Key('mapaMiUbicacion')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Sin permiso de ubicación no se muestran distancias'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Ayacucho · En revisión · hace 3 horas'), 200);
+  });
+
+  test('formato de distancia', () {
+    expect(distanciaTexto(34), 'a 30 m');
+    expect(distanciaTexto(995), 'a 1000 m');
+    expect(distanciaTexto(1234), 'a 1,2 km');
   });
 
   testWidgets('cada elemento de la lista se anuncia con categoría, distrito, estado y antigüedad', (tester) async {

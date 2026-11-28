@@ -1,4 +1,4 @@
-/// Mapa público (P7, `GET /publico/mapa`): publicaciones vigentes con zona aproximada y conteos de
+/// Mapa público (P7, `GET /publico/mapa`): publicaciones vigentes con su ubicación exacta y conteos de
 /// casos reservados. Sin referencia, punto exacto, descripción, fotos ni datos personales.
 library;
 
@@ -20,7 +20,7 @@ enum PeriodoMapa {
   final String texto;
 }
 
-/// Zona aproximada publicada: centro de una celda de 300 m, nunca el punto informado.
+/// Incidente publicado con el punto informado en el reporte (decisión del 27/11/2026).
 class PuntoMapa {
   const PuntoMapa({
     required this.id,
@@ -50,7 +50,9 @@ class PuntoMapa {
   String get antiguedadTexto {
     if (antiguedadHoras < 1) return 'hace menos de 1 hora';
     if (antiguedadHoras < 24) {
-      return antiguedadHoras == 1 ? 'hace 1 hora' : 'hace $antiguedadHoras horas';
+      return antiguedadHoras == 1
+          ? 'hace 1 hora'
+          : 'hace $antiguedadHoras horas';
     }
     final dias = antiguedadHoras ~/ 24;
     return dias == 1 ? 'hace 1 día' : 'hace $dias días';
@@ -60,7 +62,7 @@ class PuntoMapa {
     if (json is! Map<String, dynamic>) return null;
     final categoria = json['categoria'];
     final distrito = json['distrito'];
-    final zona = json['zona'];
+    final ubicacion = json['ubicacion'];
     final id = json['id'];
     final estado = json['estado'];
     final horas = json['antiguedadHoras'];
@@ -69,9 +71,9 @@ class PuntoMapa {
         horas is! int ||
         categoria is! Map<String, dynamic> ||
         distrito is! Map<String, dynamic> ||
-        zona is! Map<String, dynamic> ||
-        zona['lat'] is! num ||
-        zona['lon'] is! num ||
+        ubicacion is! Map<String, dynamic> ||
+        ubicacion['lat'] is! num ||
+        ubicacion['lon'] is! num ||
         categoria['id'] is! String ||
         distrito['id'] is! String) {
       return null;
@@ -82,15 +84,15 @@ class PuntoMapa {
       categoria: (categoria['nombre'] as String?) ?? 'Incidente',
       distritoId: distrito['id'] as String,
       distrito: (distrito['nombre'] as String?) ?? (distrito['id'] as String),
-      latitud: (zona['lat'] as num).toDouble(),
-      longitud: (zona['lon'] as num).toDouble(),
+      latitud: (ubicacion['lat'] as num).toDouble(),
+      longitud: (ubicacion['lon'] as num).toDouble(),
       estado: estado,
       antiguedadHoras: horas,
     );
   }
 }
 
-/// Casos sensibles o reservados contados por distrito y mes (solo grupos de al menos cinco).
+/// Casos reservados contados por distrito y mes (solo grupos de al menos cinco).
 class ConteoReservado {
   const ConteoReservado({
     required this.distrito,
@@ -118,20 +120,14 @@ class ConteoReservado {
 }
 
 class MapaPublico {
-  const MapaPublico({
-    required this.puntos,
-    required this.reservados,
-    required this.radioZonaM,
-  });
+  const MapaPublico({required this.puntos, required this.reservados});
   final List<PuntoMapa> puntos;
   final List<ConteoReservado> reservados;
-  final double radioZonaM;
 
   static MapaPublico? desdeJson(Map<String, dynamic> json) {
     final elementos = json['elementos'];
     final reservados = json['reservados'];
-    final radio = json['radioZonaM'];
-    if (elementos is! List || reservados is! List || radio is! num) return null;
+    if (elementos is! List || reservados is! List) return null;
     final puntos = <PuntoMapa>[];
     for (final e in elementos) {
       final p = PuntoMapa.desdeJson(e);
@@ -144,7 +140,6 @@ class MapaPublico {
         for (final r in reservados)
           if (ConteoReservado.desdeJson(r) case final ConteoReservado c) c,
       ],
-      radioZonaM: radio.toDouble(),
     );
   }
 }

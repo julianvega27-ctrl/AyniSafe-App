@@ -742,7 +742,7 @@ class IncidentesRepositorio {
     ]);
   }
 
-  /// Mapa público (P7): publicaciones vigentes con zona aproximada, sin sesión.
+  /// Mapa público (P7): publicaciones vigentes con su ubicación exacta, sin sesión.
   Future<Consulta<MapaPublico>> mapaPublico({
     String? distritoId,
     String? categoriaId,

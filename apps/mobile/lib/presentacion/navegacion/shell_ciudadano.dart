@@ -180,6 +180,7 @@ class _ShellCiudadanoState extends State<ShellCiudadano> {
     ),
     Destino.mapa => MapaPantalla(
       incidentes: Servicios.of(context).incidentes,
+      ubicacion: Servicios.of(context).ubicacion,
       mostrarTeselas: Servicios.of(context).mostrarTeselas,
     ),
     Destino.contactos => const _Contactos(),
