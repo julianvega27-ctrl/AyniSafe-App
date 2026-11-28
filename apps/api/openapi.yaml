@@ -1829,8 +1829,9 @@ paths:
       operationId: verificarIncidente
       summary: Registrar o corregir la verificacion del hecho
       description: |
-        Verificacion separada del estado operativo: no cambia el estado, no publica ni se exige para cerrar. Solo el
-        responsable activo de la principal, con motivo y auditoria.
+        Verificacion separada del estado operativo: no cambia el estado ni se exige para cerrar. Solo el responsable
+        activo de la principal, con motivo y auditoria. VERIFICADO autoriza la publicacion (decision del 27/11/2026):
+        si el incidente es publicable se publica en la misma transaccion; NO_VERIFICADO retira la publicacion vigente.
       security: [{ cookieAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrigenWeb'
@@ -1934,7 +1935,8 @@ paths:
       operationId: publicarIncidente
       summary: Publicar en el mapa un incidente verificado (P7)
       description: |
-        Autorizacion expresa del responsable activo de la principal (documento 11 §5, RF49). Exige VERIFICADO,
+        Verificar ya publica (decision del 27/11/2026); esta ruta sirve para republicar tras un retiro, solo por el
+        responsable activo de la principal (documento 11 §5, RF49). Exige VERIFICADO,
         EN_REVISION o EN_ATENCION, no vinculado, distrito resuelto y ocurrencia de menos de 7 dias. Guarda una
         instantanea con categoria, distrito real y centro de la celda fija de 300 m; nunca el punto exacto ni datos
         personales o sanitarios. Repetir con una publicacion vigente devuelve 200 sin duplicarla. Con `reservada`

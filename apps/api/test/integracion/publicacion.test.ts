@@ -63,10 +63,12 @@ async function historial(id: string) {
 }
 
 describe('publicar (RF49)', () => {
-  it('el responsable publica un verificado con instantanea generalizada; repetir no duplica', async () => {
+  it('verificar publica en la misma operacion con instantanea generalizada; repetir no duplica', async () => {
     const { inc, a } = await escenario();
+    const h0 = (await historial(inc.id)).filter((h) => h.accion === 'publicar');
+    expect(h0.map((h) => h.valorNuevo)).toEqual(['VERIFICACION']);
     const r = await publicar(a, inc.id);
-    expect(r.status).toBe(201);
+    expect(r.status).toBe(200);
     expect(Object.keys(r.body.publicacion).sort()).toEqual(['estado', 'publicadaEn', 'reservada', 'venceEn']);
 
     const envio = await prisma.envioIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } });
@@ -77,14 +79,20 @@ describe('publicar (RF49)', () => {
     expect(fila.venceEn.getTime() - envio.ocurridoEn.getTime()).toBe(VIGENCIA_MS);
     expect(await prisma.incidente.findUniqueOrThrow({ where: { id: inc.id } })).toMatchObject({ estado: 'EN_REVISION', verificacion: 'VERIFICADO' });
 
-    expect((await publicar(a, inc.id)).status).toBe(200);
+    await verificar(a, inc.id, 'VERIFICADO');
     expect((await historial(inc.id)).filter((h) => h.accion === 'publicar')).toHaveLength(1);
+  });
+
+  it('verificar fuera de plazo verifica sin publicar', async () => {
+    const { inc, a } = await escenario({}, false);
+    ahora = new Date(Date.now() + VIGENCIA_MS);
+    expect((await verificar(a, inc.id, 'VERIFICADO')).status).toBe(200);
+    expect(await prisma.publicacionIncidente.count()).toBe(0);
   });
 
   it('rechaza sin verificar, no responsable, apoyo, estado cambiado y otros roles', async () => {
     const { inc, a, b } = await escenario({}, false);
     expect((await publicar(a, inc.id)).body.error.code).toBe('NO_VERIFICADO');
-    await verificar(a, inc.id, 'VERIFICADO');
     const noResp = await publicar(b, inc.id);
     expect([noResp.status, noResp.body.error.code]).toEqual([403, 'ASIGNACION_REQUERIDA']);
     expect((await publicar(a, inc.id, { estadoEsperado: 'EN_ATENCION' })).body.error.code).toBe('ESTADO_CAMBIADO');
@@ -106,12 +114,13 @@ describe('publicar (RF49)', () => {
     await post(opPnp, `${BASE}/${inc.id}/asumir`);
     await verificar(opSamu, inc.id, 'VERIFICADO');
     expect((await publicar(opPnp, inc.id)).body.error.code).toBe('NO_PRINCIPAL');
-    expect((await publicar(opSamu, inc.id)).status).toBe(201);
+    expect((await publicar(opSamu, inc.id)).status).toBe(200); // ya publicado al verificar
     expect((await retirar(opPnp, inc.id)).body.error.code).toBe('NO_PRINCIPAL');
   });
 
   it('fuera de vigencia: ocurrido hace mas de 7 dias', async () => {
-    const { inc, a } = await escenario();
+    const { inc, a, b } = await escenario();
+    await retirar(b, inc.id);
     ahora = new Date(Date.now() + VIGENCIA_MS);
     expect((await publicar(a, inc.id)).body.error.code).toBe('FUERA_DE_VIGENCIA');
   });
@@ -120,7 +129,6 @@ describe('publicar (RF49)', () => {
 describe('retiro', () => {
   it('cualquier operador de la principal retira con motivo; republicar conserva el vencimiento', async () => {
     const { inc, a, b } = await escenario();
-    await publicar(a, inc.id);
     const antes = await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } });
     expect((await retirar(b, inc.id, 'corto')).status).toBe(400);
     expect((await retirar(b, inc.id)).status).toBe(200);
@@ -129,6 +137,8 @@ describe('retiro', () => {
     const h = (await historial(inc.id)).filter((x) => x.accion === 'retirar');
     expect(h).toHaveLength(1);
     expect(h[0]).toMatchObject({ valorNuevo: 'DECISION', motivo: MOTIVO });
+    // Seguir verificado no republica un retiro por decision.
+    expect((await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } })).estado).toBe('RETIRADA');
 
     expect((await publicar(a, inc.id)).status).toBe(201);
     const despues = await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } });
@@ -138,13 +148,12 @@ describe('retiro', () => {
 
   it('cierre, NO_VERIFICADO y vinculacion retiran en la misma transaccion', async () => {
     const { inc, a } = await escenario();
-    await publicar(a, inc.id);
     await verificar(a, inc.id, 'NO_VERIFICADO');
     expect(await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } })).toMatchObject({ estado: 'RETIRADA', causaRetiro: 'NO_VERIFICADO' });
+    // Volver a verificar republica (la verificacion autoriza la publicacion).
     await verificar(a, inc.id, 'VERIFICADO');
-    expect((await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } })).estado).toBe('RETIRADA');
+    expect((await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: inc.id } })).estado).toBe('VIGENTE');
 
-    await publicar(a, inc.id);
     await post(a, `${BASE}/${inc.id}/transiciones`, { accion: 'iniciar_atencion', estadoEsperado: 'EN_REVISION' });
     const cierre = await post(a, `${BASE}/${inc.id}/transiciones`, {
       accion: 'cerrar', estadoEsperado: 'EN_ATENCION', resultado: 'ATENDIDO', motivo: MOTIVO, resumenCiudadano: RESUMEN,
@@ -160,16 +169,15 @@ describe('retiro', () => {
     await enrutarTodo();
     await post(a, `${BASE}/${dup.id}/asumir`);
     await verificar(a, dup.id, 'VERIFICADO');
-    await publicar(a, dup.id);
+    expect((await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: dup.id } })).estado).toBe('VIGENTE');
     const v = await post(a, `${BASE}/${dup.id}/vinculo`, { referenciaPrincipal: principal.referencia, motivo: MOTIVO });
     expect(v.status).toBe(200);
     expect(await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: dup.id } })).toMatchObject({ estado: 'RETIRADA', causaRetiro: 'DUPLICADO' });
     expect((await publicar(a, dup.id)).body.error.code).toBe('INCIDENTE_VINCULADO');
   });
 
-  it('si falla el historial del cierre, no se cierra ni se retira (reversion)', async () => {
+  it('si falla el historial del retiro, no se corrige la verificacion ni se retira (reversion)', async () => {
     const { inc, a } = await escenario();
-    await publicar(a, inc.id);
     await prisma.$executeRawUnsafe(`ALTER TABLE historial_incidente ADD CONSTRAINT prueba_sin_retiro CHECK (accion <> 'retirar') NOT VALID`);
     try {
       const r = await verificar(a, inc.id, 'NO_VERIFICADO');
@@ -184,15 +192,15 @@ describe('retiro', () => {
 
 describe('resumen del operador', () => {
   it('informa estado, vencimiento y acciones; el no responsable solo retira', async () => {
-    const { inc, a, b } = await escenario();
+    const { inc, a, b } = await escenario({}, false);
     let r = await resumen(a, inc.id);
-    expect(r.body.atencion.publicacion).toMatchObject({ estado: 'NO_PUBLICADO', noPublicable: null, accionesPermitidas: ['publicar'], sensible: false });
-    await publicar(a, inc.id);
+    expect(r.body.atencion.publicacion).toMatchObject({ estado: 'NO_PUBLICADO', noPublicable: 'NO_VERIFICADO', accionesPermitidas: [], sensible: false });
+    await verificar(a, inc.id, 'VERIFICADO');
     r = await resumen(a, inc.id);
     expect(r.body.atencion.publicacion).toMatchObject({ estado: 'VIGENTE', accionesPermitidas: ['retirar', 'reservar'] });
     expect((await resumen(b, inc.id)).body.atencion.publicacion.accionesPermitidas).toEqual(['retirar']);
     await retirar(b, inc.id);
-    expect((await resumen(a, inc.id)).body.atencion.publicacion).toMatchObject({ estado: 'RETIRADA', causaRetiro: 'DECISION' });
+    expect((await resumen(a, inc.id)).body.atencion.publicacion).toMatchObject({ estado: 'RETIRADA', causaRetiro: 'DECISION', accionesPermitidas: ['publicar'] });
   });
 });
 
@@ -224,7 +232,7 @@ describe('mapa publico (EQ-04/09)', () => {
     await enrutarTodo();
     await post(a, `${BASE}/${agresion.id}/asumir`);
     await verificar(a, agresion.id, 'VERIFICADO');
-    expect((await publicar(a, agresion.id)).status).toBe(201);
+    expect((await prisma.publicacionIncidente.findUniqueOrThrow({ where: { incidenteId: agresion.id } })).estado).toBe('VIGENTE');
     expect((await resumen(a, agresion.id)).body.atencion.publicacion.sensible).toBe(true);
 
     expect((await mapa()).body.elementos.map((e: { categoria: { id: string } }) => e.categoria.id)).toEqual(['robo']);
@@ -263,8 +271,9 @@ describe('reserva y conteos (grupo C)', () => {
     expect((await historial(inc.id)).filter((h) => h.accion === 'reservar').map((h) => h.valorNuevo)).toEqual(['true', 'false']);
   });
 
-  it('publicar reservado de entrada exige motivo', async () => {
-    const { inc, a } = await escenario();
+  it('republicar como reservado exige motivo', async () => {
+    const { inc, a, b } = await escenario();
+    await retirar(b, inc.id);
     expect((await publicar(a, inc.id, { estadoEsperado: 'EN_REVISION', reservada: true })).status).toBe(400);
     expect((await publicar(a, inc.id, { estadoEsperado: 'EN_REVISION', reservada: true, motivoReserva: MOTIVO })).status).toBe(201);
     expect((await mapa()).body.elementos).toHaveLength(0);

@@ -160,6 +160,11 @@ export interface PublicacionAtencionPort {
     actor: { readonly tipo: 'operador'; readonly usuarioId: string; readonly institucion: InstitucionDestino },
   ): Promise<boolean>;
   vista(c: { readonly incidenteId: string; readonly papel: Papel; readonly esResponsable: boolean }): Promise<unknown>;
+  /** Decision del 27/11/2026: verificar autoriza la publicacion (documento 11 §5). */
+  publicarAlVerificar(
+    tx: ContextoTransaccional,
+    c: { readonly incidenteId: string; readonly estado: EstadoIncidente; readonly institucion: InstitucionDestino; readonly operadorId: string },
+  ): Promise<boolean>;
 }
 
 export interface DependenciasAtencion {
@@ -280,6 +285,10 @@ export class ServicioAtencion {
         valorNuevo: s.valor,
         motivo: s.motivo,
       });
+      // Verificar autoriza la publicacion (decision del 27/11/2026); repetir VERIFICADO no republica.
+      if (s.valor === 'VERIFICADO' && inc.verificacion !== 'VERIFICADO') {
+        await this.publicacion?.publicarAlVerificar(tx, { incidenteId: p.incidenteId, estado: inc.estado, institucion: p.institucion, operadorId });
+      }
       if (s.valor === 'NO_VERIFICADO') {
         await this.publicacion?.retirarSiVigente(tx, p.incidenteId, 'NO_VERIFICADO', { tipo: 'operador', usuarioId: operadorId, institucion: p.institucion });
       }

@@ -211,6 +211,52 @@ export class ServicioPublicacion {
   }
 
   /**
+   * Publicacion al verificar (decision del 27/11/2026, documento 11 §5): corre en la transaccion de la
+   * verificacion, que ya bloqueo el incidente y autorizo al responsable. Si no es publicable (plazo,
+   * distrito) no hace nada: se verifica sin publicar. Conserva la reserva de una publicacion anterior.
+   */
+  async publicarAlVerificar(
+    tx: ContextoTransaccional,
+    c: { readonly incidenteId: string; readonly estado: EstadoIncidente; readonly institucion: InstitucionDestino; readonly operadorId: string },
+  ): Promise<boolean> {
+    const ahora = this.ahora();
+    const actual = await this.d.repositorio.deIncidente(tx, c.incidenteId);
+    if (actual && vigente(actual, ahora)) return false;
+    const datos = await this.d.datos.de(c.incidenteId);
+    if (!datos) return false;
+    const codigo = noPublicable({
+      estado: c.estado,
+      verificacion: 'VERIFICADO',
+      vinculado: false,
+      distritoId: datos.distritoId,
+      ocurridoEn: datos.ocurridoEn,
+      ahora,
+    });
+    if (codigo) return false;
+    const celda = celdaDe(datos.latitud, datos.longitud);
+    await this.d.repositorio.guardar(tx, {
+      incidenteId: c.incidenteId,
+      institucion: c.institucion,
+      categoriaId: datos.categoriaId,
+      distritoId: datos.distritoId!,
+      celdaLat: celda.lat,
+      celdaLon: celda.lon,
+      ocurridoEn: datos.ocurridoEn,
+      venceEn: vencimientoDe(datos.ocurridoEn),
+      reservada: actual?.reservada ?? false,
+    });
+    await this.d.atencion.registrar(tx, {
+      incidenteId: c.incidenteId,
+      accion: 'publicar',
+      actorTipo: 'operador',
+      actorUsuarioId: c.operadorId,
+      institucion: c.institucion,
+      valorNuevo: 'VERIFICACION',
+    });
+    return true;
+  }
+
+  /**
    * Retiro automatico en la transaccion del llamador (cierre, NO_VERIFICADO o vinculacion). El
    * llamador ya bloqueo la fila del incidente. Sin publicacion VIGENTE no hace nada.
    */

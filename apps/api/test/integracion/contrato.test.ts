@@ -1274,8 +1274,9 @@ describe('respuestas reales conforme a openapi.yaml', () => {
     verificar(PUB, 'post', await post(ruta(''), null, pub)); // 401
     verificar(PUB, 'post', await post(ruta(''), opB!, pub)); // 403
     verificar(PUB, 'post', await post(ruta(''), opAjeno, pub)); // 404
-    verificar(PUB, 'post', await post(ruta(''), opA!, pub)); // 201
-    verificar(PUB, 'post', await post(ruta(''), opA!, pub)); // 200
+    verificar(PUB, 'post', await post(ruta(''), opA!, pub)); // 200 (publicado al verificar)
+    await post(ruta('/retiro'), opA!, { motivo });
+    verificar(PUB, 'post', await post(ruta(''), opA!, pub)); // 201 (republicar)
     verificar('/operador/incidentes/{id}', 'get', await request(app).get(U(`/operador/incidentes/${inc.id}`)).set('Cookie', opB!));
 
     verificar(MAP, 'get', await request(app).get(U(MAP))); // 200
