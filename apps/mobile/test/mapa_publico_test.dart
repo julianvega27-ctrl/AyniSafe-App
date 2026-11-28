@@ -192,6 +192,51 @@ void main() {
     await tester.scrollUntilVisible(find.text('Ayacucho · En revisión · hace 3 horas'), 200);
   });
 
+  testWidgets('tocar un marcador abre el detalle breve con categoría, estado, distrito y fecha', (tester) async {
+    await montar(tester, mapa: (_) async => respuestaJson(200, mapaJson([punto(categoria: 'Incendio', categoriaId: 'incendio')])));
+    final marcador = find.byKey(const Key('mapaMarcador-0268d5b7-c102-479d-92a3-93a212ad55f3'));
+    await tester.ensureVisible(marcador);
+    await tester.pumpAndSettle();
+    await tester.tap(marcador);
+    await tester.pumpAndSettle();
+    final hoja = find.byType(DetalleIncidenteMapa);
+    expect(hoja, findsOneWidget);
+    expect(find.descendant(of: hoja, matching: find.text('Incendio')), findsOneWidget);
+    expect(find.descendant(of: hoja, matching: find.text('Estado: En revisión')), findsOneWidget);
+    expect(find.descendant(of: hoja, matching: find.text('Distrito: Ayacucho')), findsOneWidget);
+    expect(find.descendant(of: hoja, matching: find.textContaining('(hace 3 horas)')), findsOneWidget);
+    expect(find.descendant(of: hoja, matching: find.byIcon(Icons.local_fire_department)), findsOneWidget);
+    expect(find.descendant(of: hoja, matching: find.textContaining('no se muestran la descripción')), findsOneWidget);
+  });
+
+  testWidgets('varios incidentes en el mismo punto: un marcador con su número y elección', (tester) async {
+    await montar(
+      tester,
+      mapa: (_) async => respuestaJson(200, mapaJson([punto(id: 'a1'), punto(id: 'a2', categoria: 'Pelea', categoriaId: 'pelea')])),
+    );
+    final marcador = find.byKey(const Key('mapaMarcador-a1'));
+    expect(find.descendant(of: marcador, matching: find.text('2')), findsOneWidget);
+    await tester.ensureVisible(marcador);
+    await tester.pumpAndSettle();
+    await tester.tap(marcador);
+    await tester.pumpAndSettle();
+    expect(find.text('2 incidentes en este lugar'), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byType(BottomSheet), matching: find.widgetWithText(ListTile, 'Pelea')));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byType(DetalleIncidenteMapa), matching: find.text('Pelea')), findsOneWidget);
+  });
+
+  testWidgets('tocar un elemento de la lista abre su detalle con la distancia', (tester) async {
+    await montar(tester, ubicacion: UbicacionFija(enAyacucho), mapa: (_) async => respuestaJson(200, mapaJson([punto(lat: -13.1603, lon: -74.2250)])));
+    await tester.tap(find.byKey(const Key('mapaMiUbicacion')));
+    await tester.pumpAndSettle();
+    final elemento = find.widgetWithText(ListTile, 'Robo');
+    await tester.scrollUntilVisible(elemento, 200);
+    await tester.tap(elemento);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byType(DetalleIncidenteMapa), matching: find.text('Está a 30 m de tu ubicación')), findsOneWidget);
+  });
+
   test('formato de distancia', () {
     expect(distanciaTexto(34), 'a 30 m');
     expect(distanciaTexto(995), 'a 1000 m');
@@ -224,6 +269,7 @@ void main() {
 
   test('el modelo rechaza un elemento incompleto', () {
     expect(MapaPublico.desdeJson(mapaJson([{'id': 'x'}])), isNull);
+    expect(PuntoMapa.desdeJson({...punto(), 'ocurridoEn': 'no es fecha'}), isNull);
     expect(PuntoMapa.desdeJson(punto())!.antiguedadTexto, 'hace 3 horas');
     expect(PuntoMapa.desdeJson(punto(horas: 0))!.antiguedadTexto, 'hace menos de 1 hora');
     expect(PuntoMapa.desdeJson(punto(horas: 1))!.antiguedadTexto, 'hace 1 hora');

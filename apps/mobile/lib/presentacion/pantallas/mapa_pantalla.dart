@@ -6,6 +6,7 @@ import '../../aplicacion/aviso.dart';
 import '../../config/entorno.dart';
 import '../../datos/incidentes_repositorio.dart';
 import '../../datos/ubicacion.dart';
+import '../componentes/icono_categoria.dart';
 import '../componentes/mensaje_accesible.dart';
 import '../componentes/selector_punto.dart' show centroInicial;
 import '../tema.dart';
@@ -100,6 +101,48 @@ class _MapaPantallaState extends State<MapaPantalla> {
         // El mapa aún no está dibujado: la posición se ve igual en la lista.
       }
     }
+  }
+
+  /// Al tocar un marcador: si hay varios incidentes en el mismo punto se elige uno (como el origen) y
+  /// se abre su detalle breve. Nunca la descripción ni datos de quien reportó (documento 11 §5).
+  Future<void> _seleccionar(List<PuntoMapa> grupo) async {
+    PuntoMapa? elegido = grupo.first;
+    if (grupo.length > 1) {
+      elegido = await showModalBottomSheet<PuntoMapa>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(Espaciado.s2),
+                child: Text(
+                  '${grupo.length} incidentes en este lugar',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              for (final p in grupo)
+                ListTile(
+                  leading: Icon(
+                    iconoCategoria(p.categoriaId),
+                    color: Colores.principal,
+                  ),
+                  title: Text(p.categoria),
+                  subtitle: Text('${p.estadoTexto} · ${p.antiguedadTexto}'),
+                  onTap: () => Navigator.pop(context, p),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (!mounted || elegido == null) return;
+    final p = elegido;
+    final metros = _metrosA(p);
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => DetalleIncidenteMapa(punto: p, metros: metros),
+    );
   }
 
   double? _metrosA(PuntoMapa p) {
@@ -356,16 +399,17 @@ class _MapaPantallaState extends State<MapaPantalla> {
                 MarkerLayer(
                   markers: [
                     if (datos != null)
-                      for (final p in datos.puntos)
+                      for (final grupo in _agrupados(datos.puntos))
                         Marker(
-                          point: LatLng(p.latitud, p.longitud),
-                          width: 40,
-                          height: 40,
-                          alignment: Alignment.topCenter,
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colores.secundario,
-                            size: 40,
+                          point: LatLng(
+                            grupo.first.latitud,
+                            grupo.first.longitud,
+                          ),
+                          width: 48,
+                          height: 48,
+                          child: _Marcador(
+                            grupo: grupo,
+                            alTocar: () => _seleccionar(grupo),
                           ),
                         ),
                     if (_mia case final mia?)
@@ -392,6 +436,15 @@ class _MapaPantallaState extends State<MapaPantalla> {
         ),
       ),
     );
+  }
+
+  /// Incidentes en el mismo punto exacto: un solo marcador con su número (como el origen).
+  List<List<PuntoMapa>> _agrupados(List<PuntoMapa> puntos) {
+    final grupos = <String, List<PuntoMapa>>{};
+    for (final p in puntos) {
+      grupos.putIfAbsent('${p.latitud},${p.longitud}', () => []).add(p);
+    }
+    return grupos.values.toList();
   }
 
   /// Con posición, del más cercano al más lejano; sin ella, el orden de la API (más recientes).
@@ -440,10 +493,11 @@ class _MapaPantallaState extends State<MapaPantalla> {
             Card(
               child: MergeSemantics(
                 child: ListTile(
-                  leading: const ExcludeSemantics(
+                  onTap: () => _seleccionar([p]),
+                  leading: ExcludeSemantics(
                     child: Icon(
-                      Icons.place_outlined,
-                      color: Colores.secundario,
+                      iconoCategoria(p.categoriaId),
+                      color: Colores.principal,
                     ),
                   ),
                   title: Text(p.categoria),
@@ -499,5 +553,149 @@ class _MapaPantallaState extends State<MapaPantalla> {
           ),
         ];
     }
+  }
+}
+
+/// Marcador del origen: círculo del color principal con el icono de la categoría o el número de
+/// incidentes en el mismo punto. Es un botón con etiqueta para lectores de pantalla.
+class _Marcador extends StatelessWidget {
+  const _Marcador({required this.grupo, required this.alTocar});
+
+  final List<PuntoMapa> grupo;
+  final VoidCallback alTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final primero = grupo.first;
+    final etiqueta = grupo.length > 1
+        ? '${grupo.length} incidentes en este lugar. Elegir uno'
+        : '${primero.categoria}, ${primero.estadoTexto.toLowerCase()}. Ver detalle';
+    return Semantics(
+      button: true,
+      label: etiqueta,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: etiqueta,
+        child: Material(
+          color: Colores.principal,
+          shape: const CircleBorder(
+            side: BorderSide(color: Colores.superficie, width: 2),
+          ),
+          elevation: 3,
+          child: InkWell(
+            key: Key('mapaMarcador-${primero.id}'),
+            customBorder: const CircleBorder(),
+            onTap: alTocar,
+            child: Center(
+              child: grupo.length > 1
+                  ? Text(
+                      '${grupo.length}',
+                      style: const TextStyle(
+                        color: Colores.superficie,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : Icon(
+                      iconoCategoria(primero.categoriaId),
+                      color: Colores.superficie,
+                      size: 24,
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _fechaHora(DateTime d) {
+  final l = d.toLocal();
+  String dos(int n) => n.toString().padLeft(2, '0');
+  return '${dos(l.day)}/${dos(l.month)}/${l.year} ${dos(l.hour)}:${dos(l.minute)}';
+}
+
+/// Detalle breve de un incidente publicado (hoja inferior, como `PublicIncidentSheet` del origen):
+/// categoría, estado, distrito, fecha y antigüedad, y la distancia si se pidió «Mi ubicación». La
+/// API pública no expone la descripción, las fotos ni datos de quien reportó.
+class DetalleIncidenteMapa extends StatelessWidget {
+  const DetalleIncidenteMapa({super.key, required this.punto, this.metros});
+
+  final PuntoMapa punto;
+  final double? metros;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context).textTheme;
+    Widget fila(IconData icono, String texto) => Padding(
+      padding: const EdgeInsets.only(top: Espaciado.s1),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ExcludeSemantics(
+            child: Icon(icono, size: 20, color: Colores.textoSecundario),
+          ),
+          const SizedBox(width: Espaciado.s1),
+          Expanded(child: Text(texto, style: tema.bodyLarge)),
+        ],
+      ),
+    );
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(Espaciado.s2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                ExcludeSemantics(
+                  child: CircleAvatar(
+                    backgroundColor: Colores.principal,
+                    foregroundColor: Colores.superficie,
+                    child: Icon(iconoCategoria(punto.categoriaId)),
+                  ),
+                ),
+                const SizedBox(width: Espaciado.s2),
+                Expanded(
+                  child: Semantics(
+                    header: true,
+                    child: Text(punto.categoria, style: tema.titleLarge),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Espaciado.s1),
+            fila(Icons.flag_outlined, 'Estado: ${punto.estadoTexto}'),
+            fila(Icons.map_outlined, 'Distrito: ${punto.distrito}'),
+            fila(
+              Icons.schedule,
+              'Ocurrió el ${_fechaHora(punto.ocurridoEn)} (${punto.antiguedadTexto})',
+            ),
+            if (metros case final m?)
+              fila(
+                Icons.near_me_outlined,
+                'Está ${distanciaTexto(m)} de tu ubicación',
+              ),
+            fila(
+              Icons.verified_outlined,
+              'Verificado por la institución que lo atiende.',
+            ),
+            const SizedBox(height: Espaciado.s2),
+            Text(
+              'Por privacidad no se muestran la descripción, las fotos ni los datos de quien reportó.',
+              style: tema.bodySmall?.copyWith(color: Colores.textoSecundario),
+            ),
+            const SizedBox(height: Espaciado.s1),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -31,6 +31,7 @@ class PuntoMapa {
     required this.latitud,
     required this.longitud,
     required this.estado,
+    required this.ocurridoEn,
     required this.antiguedadHoras,
   });
 
@@ -42,6 +43,7 @@ class PuntoMapa {
   final double latitud;
   final double longitud;
   final String estado;
+  final DateTime ocurridoEn;
   final int antiguedadHoras;
 
   String get estadoTexto =>
@@ -66,7 +68,9 @@ class PuntoMapa {
     final id = json['id'];
     final estado = json['estado'];
     final horas = json['antiguedadHoras'];
+    final ocurrido = DateTime.tryParse('${json['ocurridoEn']}');
     if (id is! String ||
+        ocurrido == null ||
         estado is! String ||
         horas is! int ||
         categoria is! Map<String, dynamic> ||
@@ -87,6 +91,7 @@ class PuntoMapa {
       latitud: (ubicacion['lat'] as num).toDouble(),
       longitud: (ubicacion['lon'] as num).toDouble(),
       estado: estado,
+      ocurridoEn: ocurrido,
       antiguedadHoras: horas,
     );
   }
