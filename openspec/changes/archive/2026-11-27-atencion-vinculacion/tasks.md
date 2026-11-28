@@ -43,7 +43,7 @@ Grupos verticales por prioridad. Durante la implementación se ejecutan solo las
 ## Z. Cierre
 - [x] Z1 Suite completa con cobertura, validación OpenAPI y verificador de arquitectura, una vez.
 - [x] Z2 Evidencia breve en `docs/validacion/p6-atencion.md` (comandos, resultados, pendientes) y estado P6 en `docs/comparacion-proyecto-incidencias.md`.
-- [ ] Z3 Recorrido en Android real (manual, responsable del proyecto).
+- [x] Z3 Recorrido en Android real (manual, responsable del proyecto).
 - [x] Z4 Commits por capa, push, PR y CI.
 
 ## D. Ajuste tras la prueba manual (decisión del responsable, 27/11/2026)

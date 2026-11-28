@@ -101,10 +101,13 @@ En la prueba manual, el responsable observó que «Asumir caso» era confuso, po
 
 **No verificado:** la revisión visual renderizada del bloque nuevo y de los filtros. No había credenciales de operador para entrar al panel local. Queda para la prueba manual del responsable, en escritorio y en pantalla estrecha.
 
+## Aceptación y fusión (27/11/2026)
+
+- **Recorrido en Android real y revisión del panel:** aprobados por el responsable el 27/11/2026, en verificación manual sobre el Samsung SM A346M conectado por USB con `adb reverse tcp:3000` a la API local. Incluye el bloque de atención guiado y los filtros de la bandeja del grupo D, que no se habían revisado renderizados en esta sesión. La conexión del teléfono se había perdido porque faltaba el `adb reverse`, no por un cambio de P6.
+- **PR #15:** fusionado en `main` el 28/11/2026 a las 00:00 UTC, con el commit de fusión `37a1771`. La CI de `main` (ejecución `46085535143`) aprobó.
+
 ## Pendiente, sin presentarlo como hecho
 
-- **Recorrido en Android real.** Lo verifica el responsable de forma manual; no se ejecutó aquí.
-- **Fusión del PR.** El PR #15 tiene CI en verde en la ejecución `46075468404`, con 4 jobs: API (tipos, arquitectura, contrato y Jest con cobertura), Web, Flutter y escaneo de secretos.
 - **Fuera del alcance de P6:**
   - reapertura de cerrados;
   - transferencia de turno solicitada por el operador;
