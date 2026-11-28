@@ -111,7 +111,7 @@ class _MapaPantallaState extends State<MapaPantalla> {
           ),
           const SizedBox(height: Espaciado.s1),
           Text(
-            'Incidentes verificados que las instituciones decidieron publicar. Las ubicaciones son aproximadas: '
+            'Incidentes reportados que una institución ya verificó. Las ubicaciones son aproximadas: '
             'se muestran zonas de unos 300 m, nunca el lugar exacto.',
             style: tema.bodyLarge,
           ),
