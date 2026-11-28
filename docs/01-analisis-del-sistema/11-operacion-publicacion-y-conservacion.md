@@ -104,6 +104,28 @@ Valor inicial: **Acoso, Violencia, Agresión y Emergencia médica** no muestran 
 
 Un incidente cerrado deja de generar alertas preventivas y sale del mapa activo. Valor inicial de publicación: hasta siete días desde la ocurrencia o hasta el cierre/retiro, lo que suceda primero; no renovar la antigüedad por agregar otro reporte al mismo caso. El historial identificable no es público. Datos originales y seguimiento del autor siguen sujetos a sus permisos y plazos de conservación.
 
+**Precisiones de P7, decisión del 27/11/2026.** Concretan esta sección sin cambiar sus valores iniciales.
+
+- **Quién publica.** Publica el responsable asignado de la institución principal, el mismo que verifica y cierra. Solo puede publicar si el incidente está VERIFICADO y abierto (EN_REVISION o EN_ATENCION), no está vinculado como duplicado, tiene el distrito resuelto y ocurrió hace menos de siete días.
+- **Quién retira.** Retira, con motivo, cualquier operador activo de la principal.
+- **Sin publicación del administrador.** El administrador no publica ni retira.
+- **Retiro automático.** El sistema retira la publicación, en la misma operación, en tres casos:
+  - al cerrar el incidente;
+  - al corregir la verificación a NO_VERIFICADO;
+  - al vincularlo como duplicado.
+
+  Republicar exige otra autorización y conserva el vencimiento original.
+- **Zona aproximada.** Se calcula con una cuadrícula fija de 300 m y se publica el centro de la celda, nunca el punto. Se guarda al publicar una instantánea con solo:
+  - la categoría;
+  - el distrito real;
+  - la celda;
+  - la ocurrencia y el vencimiento.
+- **Categorías sensibles y casos reservados.** Sus conteos por distrito y mes excluyen las publicaciones retiradas por decisión o por NO_VERIFICADO. Cuentan juntos, sin revelar la categoría.
+- **Mapas.**
+  - **Mapa público:** está en la app.
+  - **Mapa operativo del panel:** es una consulta autorizada, distinta del mapa público. Muestra al operador el punto exacto solo de los incidentes en que participa su sede dentro de su ámbito. No es público ni lo ve el administrador.
+- **Teselas.** El proveedor por defecto es OpenStreetMap estándar, con atribución visible, Referer o User-Agent identificable y sin precarga masiva. Es configurable; su cuota no es contractual. Si falla, siguen la lista, los filtros y los límites distritales.
+
 ## 6. Alertas preventivas: distritos y cercanía
 
 Cada ciudadano puede activar ambas modalidades, elegir categorías y desactivar todas las alertas preventivas. Mantener el seguimiento de sus propios reportes como preferencia independiente. Rechazar permiso de notificaciones no impide reportar ni consultar la bandeja en la app.
