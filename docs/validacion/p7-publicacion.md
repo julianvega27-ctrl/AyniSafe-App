@@ -119,6 +119,15 @@ Los cambios de reglas se registraron antes de implementar en el documento 11 §5
 - **Base de desarrollo:** se migró `ayni_safe_dev`.
 - **Teléfono:** `RFCW60MHE2E` conectado, con `adb reverse tcp:3000 tcp:3000` activo.
 
+## Grupo G: detalle al tocar en el mapa móvil (27/11/2026)
+
+Pedido del responsable: los marcadores no permitían saber qué reporte era. Se reprodujo el mapa del origen (`map_view.dart`):
+- **Marcadores:** círculo del color principal con el icono de la categoría. Los incidentes del mismo punto se agrupan en un marcador con su número; al tocarlo se elige cuál ver.
+- **Detalle breve:** al tocar un marcador o un elemento de la lista se abre una hoja inferior con categoría, estado, distrito, fecha y antigüedad de la ocurrencia, y la distancia si se usó «Mi ubicación».
+- **Sin descripción:** el detalle no muestra la descripción del reporte, las fotos ni datos de quien reportó, porque la API pública no los expone (documento 11 §5). La hoja lo indica.
+
+**Verificación:** Flutter con 376 pruebas aprobadas, 3 de ellas nuevas (tocar un marcador, grupo en el mismo punto y detalle desde la lista con distancia). Análisis sin problemas. Solo cambió la app.
+
 ## No verificado, sin presentarlo como hecho
 
 - **Revisión visual renderizada:** queda para la prueba manual del responsable, en escritorio y en pantalla estrecha:
