@@ -17,6 +17,17 @@ La pantalla Mapa MUST estar disponible con y sin sesión y mostrar las publicaci
 - **WHEN** no hay publicaciones vigentes para los filtros
 - **THEN** ve un estado vacío explicativo, sin datos de ejemplo
 
+### Requirement: Marcadores por categoría y detalle breve
+Cada marcador MUST mostrar el icono de su categoría, como el mapa del origen. Los incidentes en el mismo punto MUST agruparse en un marcador con su número. Tocar un marcador o un elemento de la lista MUST abrir un detalle breve con categoría, estado, distrito, fecha y antigüedad de la ocurrencia, y la distancia si se usó «Mi ubicación». MUST NOT mostrar descripción, fotos ni datos de quien reportó.
+
+#### Scenario: Tocar un marcador
+- **WHEN** el ciudadano toca el marcador de un incendio
+- **THEN** ve una hoja con «Incendio», su estado, distrito y fecha, sin la descripción del reporte
+
+#### Scenario: Varios en el mismo punto
+- **WHEN** dos incidentes publicados comparten el punto
+- **THEN** el marcador muestra «2» y al tocarlo se elige cuál ver
+
 ### Requirement: Mi ubicación y distancia
 La pantalla MUST ofrecer «Mi ubicación». Solo al pulsarlo MUST pedir el permiso de ubicación; con él MUST mostrar la posición actual, centrar el mapa e indicar la distancia a cada incidente, ordenando la lista de la más cercana a la más lejana. La ubicación MUST usarse solo en el teléfono: MUST NOT enviarse al servidor ni guardarse. Si se niega el permiso o no hay señal, el mapa MUST seguir funcionando sin distancias y con un aviso.
 

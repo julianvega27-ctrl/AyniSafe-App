@@ -37,7 +37,7 @@ Se adopta la composición móvil del origen: AppBar con acceso a perfil, Drawer 
 |---|---|
 | Inicio | Inicio con composición de la app de origen y contenido real de AyniSafe. |
 | Reportar | Formulario de incidente como invitado o con cuenta, con requisitos elegidos. |
-| Mapa | Incidentes publicados y vigentes con su ubicación exacta, límites distritales, filtros por distrito, categoría y período (24 h, 3 días, 7 días) y lista accesible. Botón «Mi ubicación»: pide permiso solo al pulsarlo, muestra la posición y la distancia a cada incidente (calculada en el teléfono, no se envía). Si fallan las teselas o el mapa, siguen la lista y los filtros (P7). |
+| Mapa | Incidentes publicados y vigentes con su ubicación exacta, límites distritales, filtros por distrito, categoría y período (24 h, 3 días, 7 días) y lista accesible. Marcadores con el icono de la categoría (agrupados si comparten punto) y detalle breve al tocarlos: categoría, estado, distrito, fecha y distancia; sin descripción ni fotos. Botón «Mi ubicación»: pide permiso solo al pulsarlo, muestra la posición y la distancia a cada incidente (calculada en el teléfono, no se envía). Si fallan las teselas o el mapa, siguen la lista y los filtros (P7). |
 | Contactos | Directorio aprobado, sin números inventados. |
 
 En Drawer: Inicio, Reportar, Mapa, Contactos, Alertas, información, Perfil y Mis reportes según sesión, siguiendo la presentación del origen. La consulta mediante código secreto de invitado usa sus componentes sin acceso al historial privado de cuentas.

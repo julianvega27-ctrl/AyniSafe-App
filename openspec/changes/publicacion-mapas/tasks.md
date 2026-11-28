@@ -81,6 +81,9 @@ Grupos verticales por prioridad. Durante la implementación solo se ejecutan las
 - [x] F3 Panel: vista previa y textos con ubicación exacta; sin «sensible».
 - [x] F4 App: marcadores en el punto exacto, botón «Mi ubicación», distancia y orden por cercanía sin enviar la posición; pruebas.
 
+## G. Detalle al tocar en el mapa móvil (pedido del responsable, 27/11/2026)
+- [x] G1 Marcadores con el icono de su categoría y agrupados por punto (como el origen), detalle breve al tocar un marcador o un elemento de la lista; spec y pruebas de widget.
+
 ## Z. Cierre
 - [x] Z1 Suite completa con cobertura, validación OpenAPI y verificador de arquitectura, una vez.
 - [ ] Z2 Migrar `ayni_safe_dev` (`npm run db:migrar`) y comprobar `adb reverse tcp:3000` en el teléfono.
