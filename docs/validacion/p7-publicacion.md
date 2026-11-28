@@ -96,6 +96,29 @@ La decisión se registró antes del código en el documento 11 §5, RF49 y las s
 - **Web:** 16 archivos y 200 pruebas.
 - **Flutter:** la prueba del mapa aprobada y el análisis sin problemas.
 
+## Grupo F: ubicación exacta y «Mi ubicación» (decisión del 27/11/2026, segunda revisión)
+
+El responsable eligió, con el conflicto y el riesgo a la vista, lo siguiente:
+1. **Ubicación exacta:** se muestra el punto del reporte en lugar de la zona de 300 m.
+2. **Todas las categorías verificadas,** incluidas Acoso, Violencia, Agresión y Emergencia médica. Solo los casos reservados quedan fuera y cuentan en los totales.
+3. **Se mantienen** la vigencia de 7 días y el filtro de período.
+4. **Botón «Mi ubicación»** en la app: pide el permiso solo al pulsarlo, muestra la posición, indica la distancia a cada incidente y ordena la lista por cercanía. La distancia se calcula en el teléfono; la posición no se envía ni se guarda.
+
+Los cambios de reglas se registraron antes de implementar en el documento 11 §5, RF49, la guía UI y las specs y el diseño del cambio (decisión 12). **Riesgo aceptado:** el punto exacto puede revelar el domicilio o la ubicación de la víctima. La mitigación es la reserva por caso; el diálogo de verificación lo recuerda.
+
+**Cambios:**
+- **Migración:** `20261201110000_publicacion_ubicacion_exacta` renombra `celda_lat/celda_lon` a `latitud/longitud`. Las filas publicadas antes conservan el centro de celda hasta que se republiquen.
+- **API:** `ubicacion: {lat, lon}` sustituye a `zona` y a `radioZonaM`. Se quitan la cuadrícula y la lista de sensibles. Los conteos agregados son solo de reservados.
+- **Panel:** la vista previa y los textos indican la ubicación exacta; se quita el campo `sensible`.
+- **App:** marcadores en el punto, botón «Mi ubicación», distancia («a 30 m», «a 1,1 km») y orden por cercanía.
+
+**Verificación tras el grupo F:**
+- **API:** 83 suites y 1487 pruebas Jest, con 89,24 % de líneas y 90,89 % de ramas. Bajó de 1493 a 1487 porque se retiraron las pruebas de la cuadrícula. OpenAPI válido con 63 operaciones y 0 infracciones de arquitectura.
+- **Web:** 200 pruebas, lint y build correctos.
+- **Flutter:** 373 pruebas y análisis sin problemas. Las pruebas comprueban que al abrir no se pide la ubicación y que ninguna solicitud lleva la posición.
+- **Base de desarrollo:** se migró `ayni_safe_dev`.
+- **Teléfono:** `RFCW60MHE2E` conectado, con `adb reverse tcp:3000 tcp:3000` activo.
+
 ## No verificado, sin presentarlo como hecho
 
 - **Revisión visual renderizada:** queda para la prueba manual del responsable, en escritorio y en pantalla estrecha:
@@ -106,7 +129,7 @@ La decisión se registró antes del código en el documento 11 §5, RF49 y las s
 
   En las pruebas, el lienzo Leaflet se sustituyó por un doble.
 - **Proveedor de teselas:** no se midieron cuotas ni disponibilidad de OSM; su política no garantiza servicio para uso institucional.
-- **Teléfono:** al cerrar esta evidencia no había un dispositivo conectado (`adb devices` vacío). Antes de la prueba hay que ejecutar `adb reverse tcp:3000 tcp:3000`.
+- **Prueba en Android real:** la permanencia de la posición, el permiso de ubicación y el centrado del mapa quedan para la prueba manual.
 - **Fuera de alcance:**
   - alertas preventivas (P8);
   - mapa público en la portada web;
