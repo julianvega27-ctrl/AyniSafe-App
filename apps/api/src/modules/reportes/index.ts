@@ -61,6 +61,7 @@ export type {
   EnvioResumenOperativo,
   EnvioInvitadoVerificado,
   EnvioResumen,
+  UbicacionEnvio,
   LecturaEnvios,
 } from './aplicacion/lectura-envios';
 export type { IdentificarSolicitante, SolicitanteHttp } from './presentacion/incidentes.routes';

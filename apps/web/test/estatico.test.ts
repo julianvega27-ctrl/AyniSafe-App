@@ -39,7 +39,11 @@ describe('vercel.json: mismo origen y cabeceras de seguridad', () => {
     expect(csp).toContain("connect-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("base-uri 'none'");
-    expect(csp).not.toMatch(/unsafe-inline|unsafe-eval|https?:\/\/|\*/);
+    expect(csp).not.toMatch(/unsafe-inline|unsafe-eval|\*/);
+    // P7 (ADR-009): el unico origen externo son las imagenes del mapa base, solo en img-src.
+    const externos = [...csp.matchAll(/https?:\/\/[^\s;]+/g)].map((m) => m[0]);
+    expect(externos).toEqual(['https://tile.openstreetmap.org']);
+    expect(csp).toMatch(/img-src 'self' data: https:\/\/tile\.openstreetmap\.org;/);
   });
 
   it('nosniff, sin referrer (no filtra fragmentos) y sin permisos de dispositivo', () => {

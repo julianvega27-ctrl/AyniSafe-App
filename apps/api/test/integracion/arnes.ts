@@ -4,8 +4,8 @@ import type { Express } from 'express';
 import { crearApp } from '../../src/app';
 import { crearModuloConsultasConPrisma, idsDistritosPiloto } from '../../src/modules/consultas';
 import { crearModuloReportesConPrisma, type ModuloReportes } from '../../src/modules/reportes';
-import { crearModuloOperacionesConPrisma, type ModuloOperaciones, type ServicioAtencion, type ServicioEnrutamiento } from '../../src/modules/operaciones';
-import { atencionDe, dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesSeguimiento, routerOperaciones } from '../../src/composicion';
+import { crearModuloOperacionesConPrisma, type ModuloOperaciones, type ServicioAtencion, type ServicioPublicacion, type ServicioEnrutamiento } from '../../src/modules/operaciones';
+import { atencionDe, dependenciasRegistro, enrutamientoDe, opcionesBandeja, opcionesMapaPublico, opcionesSeguimiento, publicacionDe, routerOperaciones } from '../../src/composicion';
 import type { ConsumidorEventos } from '../../src/compartido/eventos/eventos';
 import { ProcesadorEntregas } from '../../src/compartido/eventos/procesador-entregas';
 import { PrismaOrganizacionAdapter } from '../../src/modules/identidad/infraestructura/prisma-organizacion.adapter';
@@ -78,6 +78,8 @@ export class LoggerCapturado implements Logger {
 }
 
 export interface OpcionesArnes {
+  /** P7: reloj de la publicacion (vigencia y mapa publico); por defecto, el del sistema. */
+  readonly ahoraPublicacion?: () => Date;
   readonly politica?: Partial<PoliticaLimites>;
   readonly saltosProxy?: number;
   readonly hash?: HashContrasenaPort;
@@ -114,6 +116,7 @@ export interface Arnes {
   readonly procesador: ProcesadorEntregas;
   readonly enrutamiento: ServicioEnrutamiento;
   readonly atencion: ServicioAtencion;
+  readonly publicacion: ServicioPublicacion;
   readonly deps: DependenciasIdentidad;
   /** Adaptador de correo en memoria (salvo que se sobrescriba): no valida el proveedor real. */
   readonly correo: CorreoPruebaAdapter;
@@ -180,6 +183,9 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
   clientesCreados.add(prisma);
   let procesadorCreado: ProcesadorEntregas | undefined;
   const atencion = atencionDe(prisma, modulo);
+  const ahoraPublicacion = opciones.ahoraPublicacion;
+  const publicacion = publicacionDe(prisma, () => reportes!, ahoraPublicacion);
+  atencion.conPublicacion(publicacion.servicio);
   const enrutamiento = enrutamientoDe(prisma, modulo, () => reportes!, () => procesadorCreado?.despertar(), atencion);
   const consultas = crearModuloConsultasConPrisma(
     prisma,
@@ -188,7 +194,8 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
       ...opcionesSeguimiento({ identidad: modulo, operaciones, enrutamiento, atencion }, () => reportes!, logger),
       ...(opciones.limitesSeguimiento ? { limites: opciones.limitesSeguimiento } : {}),
     },
-    opcionesBandeja(modulo, enrutamiento, () => reportes!, logger, atencion),
+    opcionesBandeja(modulo, enrutamiento, () => reportes!, logger, atencion, publicacion.lectura),
+    opcionesMapaPublico(publicacion.lectura, () => reportes!, logger, ahoraPublicacion),
   );
   const procesador = new ProcesadorEntregas(
     prisma,
@@ -212,9 +219,12 @@ export function crearArnes(opciones: OpcionesArnes = {}): Arnes {
     identidad: modulo,
     consultas,
     reportes,
-    operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger, atencion, operaciones.incidentes),
+    operaciones: routerOperaciones(enrutamiento, modulo, () => reportes!, logger, atencion, operaciones.incidentes, publicacion.servicio),
   });
-  return { app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, atencion, deps, correo, almacenEvidencias };
+  return {
+    app, prisma, reloj, logger, modulo, reportes, operaciones, procesador, enrutamiento, atencion,
+    publicacion: publicacion.servicio, deps, correo, almacenEvidencias,
+  };
 }
 
 export async function limpiarBd(prisma: PrismaClient): Promise<void> {

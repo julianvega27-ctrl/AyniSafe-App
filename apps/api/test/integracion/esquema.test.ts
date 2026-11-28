@@ -66,6 +66,7 @@ describe('migracion desde base vacia', () => {
       'participaciones_incidente',
       'permisos_evidencia',
       'pertenencias_operador',
+      'publicaciones_incidente',
       'sedes',
       'sesiones',
       'solicitudes_envio',

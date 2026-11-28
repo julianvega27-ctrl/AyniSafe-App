@@ -43,7 +43,18 @@ export interface EstadoBloqueado {
   readonly prioridad?: string;
 }
 
-export type AccionHistorial = 'asumir' | 'transicion' | 'verificacion' | 'liberar' | 'reasignar' | 'vincular' | 'prioridad';
+export type AccionHistorial =
+  | 'asumir'
+  | 'transicion'
+  | 'verificacion'
+  | 'liberar'
+  | 'reasignar'
+  | 'vincular'
+  | 'prioridad'
+  // P7: publicacion, retiro (valor nuevo = causa) y reserva.
+  | 'publicar'
+  | 'retirar'
+  | 'reservar';
 
 export interface EntradaHistorial {
   readonly incidenteId: string;
@@ -137,10 +148,31 @@ export interface ParticipacionOperador {
   readonly sedeId: string;
 }
 
+/**
+ * Publicacion (P7) vista desde la atencion: retiro automatico en la misma transaccion al cerrar,
+ * corregir a NO_VERIFICADO o vincular, y estado de publicacion para el resumen del operador.
+ */
+export interface PublicacionAtencionPort {
+  retirarSiVigente(
+    tx: ContextoTransaccional,
+    incidenteId: string,
+    causa: 'CIERRE' | 'NO_VERIFICADO' | 'DUPLICADO',
+    actor: { readonly tipo: 'operador'; readonly usuarioId: string; readonly institucion: InstitucionDestino },
+  ): Promise<boolean>;
+  vista(c: { readonly incidenteId: string; readonly papel: Papel; readonly esResponsable: boolean }): Promise<unknown>;
+  /** Decision del 27/11/2026: verificar autoriza la publicacion (documento 11 §5). */
+  publicarAlVerificar(
+    tx: ContextoTransaccional,
+    c: { readonly incidenteId: string; readonly estado: EstadoIncidente; readonly institucion: InstitucionDestino; readonly operadorId: string },
+  ): Promise<boolean>;
+}
+
 export interface DependenciasAtencion {
   readonly repositorio: AtencionRepositorio;
   readonly operadores: OperadoresPort;
   readonly unidadDeTrabajo: UnidadDeTrabajo;
+  /** P7. Sin ella no hay publicaciones que retirar ni estado de publicacion en el resumen. */
+  readonly publicacion?: PublicacionAtencionPort;
 }
 
 export const LIMITE_ASIGNACIONES = 200;
@@ -148,7 +180,17 @@ export const LIMITE_ASIGNACIONES = 200;
 const SIN_VALORES: ReadonlySet<string> = new Set(['asumir', 'reasignar', 'liberar', 'vincular']);
 
 export class ServicioAtencion {
-  constructor(private readonly d: DependenciasAtencion) {}
+  private publicacion: PublicacionAtencionPort | undefined;
+
+  constructor(private readonly d: DependenciasAtencion) {
+    this.publicacion = d.publicacion;
+  }
+
+  /** Cableado tardio de la publicacion (P7), que comparte el repositorio de la atencion. */
+  conPublicacion(publicacion: PublicacionAtencionPort): this {
+    this.publicacion = publicacion;
+    return this;
+  }
 
   /** Asumir caso (RF56). La primera asuncion de la principal inicia la revision. */
   async asumir(p: ParticipacionOperador, operadorId: string): Promise<{ readonly asignacion: Asignacion; readonly nueva: boolean; readonly estado: EstadoIncidente }> {
@@ -218,6 +260,9 @@ export class ServicioAtencion {
         valorNuevo: s.accion === 'cerrar' ? `CERRADO:${s.resultado}` : destino,
         motivo: s.accion === 'cerrar' ? s.motivo : null,
       });
+      if (destino === 'CERRADO') {
+        await this.publicacion?.retirarSiVigente(tx, p.incidenteId, 'CIERRE', { tipo: 'operador', usuarioId: operadorId, institucion: p.institucion });
+      }
       return { estado: destino, resultado: s.accion === 'cerrar' ? s.resultado : null };
     });
   }
@@ -240,6 +285,13 @@ export class ServicioAtencion {
         valorNuevo: s.valor,
         motivo: s.motivo,
       });
+      // Verificar autoriza la publicacion (decision del 27/11/2026); repetir VERIFICADO no republica.
+      if (s.valor === 'VERIFICADO' && inc.verificacion !== 'VERIFICADO') {
+        await this.publicacion?.publicarAlVerificar(tx, { incidenteId: p.incidenteId, estado: inc.estado, institucion: p.institucion, operadorId });
+      }
+      if (s.valor === 'NO_VERIFICADO') {
+        await this.publicacion?.retirarSiVigente(tx, p.incidenteId, 'NO_VERIFICADO', { tipo: 'operador', usuarioId: operadorId, institucion: p.institucion });
+      }
       return { verificacion: s.valor, estado: inc.estado };
     });
   }
@@ -254,7 +306,12 @@ export class ServicioAtencion {
       this.d.repositorio.historial(p.incidenteId),
     ]);
     const propia = activas.find((a) => a.institucion === p.institucion) ?? null;
-    const nombres = propia ? await this.d.operadores.describir([propia.operadorId]) : new Map<string, OperadorAtencion>();
+    const [nombres, publicacion] = await Promise.all([
+      propia ? this.d.operadores.describir([propia.operadorId]) : Promise.resolve(new Map<string, OperadorAtencion>()),
+      this.publicacion
+        ? this.publicacion.vista({ incidenteId: p.incidenteId, papel: p.papel, esResponsable: propia?.operadorId === operadorId })
+        : Promise.resolve(null),
+    ]);
     const vinculado = p.vinculado ?? false;
     const acciones: readonly Accion[] = accionesPermitidas({
       estado: p.estado,
@@ -285,6 +342,7 @@ export class ServicioAtencion {
         motivo: h.institucion === p.institucion ? h.motivo : null,
         instante: h.creadoEn.toISOString(),
       })),
+      publicacion,
     };
   }
 
@@ -399,6 +457,7 @@ export class ServicioAtencion {
         valorNuevo: principalId,
         motivo,
       });
+      await this.publicacion?.retirarSiVigente(tx, p.incidenteId, 'DUPLICADO', { tipo: 'operador', usuarioId: operadorId, institucion: p.institucion });
       return { vinculado: true as const };
     });
   }

@@ -300,6 +300,7 @@ model Incidente {
   enrutamiento EnrutamientoIncidente?
   asignaciones AsignacionIncidente[]
   historial    HistorialIncidente[]
+  publicacion  PublicacionIncidente?
   @@map("incidentes")
 }
 
@@ -334,6 +335,28 @@ model HistorialIncidente {
   incidente      Incidente @relation(fields: [incidenteId], references: [id], onDelete: Restrict)
   @@index([incidenteId, creadoEn, id], map: "historial_incidente_orden")
   @@map("historial_incidente")
+}
+
+/// P7 (Operaciones): publicacion de un incidente con instantanea publica minima y ubicacion exacta (documento 11 §5).
+/// Una fila por incidente; republicar la actualiza y conserva el vencimiento. CHECK en la migracion.
+model PublicacionIncidente {
+  incidenteId String    @id @map("incidente_id") @db.Uuid
+  idPublico   String    @unique @default(dbgenerated("gen_random_uuid()")) @map("id_publico") @db.Uuid
+  estado      String
+  reservada   Boolean   @default(false)
+  institucion String
+  categoriaId String    @map("categoria_id")
+  distritoId  String    @map("distrito_id")
+  latitud     Float
+  longitud    Float
+  ocurridoEn  DateTime  @map("ocurrido_en") @db.Timestamptz(3)
+  venceEn     DateTime  @map("vence_en") @db.Timestamptz(3)
+  publicadaEn DateTime  @default(dbgenerated("clock_timestamp()")) @map("publicada_en") @db.Timestamptz(3)
+  retiradaEn  DateTime? @map("retirada_en") @db.Timestamptz(3)
+  causaRetiro String?   @map("causa_retiro")
+  incidente   Incidente @relation(fields: [incidenteId], references: [id], onDelete: Restrict)
+  @@index([distritoId, ocurridoEn], map: "publicaciones_distrito_ocurrencia")
+  @@map("publicaciones_incidente")
 }
 
 /// P4.2 (Operaciones): regla aplicada, condiciones y resultado del enrutamiento de un incidente.

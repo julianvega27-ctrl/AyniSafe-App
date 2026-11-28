@@ -11,6 +11,7 @@ import { useSesion } from '../sesion/SesionContexto';
 import { Bandeja, olvidarBandeja, ResumenIncidenteVista } from './incidentes/Bandeja';
 import { EnrutamientoPendiente } from './incidentes/Pendientes';
 import { ResponsablesActivos } from './incidentes/Responsables';
+import { MapaOperativo } from './incidentes/MapaOperativo';
 import { DESCRIPCION_SECCION, SeccionOrganizacion } from './organizacion/Organizacion';
 
 /**
@@ -77,6 +78,11 @@ const INTRO_P42: Record<string, { eyebrow: string; titulo: string; texto: string
     eyebrow: 'Operaciones',
     titulo: 'Bandeja de incidentes',
     texto: 'Casos en que participa tu sede, en orden de llegada. Leer un caso no confirma su recepción ni su atención.',
+  },
+  'operador:mapa': {
+    eyebrow: 'Territorio',
+    titulo: 'Mapa de incidencias',
+    texto: 'Ubicaciones de los incidentes en que participa tu sede. Solo tu sede ve estos puntos exactos; el mapa ciudadano muestra zonas aproximadas.',
   },
   'administrador:inicio': {
     eyebrow: 'Administración',
@@ -192,6 +198,7 @@ export function PanelRol({ rol }: { rol: Rol }) {
       {seccion && organizacion ? <SeccionOrganizacion id={seccion.id} /> : null}
       {resumen ? <ResumenIncidenteVista key={resumen} id={resumen} /> : null}
       {intro && seccion?.id === 'incidentes' && !resumen ? <Bandeja /> : null}
+      {intro && seccion?.id === 'mapa' ? <MapaOperativo /> : null}
       {intro && seccion?.id === 'inicio' ? (
         <>
           <EnrutamientoPendiente />

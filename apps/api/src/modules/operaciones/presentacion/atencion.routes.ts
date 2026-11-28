@@ -3,6 +3,7 @@ import express, { type ErrorRequestHandler, type NextFunction, type Request, typ
 import type { Logger } from '../../../compartido/logger';
 import type { AmbitoBandeja, ServicioEnrutamiento } from '../aplicacion/enrutamiento';
 import type { ServicioAtencion } from '../aplicacion/atencion';
+import type { Publicacion, ServicioPublicacion } from '../aplicacion/publicacion';
 import {
   AtencionNoDisponibleError,
   ConflictoAtencionError,
@@ -21,6 +22,8 @@ export interface OpcionesRutasAtencion {
   readonly ambito: (usuarioId: string) => Promise<AmbitoBandeja | null>;
   /** Grupo B: identificador del incidente por su referencia escrita (null si no existe o no es valida). */
   readonly idPorReferencia?: (texto: string) => Promise<string | null>;
+  /** P7: publicacion controlada. Sin ella no se exponen sus rutas. */
+  readonly publicacion?: ServicioPublicacion;
   readonly logger: Logger;
 }
 
@@ -35,6 +38,10 @@ const MENSAJES_CONFLICTO: Record<CodigoConflicto, string> = {
   ASIGNACION_INACTIVA: 'La asignación ya no está activa.',
   INCIDENTE_VINCULADO: 'El incidente está vinculado a otro reporte del mismo hecho y se atiende desde ese caso.',
   VINCULO_NO_PERMITIDO: 'No se puede vincular este incidente a ese caso.',
+  NO_VERIFICADO: 'Solo se publican incidentes verificados.',
+  FUERA_DE_VIGENCIA: 'El incidente ocurrió hace más de 7 días y ya no se puede publicar.',
+  DISTRITO_PENDIENTE: 'El distrito del incidente está pendiente; no se puede publicar.',
+  NO_PUBLICADA: 'El incidente no tiene una publicación vigente.',
 };
 
 const MENSAJES_PERMISO = {
@@ -158,6 +165,35 @@ export function crearRouterAtencion(atencion: ServicioAtencion, enrutamiento: Se
     registrar(res, 'prioridad_revisada', { prioridad: r.prioridad });
     res.json(r);
   });
+
+  if (o.publicacion) {
+    const publicacion = o.publicacion;
+    /** Vista del operador: sin coordenadas exactas ni identificador publico (no hace falta para operar). */
+    const vistaPublicacion = (p: Publicacion) => ({
+      estado: p.estado,
+      reservada: p.reservada,
+      publicadaEn: p.publicadaEn.toISOString(),
+      venceEn: p.venceEn.toISOString(),
+    });
+
+    router.post('/operador/incidentes/:id/publicacion', sinCache, rol('operador', true), ...json, participacion, async (req, res) => {
+      const r = await publicacion.publicar(res.locals.participacion, res.locals.usuarioId as string, req.body);
+      registrar(res, r.nueva ? 'incidente_publicado' : 'incidente_ya_publicado');
+      res.status(r.nueva ? 201 : 200).json({ publicacion: vistaPublicacion(r.publicacion) });
+    });
+
+    router.post('/operador/incidentes/:id/publicacion/retiro', sinCache, rol('operador', true), ...json, participacion, async (req, res) => {
+      const r = await publicacion.retirar(res.locals.participacion, res.locals.usuarioId as string, req.body);
+      registrar(res, 'publicacion_retirada');
+      res.json(r);
+    });
+
+    router.post('/operador/incidentes/:id/publicacion/reserva', sinCache, rol('operador', true), ...json, participacion, async (req, res) => {
+      const r = await publicacion.reservar(res.locals.participacion, res.locals.usuarioId as string, req.body);
+      registrar(res, 'publicacion_reserva');
+      res.json(r);
+    });
+  }
 
   router.get('/admin/asignaciones', sinCache, rol('administrador', false), async (req, res) => {
     if (Object.keys(req.query).length) return responderError(res, 400, 'VALIDATION_ERROR', 'Revisa los datos de la consulta.');

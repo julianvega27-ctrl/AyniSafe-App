@@ -12,7 +12,13 @@ import { crearApp } from '../../src/app';
 import { crearModuloConsultas } from '../../src/modules/consultas';
 import { crearModuloReportes } from '../../src/modules/reportes';
 import express from 'express';
-import { crearRouterAtencion, crearRouterEnrutamiento, type ServicioAtencion, type ServicioEnrutamiento } from '../../src/modules/operaciones';
+import {
+  crearRouterAtencion,
+  crearRouterEnrutamiento,
+  type ServicioAtencion,
+  type ServicioEnrutamiento,
+  type ServicioPublicacion,
+} from '../../src/modules/operaciones';
 import { cookieInstitucional, crearSedeDePrueba, registrarIncidente } from './fixtures-enrutamiento';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import type { CuentasPort } from '../../src/modules/identidad/aplicacion/puertos/cuentas.port';
@@ -1226,6 +1232,133 @@ describe('respuestas reales conforme a openapi.yaml', () => {
         .set('Content-Type', 'application/json').send(JSON.stringify({ motivo }))],
       [REA, 'post', request(caida).post(U(`${ASI}/${nueva}/reasignar`)).set('Cookie', cookieAdmin).set('Origin', ORIGEN_WEB_PRUEBA)
         .set('Content-Type', 'application/json').send(JSON.stringify({ operadorId: pnp.operadores[1]!.id, motivo }))],
+    ] as const;
+    for (const [doc, metodo, pendiente] of casos) {
+      const r = await pendiente;
+      expect(r.status).toBe(503);
+      verificar(doc, metodo, r);
+    }
+  });
+
+  it('publicacion y mapa publico (P7): cada estado documentado coincide con la respuesta real', async () => {
+    const PUB = '/operador/incidentes/{id}/publicacion';
+    const RET = '/operador/incidentes/{id}/publicacion/retiro';
+    const RES = '/operador/incidentes/{id}/publicacion/reserva';
+    const MAP = '/publico/mapa';
+    const U = (r: string) => `/api/v1${r}`;
+    const arnes = crearArnes({ prisma, enrutar: true });
+    const { app, procesador } = arnes;
+    await limpiarBd(prisma);
+    await new PrismaTerritorioAdapter(prisma).importar(paqueteSintetico().preparado, true);
+    const admin = await crearCuentaDePrueba(prisma, { rol: 'administrador' });
+    const pnp = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['robo'], operadores: ['activo', 'activo'], creadoPor: admin.id });
+    const ajena = await crearSedeDePrueba(prisma, { institucion: 'pnp', distritos: ['DIS-02'], categorias: ['robo'], creadoPor: admin.id });
+    const [opA, opB] = await Promise.all(pnp.operadores.map((o) => cookieInstitucional(app, o.correo)));
+    const opAjeno = await cookieInstitucional(app, ajena.operadores[0]!.correo);
+    const inc = await registrarIncidente(app, prisma);
+    await procesador.esperarReposo();
+    await procesador.procesarPendientes();
+    const motivo = 'Confirmado por llamada al lugar';
+    const post = (ruta: string, cookie: string | null, cuerpo?: unknown) => {
+      let r = request(app).post(U(ruta)).set('Origin', ORIGEN_WEB_PRUEBA);
+      if (cookie) r = r.set('Cookie', cookie);
+      return cuerpo === undefined ? r : r.set('Content-Type', 'application/json').send(JSON.stringify(cuerpo));
+    };
+    const ruta = (sufijo: string) => `/operador/incidentes/${inc.id}/publicacion${sufijo}`;
+    const pub = { estadoEsperado: 'EN_REVISION' };
+    await post(`/operador/incidentes/${inc.id}/asumir`, opA!);
+
+    verificar(PUB, 'post', await post(ruta(''), opA!, pub)); // 409 sin verificar
+    await post(`/operador/incidentes/${inc.id}/verificacion`, opA!, { valor: 'VERIFICADO', motivo, estadoEsperado: 'EN_REVISION' });
+    verificar(PUB, 'post', await post(ruta(''), opA!, { estadoEsperado: 'X' })); // 400
+    verificar(PUB, 'post', await post(ruta(''), null, pub)); // 401
+    verificar(PUB, 'post', await post(ruta(''), opB!, pub)); // 403
+    verificar(PUB, 'post', await post(ruta(''), opAjeno, pub)); // 404
+    verificar(PUB, 'post', await post(ruta(''), opA!, pub)); // 200 (publicado al verificar)
+    await post(ruta('/retiro'), opA!, { motivo });
+    verificar(PUB, 'post', await post(ruta(''), opA!, pub)); // 201 (republicar)
+    verificar('/operador/incidentes/{id}', 'get', await request(app).get(U(`/operador/incidentes/${inc.id}`)).set('Cookie', opB!));
+
+    verificar(MAP, 'get', await request(app).get(U(MAP))); // 200
+    verificar(MAP, 'get', await request(app).get(U(`${MAP}?periodo=30d`))); // 422
+
+    const OPE = '/operador/mapa';
+    const cookieAdmin = await cookieInstitucional(app, admin.correo);
+    verificar(OPE, 'get', await request(app).get(U(OPE)).set('Cookie', opA!)); // 200
+    verificar(OPE, 'get', await request(app).get(U(OPE))); // 401
+    verificar(OPE, 'get', await request(app).get(U(OPE)).set('Cookie', cookieAdmin)); // 403
+    verificar(OPE, 'get', await request(app).get(U(`${OPE}?periodo=3d`)).set('Cookie', opA!)); // 422
+
+    const res = { reservada: true, motivo };
+    verificar(RES, 'post', await post(ruta('/reserva'), opA!, { reservada: 'si' })); // 400
+    verificar(RES, 'post', await post(ruta('/reserva'), null, res)); // 401
+    verificar(RES, 'post', await post(ruta('/reserva'), opB!, res)); // 403
+    verificar(RES, 'post', await post(ruta('/reserva'), opAjeno, res)); // 404
+    verificar(RES, 'post', await post(ruta('/reserva'), opA!, res)); // 200
+
+    verificar(RET, 'post', await post(ruta('/retiro'), opB!, { motivo: 'x' })); // 400
+    verificar(RET, 'post', await post(ruta('/retiro'), null, { motivo })); // 401
+    verificar(RET, 'post', await post(ruta('/retiro'), opAjeno, { motivo })); // 404
+    verificar(RET, 'post', await post(ruta('/retiro'), opB!, { motivo })); // 200
+    verificar(RET, 'post', await post(ruta('/retiro'), opB!, { motivo })); // 409
+    verificar(RES, 'post', await post(ruta('/reserva'), opA!, res)); // 409
+
+    // 403 del retiro: un operador de una institucion de apoyo.
+    const samu = await crearSedeDePrueba(prisma, { institucion: 'samu', categorias: ['accidente-transito'], creadoPor: admin.id });
+    const apoyo = await crearSedeDePrueba(prisma, { institucion: 'pnp', categorias: ['accidente-transito'], creadoPor: admin.id });
+    const acc = await registrarIncidente(app, prisma, { categoriaId: 'accidente-transito', descripcion: 'Choque con heridos en la avenida', heridos: 'si' });
+    await procesador.esperarReposo();
+    await procesador.procesarPendientes();
+    const opApoyo = await cookieInstitucional(app, apoyo.operadores[0]!.correo);
+    expect(samu.operadores).toHaveLength(1);
+    verificar(RET, 'post', await post(`/operador/incidentes/${acc.id}/publicacion/retiro`, opApoyo, { motivo })); // 403
+
+    // 503: servicio de publicacion y lectura publica averiados.
+    const falla = () => Promise.reject(new Error('bd caida'));
+    const roto = new Proxy({}, { get: () => falla }) as unknown as ServicioPublicacion;
+    const caida = express();
+    caida.use('/api/v1', crearRouterAtencion(arnes.atencion, arnes.enrutamiento, {
+      identificar: arnes.modulo.identificarSolicitante,
+      origenWebPermitido: arnes.modulo.origenWebPermitido,
+      ambito: async (id) => {
+        const a = await arnes.modulo.consultarAmbitoOperador.ejecutar(id);
+        return a ? { sedeId: a.sede.id, distritos: a.distritos, categorias: a.categorias } : null;
+      },
+      publicacion: roto,
+      logger: arnes.logger,
+    }));
+    const mapaCaido = crearModuloConsultas(undefined, {
+      repositorio: { leer: async () => null },
+      secretoLimitador: 'x'.repeat(32),
+      mapaPublico: {
+        publicaciones: { puntos: falla, conteos: falla },
+        categorias: { nombres: async () => new Map() },
+        logger: arnes.logger,
+      },
+    });
+    caida.use('/api/v1', mapaCaido.router);
+    const bandejaCaida = crearModuloConsultas(undefined, {
+      repositorio: { leer: async () => null },
+      secretoLimitador: 'x'.repeat(32),
+      bandeja: {
+        ambito: { de: falla },
+        participaciones: { bandeja: falla, participacionDe: falla },
+        originales: { resumenOperativo: falla },
+        categorias: { nombres: async () => new Map() },
+        mapaOperativo: { participaciones: falla, puntos: falla, publicaciones: falla },
+        identificar: arnes.modulo.identificarSolicitante,
+        logger: arnes.logger,
+      },
+    });
+    caida.use('/api/v1', bandejaCaida.router);
+    const enviar = (r: string, cuerpo: unknown) => request(caida).post(U(r)).set('Cookie', opA!).set('Origin', ORIGEN_WEB_PRUEBA)
+      .set('Content-Type', 'application/json').send(JSON.stringify(cuerpo));
+    const casos = [
+      [PUB, 'post', enviar(ruta(''), pub)],
+      [RET, 'post', enviar(ruta('/retiro'), { motivo })],
+      [RES, 'post', enviar(ruta('/reserva'), res)],
+      [MAP, 'get', request(caida).get(U(MAP))],
+      ['/operador/mapa', 'get', request(caida).get(U('/operador/mapa')).set('Cookie', opA!)],
     ] as const;
     for (const [doc, metodo, pendiente] of casos) {
       const r = await pendiente;

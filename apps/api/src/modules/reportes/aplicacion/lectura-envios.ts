@@ -48,6 +48,19 @@ export interface EnvioResumenOperativo {
   readonly recibidoEn: Date;
 }
 
+/**
+ * Ubicacion exacta, categoria y ocurrencia (P7). Solo para Operaciones, que guarda el centro de la
+ * celda al publicar, y para el mapa operativo autorizado. Nunca se expone en lecturas publicas.
+ */
+export interface UbicacionEnvio {
+  readonly incidenteId: string;
+  readonly categoriaId: string;
+  readonly distritoId: string | null;
+  readonly latitud: number;
+  readonly longitud: number;
+  readonly ocurridoEn: Date;
+}
+
 export interface CursorHistorial {
   readonly recibidoEn: Date;
   readonly incidenteId: string;
@@ -64,6 +77,7 @@ export interface EnviosLecturaRepositorio {
   /** Null si el incidente no tiene envio. */
   datosEnrutamiento(incidenteId: string): Promise<DatosEnrutamientoEnvio | null>;
   resumenOperativo(ids: readonly string[]): Promise<readonly EnvioResumenOperativo[]>;
+  ubicaciones(ids: readonly string[]): Promise<readonly UbicacionEnvio[]>;
 }
 
 /** Identificador fijo para igualar el trabajo cuando la referencia no existe. */
@@ -86,6 +100,12 @@ export class LecturaEnvios {
   /** Contrato interno del enrutamiento de Operaciones (P4.2). */
   datosEnrutamiento(incidenteId: string): Promise<DatosEnrutamientoEnvio | null> {
     return this.repositorio.datosEnrutamiento(incidenteId);
+  }
+
+  /** Ubicaciones exactas (P7); el llamador ya autorizo la publicacion o el ambito del operador. */
+  async ubicaciones(ids: readonly string[]): Promise<ReadonlyMap<string, UbicacionEnvio>> {
+    if (ids.length === 0) return new Map();
+    return new Map((await this.repositorio.ubicaciones(ids)).map((e) => [e.incidenteId, e]));
   }
 
   /** Originales para el resumen operativo; el llamador ya comprobo el ambito del operador. */

@@ -273,3 +273,44 @@
 @media (max-width: 600px) {
   .cards--respuestas .mini-card { flex-basis: 100%; }
 }
+
+/* Mapa operativo (P7 grupo B). Composicion de MapView.jsx y style.css del origen (map-filters,
+   map-frame, map-summary, map-legend, incident-map-*), con tokens existentes. AyniSafe: un solo tono
+   de marcador (--color-accion) y el borde del publicado con --color-azul; los tonos por familia del
+   origen no se portan sin una eleccion en DESIGN.md. */
+.map-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 14px; }
+/* Selectores con el CampoSeleccion compartido (etiqueta arriba, borde y altura de los campos del panel). */
+.map-filters .campo { min-width: 0; margin: 0; }
+.map-filter-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 16px 0 18px; }
+.map-filter-footer .map-note { margin: 0; line-height: 1.6; }
+.map-note { font-size: 0.75rem; color: var(--color-texto-suave); margin: 11px 0 0; }
+.map-frame { height: clamp(500px, 62vh, 720px); min-height: 500px; border: 1px solid var(--color-divisor); border-radius: 12px; overflow: hidden; background: var(--color-fondo); }
+.map-canvas { height: 100%; width: 100%; font-family: 'DM Sans', sans-serif; background: var(--color-fondo); }
+.map-canvas .leaflet-popup-content { margin: 11px 14px; font-size: 0.75rem; line-height: 1.45; color: var(--color-texto); }
+.map-summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; font-size: 0.75rem; color: var(--color-texto-suave); }
+.map-summary strong, .map-summary span { display: inline-flex; align-items: center; min-height: 31px; padding: 6px 11px; border-radius: 99px; background: var(--color-info-fondo); color: var(--color-info-texto); }
+.map-summary strong { background: var(--color-accion); color: var(--color-superficie); }
+.incident-map-icon { display: grid; place-items: center; background: transparent; border: 0; }
+.incident-map-symbol { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 3px solid var(--color-superficie); border-radius: 16px 16px 16px 5px; transform: rotate(-45deg); background: var(--color-accion); color: var(--color-superficie); box-shadow: 0 4px 13px #17383b70; }
+.incident-map-symbol--publicado { border-color: var(--color-azul); }
+.incident-map-glyph { display: grid; place-items: center; transform: rotate(45deg); }
+.incident-map-glyph svg { width: 25px; height: 25px; }
+.map-canvas .leaflet-tooltip.incident-map-label { max-width: 190px; padding: 5px 8px; border: 1px solid var(--color-divisor); border-radius: 8px; background: var(--color-superficie); color: var(--color-texto); font: 700 0.6875rem/1.25 'DM Sans', sans-serif; text-align: center; white-space: nowrap; }
+.incident-map-popup { display: grid; gap: 5px; min-width: 150px; }
+.incident-map-popup strong { font-size: 0.8125rem; }
+.incident-map-popup a { font-weight: 700; margin-top: 4px; }
+.map-limite { stroke: var(--color-accion); fill: var(--color-accion); }
+.map-limite--activo { stroke-width: 4; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; color: var(--color-texto-suave); font-size: 0.75rem; }
+.map-legend-item { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 6px 12px; border: 1px solid var(--color-divisor); border-radius: 9px; background: var(--color-fondo); color: var(--color-texto); text-align: left; font-size: 0.75rem; }
+.map-legend-item:hover, .map-legend-item.active { border-color: var(--color-accion); background: var(--color-exito-fondo); }
+.map-legend-item:focus-visible { outline: 3px solid var(--color-accion); outline-offset: 2px; }
+.map-legend-help { margin: 9px 0 0; color: var(--color-texto-suave); font-size: 0.75rem; }
+@media (max-width: 900px) {
+  .map-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .map-filters { grid-template-columns: 1fr; }
+  .map-filter-footer { align-items: flex-start; flex-wrap: wrap; }
+  .map-frame { height: clamp(380px, 55vh, 560px); min-height: 380px; }
+}

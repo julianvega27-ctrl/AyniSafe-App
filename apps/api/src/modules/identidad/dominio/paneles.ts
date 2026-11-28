@@ -10,14 +10,14 @@ export interface SeccionPanel {
 /**
  * Secciones de cada panel segun la guia de UI (2.3). Disponibles: organizacion del administrador
  * (P3.2: Instituciones y sedes, Operadores y Coberturas), Inicio del administrador limitado al bloque de
- * enrutamiento pendiente y la bandeja Incidentes del operador (P4.2). El resto del resumen, el Inicio del
+ * enrutamiento pendiente, la bandeja Incidentes del operador (P4.2) y su Mapa operativo (P7). El resto del resumen, el Inicio del
  * operador e Historial siguen pendientes; no hay tableros de metricas de ejemplo.
  */
 const SECCIONES: Readonly<Record<RolInstitucional, readonly SeccionPanel[]>> = {
   operador: [
     { id: 'inicio', titulo: 'Inicio', disponible: false },
     { id: 'incidentes', titulo: 'Incidentes', disponible: true },
-    { id: 'mapa', titulo: 'Mapa', disponible: false },
+    { id: 'mapa', titulo: 'Mapa', disponible: true },
     { id: 'indicadores', titulo: 'Indicadores', disponible: false },
     { id: 'historial', titulo: 'Historial', disponible: false },
   ],

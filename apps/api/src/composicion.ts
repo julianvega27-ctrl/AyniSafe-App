@@ -1,11 +1,14 @@
 import { PrismaPublicadorEventos } from './compartido/eventos/prisma-eventos';
 import type { Logger } from './compartido/logger';
 import { PrismaUnidadDeTrabajo } from './compartido/prisma-transaccion';
-import { distritosPiloto, type ModuloConsultas, type OpcionesBandeja, type OpcionesSeguimiento } from './modules/consultas';
+import { distritosPiloto, type ModuloConsultas, type OpcionesBandeja, type OpcionesMapaPublico, type OpcionesSeguimiento } from './modules/consultas';
 import type { ModuloIdentidad } from './modules/identidad';
 import { Router } from 'express';
 import {
   crearAtencionConPrisma,
+  crearPublicacionConPrisma,
+  type PrismaPublicacionAdapter,
+  type ServicioPublicacion,
   crearEnrutamientoConPrisma,
   crearRouterAtencion,
   crearRouterEnrutamiento,
@@ -153,8 +156,24 @@ export function opcionesBandeja(
   obtenerReportes: () => ModuloReportes,
   logger: Logger,
   atencion?: ServicioAtencion,
+  /** P7 grupo B: lectura de publicaciones para el mapa operativo. */
+  publicaciones?: PrismaPublicacionAdapter,
 ): OpcionesBandeja {
   return {
+    ...(publicaciones
+      ? {
+          mapaOperativo: {
+            participaciones: (ambito, filtro, limite) => enrutamiento.mapa(ambito, filtro, limite),
+            async puntos(ids) {
+              const lectura = obtenerReportes().lectura;
+              if (!lectura) throw new Error('Reportes sin lectura de envios compuesta');
+              const u = await lectura.ubicaciones(ids);
+              return new Map([...u].map(([id, x]) => [id, { latitud: x.latitud, longitud: x.longitud }]));
+            },
+            publicaciones: (ids) => publicaciones.vigentesDe(ids, new Date()),
+          },
+        }
+      : {}),
     ...(atencion
       ? {
           atencion: {
@@ -301,6 +320,44 @@ function aclararComoOperador(obtenerReportes: () => ModuloReportes) {
   };
 }
 
+/**
+ * Publicacion controlada (P7): la instantanea toma categoria, distrito, punto y ocurrencia por la
+ * fachada de Reportes; Operaciones guarda solo el centro de la celda. Reportes se resuelve al usarse.
+ */
+export function publicacionDe(prisma: PrismaClient, obtenerReportes: () => ModuloReportes, ahora?: () => Date) {
+  return crearPublicacionConPrisma(
+    prisma,
+    {
+      async de(incidenteId) {
+        const lectura = obtenerReportes().lectura;
+        if (!lectura) throw new Error('Reportes sin lectura de envios compuesta');
+        return (await lectura.ubicaciones([incidenteId])).get(incidenteId) ?? null;
+      },
+    },
+    ahora,
+  );
+}
+
+/** Mapa publico (P7): instantaneas vigentes de Operaciones y nombres de categorias de Reportes. */
+export function opcionesMapaPublico(
+  lectura: PrismaPublicacionAdapter,
+  obtenerReportes: () => ModuloReportes,
+  logger: Logger,
+  ahora?: () => Date,
+): OpcionesMapaPublico {
+  return {
+    publicaciones: {
+      puntos: (f) => lectura.puntosPublicos(f),
+      conteos: (f) => lectura.conteosReservados(f),
+    },
+    categorias: {
+      nombres: async () => new Map((await obtenerReportes().categorias.listar()).map((c) => [c.id, c.nombre])),
+    },
+    logger,
+    ...(ahora ? { ahora } : {}),
+  };
+}
+
 /** Atencion institucional (P6) con los operadores de la fachada de Identidad. */
 export function atencionDe(prisma: PrismaClient, identidad: ModuloIdentidad): ServicioAtencion {
   return crearAtencionConPrisma(prisma, {
@@ -320,6 +377,7 @@ export function routerOperaciones(
   logger: Logger,
   atencion?: ServicioAtencion,
   operacionesIncidentes?: ModuloOperaciones['incidentes'],
+  publicacion?: ServicioPublicacion,
 ) {
   const distritos = new Map(distritosPiloto().map((d) => [d.id, d.nombre]));
   const router = Router();
@@ -332,6 +390,7 @@ export function routerOperaciones(
         const referencia = normalizarReferencia(texto);
         return referencia ? ((await operacionesIncidentes?.porReferencia(referencia))?.id ?? null) : null;
       },
+      ...(publicacion ? { publicacion } : {}),
       logger,
     }));
   }

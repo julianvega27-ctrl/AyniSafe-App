@@ -1,6 +1,7 @@
 import { codificarCursorFifo, decodificarCursorFifo } from '../../../compartido/cursor-fifo';
 import { territorioVista, type TerritorioSeguimiento } from '../dominio/seguimiento';
 import { DISTRITOS_PILOTO } from '../dominio/territorio';
+import { FiltroMapaInvalidoError } from './mapa.use-case';
 
 /**
  * Bandeja institucional del operador (P4.2, spec `consultas/bandeja-institucional`). Compone el
@@ -110,6 +111,18 @@ export interface EvidenciasLecturaPort {
   ): Promise<{ readonly bytes: Buffer; readonly tipo: string } | null>;
 }
 
+/** Puertos del mapa operativo (P7 grupo B): participaciones filtradas, puntos exactos y publicacion. */
+export interface MapaOperativoPort {
+  participaciones(
+    ambito: { readonly sedeId: string; readonly distritos: readonly string[]; readonly categorias: readonly string[] },
+    filtro: { readonly desde: Date; readonly distritoId: string | null; readonly categoriaId: string | null },
+    limite: number,
+  ): Promise<readonly FilaOperaciones[]>;
+  /** Puntos exactos de Reportes; solo para participaciones ya autorizadas. */
+  puntos(ids: readonly string[]): Promise<ReadonlyMap<string, { readonly latitud: number; readonly longitud: number }>>;
+  publicaciones(ids: readonly string[]): Promise<ReadonlyMap<string, { readonly reservada: boolean; readonly venceEn: Date }>>;
+}
+
 export interface DependenciasBandeja {
   readonly ambito: AmbitoBandejaPort;
   readonly participaciones: ParticipacionesBandejaPort;
@@ -121,7 +134,13 @@ export interface DependenciasBandeja {
   readonly evidencias?: EvidenciasLecturaPort;
   /** Atencion institucional (P6). Sin ella, el resumen no informa responsable ni acciones. */
   readonly atencion?: AtencionBandejaPort;
+  /** Mapa operativo (P7 grupo B). Sin el, no se expone la ruta. */
+  readonly mapaOperativo?: MapaOperativoPort;
+  readonly ahora?: () => Date;
 }
+
+export const PERIODOS_OPERATIVOS = { '24h': 24, '7d': 168, '30d': 720 } as const;
+export const LIMITE_MAPA_OPERATIVO = 500;
 
 export const PAGINA_BANDEJA = 50;
 /** Sin propuesta valida ni revision (P6 grupo C), la etiqueta es «Sin evaluar» (RF12). */
@@ -237,6 +256,58 @@ export class BandejaInstitucional {
       otrasInstituciones: [...p.otrasInstituciones],
       evidencias: [...(fotos.get(p.incidenteId) ?? [])],
       atencion,
+    };
+  }
+
+  /**
+   * Mapa operativo (P7 grupo B, spec `consultas/mapa-operativo`): punto exacto solo de los incidentes
+   * en que participa la sede del operador dentro de su ambito vigente. Sin descripcion, telefono,
+   * autor, codigo, fotos ni datos sanitarios. Filtro invalido: 422.
+   */
+  async mapa(usuarioId: string, query: Record<string, unknown>) {
+    const m = this.d.mapaOperativo;
+    if (!m) throw new IncidenteNoDisponibleError();
+    const campos: Record<string, string> = {};
+    for (const k of Object.keys(query)) if (!['distrito', 'categoria', 'periodo'].includes(k)) campos[k] = 'Filtro no admitido.';
+    const texto = (v: unknown) => (typeof v === 'string' && v.length > 0 && v.length <= 60 ? v : undefined);
+    const distrito = query.distrito === undefined ? null : texto(query.distrito);
+    if (distrito === undefined || (distrito && !nombreDistrito(distrito))) campos.distrito = 'Elige un distrito del catálogo.';
+    const categorias = await this.d.categorias.nombres();
+    const categoria = query.categoria === undefined ? null : texto(query.categoria);
+    if (categoria === undefined || (categoria && !categorias.has(categoria))) campos.categoria = 'Elige una categoría del catálogo.';
+    const periodo = query.periodo === undefined ? '7d' : query.periodo;
+    if (typeof periodo !== 'string' || !(periodo in PERIODOS_OPERATIVOS)) campos.periodo = 'Elige 24h, 7d o 30d.';
+    if (Object.keys(campos).length) throw new FiltroMapaInvalidoError(campos);
+    const ambito = await this.ambito(usuarioId);
+    const ahora = this.d.ahora ? this.d.ahora() : new Date();
+    const horas = PERIODOS_OPERATIVOS[periodo as keyof typeof PERIODOS_OPERATIVOS];
+    const filas = await m.participaciones(
+      ambito,
+      { desde: new Date(ahora.getTime() - horas * 3_600_000), distritoId: distrito ?? null, categoriaId: categoria ?? null },
+      LIMITE_MAPA_OPERATIVO + 1,
+    );
+    const pagina = filas.slice(0, LIMITE_MAPA_OPERATIVO);
+    const ids = pagina.map((f) => f.incidenteId);
+    const [puntos, publicaciones] = await Promise.all([m.puntos(ids), m.publicaciones(ids)]);
+    return {
+      filtros: { distrito: distrito ?? null, categoria: categoria ?? null, periodo },
+      truncado: filas.length > LIMITE_MAPA_OPERATIVO,
+      elementos: pagina.flatMap((f) => {
+        const p = puntos.get(f.incidenteId);
+        if (!p) return [];
+        const pub = publicaciones.get(f.incidenteId);
+        return [{
+          id: f.incidenteId,
+          referencia: f.referencia,
+          categoria: { id: f.categoriaId, nombre: categorias.get(f.categoriaId) ?? null },
+          distrito: f.distritoId ? { id: f.distritoId, nombre: nombreDistrito(f.distritoId) } : null,
+          estado: f.estado,
+          prioridad: f.prioridad ?? PRIORIDAD_SIN_EVALUAR,
+          registradoEn: f.registradoEn.toISOString(),
+          punto: { lat: p.latitud, lon: p.longitud },
+          publicacion: pub ? { vigente: true, reservada: pub.reservada } : { vigente: false, reservada: false },
+        }];
+      }),
     };
   }
 

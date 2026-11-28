@@ -15,6 +15,8 @@ import { PrismaPublicadorEventos } from '../../compartido/eventos/prisma-eventos
 import { PrismaUnidadDeTrabajo } from '../../compartido/prisma-transaccion';
 import { ServicioAtencion, type OperadoresPort } from './aplicacion/atencion';
 import { PrismaAtencionAdapter } from './infraestructura/prisma-atencion.adapter';
+import { ServicioPublicacion, type DatosPublicacionPort } from './aplicacion/publicacion';
+import { PrismaPublicacionAdapter } from './infraestructura/prisma-publicacion.adapter';
 
 export { ServicioIncidentes, type IncidentesRepositorio, type FuenteAleatoria } from './aplicacion/incidentes';
 export {
@@ -61,6 +63,7 @@ export {
   type DatosEnrutamientoPort,
   type DependenciasEnrutamiento,
   type FilaBandeja,
+  type FiltroMapaOperativo,
   type ParticipacionVisible,
   type EnrutamientoGuardado,
   type EnrutamientosRepositorio,
@@ -99,6 +102,39 @@ export {
   type Verificacion,
 } from './dominio/atencion';
 export { crearRouterAtencion, type OpcionesRutasAtencion } from './presentacion/atencion.routes';
+export {
+  ServicioPublicacion,
+  type DatosPublicacionPort,
+  type Publicacion,
+  type PublicacionRepositorio,
+  type VistaPublicacion,
+} from './aplicacion/publicacion';
+export {
+  MINIMO_CONTEO,
+  VIGENCIA_MS,
+  type CausaRetiro,
+} from './dominio/publicacion';
+export { PrismaPublicacionAdapter } from './infraestructura/prisma-publicacion.adapter';
+
+/**
+ * Publicacion controlada sobre PostgreSQL (P7). La instantanea toma los originales por el puerto
+ * hacia Reportes; `lectura` sirve las lecturas publicas y operativas por los puertos de Consultas.
+ */
+export function crearPublicacionConPrisma(
+  prisma: PrismaClient,
+  datos: DatosPublicacionPort,
+  ahora?: () => Date,
+): { readonly servicio: ServicioPublicacion; readonly lectura: PrismaPublicacionAdapter } {
+  const lectura = new PrismaPublicacionAdapter(prisma);
+  const servicio = new ServicioPublicacion({
+    repositorio: lectura,
+    atencion: new PrismaAtencionAdapter(prisma),
+    datos,
+    unidadDeTrabajo: new PrismaUnidadDeTrabajo(prisma),
+    ...(ahora ? { ahora } : {}),
+  });
+  return { servicio, lectura };
+}
 export {
   CONFIGURACION_PRIORIDAD,
   configuracionValida,

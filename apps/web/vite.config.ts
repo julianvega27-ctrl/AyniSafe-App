@@ -6,8 +6,16 @@ import { defineConfig } from 'vitest/config';
 // la API no necesita CORS. El proxy conserva la cabecera Origin (changeOrigin: false), que la API exige.
 const API_DEV = process.env.API_DEV_URL ?? 'http://127.0.0.1:3000';
 
+// Mapa base (P7, ADR-009): OSM estandar por defecto, configurable al construir sin tocar el codigo.
+// Se cumple su politica de uso: atribucion visible, Referer de origen solo en las teselas y sin precarga.
+const TESELAS = {
+  url: process.env.VITE_TILE_URL ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  atribucion: process.env.VITE_TILE_ATTRIBUTION ?? '© OpenStreetMap contributors',
+};
+
 export default defineConfig({
   plugins: [react()],
+  define: { __TESELAS__: JSON.stringify(TESELAS) },
   server: {
     port: 5173,
     strictPort: true,
